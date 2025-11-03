@@ -1,6 +1,6 @@
 import { Card, Row, Col, Statistic, Typography } from 'antd';
 import {
-  ServerOutlined,
+  CloudServerOutlined,
   ApiOutlined,
   DatabaseOutlined,
   CheckCircleOutlined,
@@ -22,7 +22,7 @@ export default function Dashboard() {
             <Statistic
               title="设备总数"
               value={0}
-              prefix={<ServerOutlined />}
+              prefix={<CloudServerOutlined />}
               valueStyle={{ color: '#3f8600' }}
             />
           </Card>

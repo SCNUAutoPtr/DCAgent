@@ -1,6 +1,9 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import datacentersRouter from './routes/datacenters';
+import roomsRouter from './routes/rooms';
+import cabinetsRouter from './routes/cabinets';
 import devicesRouter from './routes/devices';
 import cablesRouter from './routes/cables';
 
@@ -24,25 +27,29 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // API Routes
-app.get('/api', (req: Request, res: Response) => {
+app.get('/api/v1', (req: Request, res: Response) => {
   res.json({
     message: 'DCAgent API v1',
+    version: '1.0.0',
     endpoints: {
-      datacenters: '/api/datacenters',
-      rooms: '/api/rooms',
-      cabinets: '/api/cabinets',
-      devices: '/api/devices',
-      panels: '/api/panels',
-      ports: '/api/ports',
-      cables: '/api/cables',
-      connections: '/api/connections'
+      datacenters: '/api/v1/datacenters',
+      rooms: '/api/v1/rooms',
+      cabinets: '/api/v1/cabinets',
+      devices: '/api/v1/devices',
+      panels: '/api/v1/panels',
+      ports: '/api/v1/ports',
+      cables: '/api/v1/cables',
+      connections: '/api/v1/connections'
     }
   });
 });
 
 // Mount routers
-app.use('/api/devices', devicesRouter);
-app.use('/api/cables', cablesRouter);
+app.use('/api/v1/datacenters', datacentersRouter);
+app.use('/api/v1/rooms', roomsRouter);
+app.use('/api/v1/cabinets', cabinetsRouter);
+app.use('/api/v1/devices', devicesRouter);
+app.use('/api/v1/cables', cablesRouter);
 
 // Error handling
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {

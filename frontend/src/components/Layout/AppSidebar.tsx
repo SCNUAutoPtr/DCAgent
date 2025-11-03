@@ -1,7 +1,7 @@
 import { Layout, Menu } from 'antd';
 import {
   DashboardOutlined,
-  ServerOutlined,
+  DatabaseOutlined,
   ApartmentOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -20,7 +20,7 @@ export default function AppSidebar() {
     },
     {
       key: '/devices',
-      icon: <ServerOutlined />,
+      icon: <DatabaseOutlined />,
       label: '设备管理',
     },
     {
