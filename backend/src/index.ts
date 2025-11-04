@@ -13,6 +13,7 @@ import portsRouter from './routes/ports';
 import cablesRouter from './routes/cables';
 import searchRouter from './routes/search';
 import panelTemplateRouter from './routes/panelTemplateRoutes';
+import { requestLogger, errorLogger } from './middleware/logger';
 
 dotenv.config();
 
@@ -26,6 +27,9 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// 日志中间件（放在所有路由之前）
+app.use(requestLogger);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
@@ -69,18 +73,19 @@ app.use('/api/v1/panel-templates', panelTemplateRouter);
 // Swagger UI (需要先安装依赖: npm install swagger-ui-express yamljs @types/yamljs)
 // app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
-// Error handling
+// 404 handler (在错误处理之前)
+app.use((req: Request, res: Response, next: NextFunction) => {
+  console.log(`[${new Date().toISOString()}] [404] ${req.method} ${req.path}`);
+  res.status(404).json({ error: 'Not Found', path: req.path });
+});
+
+// Error handling (使用日志中间件)
+app.use(errorLogger);
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
   res.status(500).json({
     error: 'Internal Server Error',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
-});
-
-// 404 handler
-app.use((req: Request, res: Response) => {
-  res.status(404).json({ error: 'Not Found' });
 });
 
 // Start server

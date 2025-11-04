@@ -13,6 +13,8 @@ import {
   Row,
   Col,
   Input,
+  Modal,
+  Form,
 } from 'antd';
 import {
   ZoomInOutlined,
@@ -27,11 +29,14 @@ import {
   RedoOutlined,
 } from '@ant-design/icons';
 import { PanelType } from '@/types';
+import {  PortType, getPortSize, PORT_TYPE_OPTIONS } from '@/constants/portSizes';
 
 interface PortDefinition {
   number: string;
+  portType: string; // 端口类型
   position: { x: number; y: number };
   size: { width: number; height: number };
+  label?: string; // 端口标签
   group?: string; // 端口组ID
 }
 
@@ -82,6 +87,8 @@ export default function PanelTemplateEditor({
   const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
   const [history, setHistory] = useState<PortDefinition[][]>([initialPorts]);
   const [historyIndex, setHistoryIndex] = useState(0);
+  const [addPortModalVisible, setAddPortModalVisible] = useState(false);
+  const [addPortForm] = Form.useForm();
 
   // 当initialPorts改变时重新初始化编辑器状态
   useEffect(() => {
@@ -118,12 +125,16 @@ export default function PanelTemplateEditor({
       const isSelected = selectedPorts.has(port.number);
       const group = groups.find((g) => g.portNumbers.includes(port.number));
 
+      // 获取端口类型对应的颜色
+      const portTypeInfo = port.portType ? getPortSize(port.portType as PortType) : null;
+      const portColor = portTypeInfo?.color || PORT_COLORS.AVAILABLE;
+
       // 绘制端口矩形
       ctx.fillStyle = isSelected
         ? PORT_COLORS.SELECTED
         : group
         ? group.color
-        : PORT_COLORS.AVAILABLE;
+        : portColor;
       ctx.fillRect(
         port.position.x * zoom,
         port.position.y * zoom,
@@ -151,6 +162,17 @@ export default function PanelTemplateEditor({
         (port.position.x + port.size.width / 2) * zoom,
         (port.position.y + port.size.height / 2) * zoom
       );
+
+      // 如果有端口类型标签，在端口下方显示
+      if (port.portType && portTypeInfo) {
+        ctx.fillStyle = '#595959';
+        ctx.font = `${8 * zoom}px Arial`;
+        ctx.fillText(
+          portTypeInfo.label,
+          (port.position.x + port.size.width / 2) * zoom,
+          (port.position.y + port.size.height + 8) * zoom
+        );
+      }
     });
 
     // 绘制拖拽选择框
@@ -305,16 +327,35 @@ export default function PanelTemplateEditor({
 
   // 添加端口
   const handleAddPort = () => {
-    const newPortNumber = String(ports.length + 1);
-    const newPort: PortDefinition = {
-      number: newPortNumber,
-      position: { x: 20, y: 20 },
-      size: { width: 16, height: 14 },
-    };
-    const newPorts = [...ports, newPort];
-    setPorts(newPorts);
-    addToHistory(newPorts);
-    message.success(`已添加端口 ${newPortNumber}`);
+    setAddPortModalVisible(true);
+    addPortForm.setFieldsValue({
+      portType: PortType.RJ45, // 默认选择RJ45
+      label: '',
+    });
+  };
+
+  // 确认添加端口
+  const handleConfirmAddPort = () => {
+    addPortForm.validateFields().then((values) => {
+      const { portType, label } = values;
+      const portSize = getPortSize(portType);
+
+      const newPortNumber = String(ports.length + 1);
+      const newPort: PortDefinition = {
+        number: newPortNumber,
+        portType,
+        position: { x: 20, y: 20 },
+        size: { width: portSize.width, height: portSize.height },
+        label: label || undefined,
+      };
+      const newPorts = [...ports, newPort];
+      setPorts(newPorts);
+      addToHistory(newPorts);
+      message.success(`已添加 ${portSize.label} 端口 ${newPortNumber}`);
+
+      setAddPortModalVisible(false);
+      addPortForm.resetFields();
+    });
   };
 
   // 删除选中端口
@@ -398,6 +439,41 @@ export default function PanelTemplateEditor({
   return (
     <Card>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        {/* 添加端口模态框 */}
+        <Modal
+          title="添加端口"
+          open={addPortModalVisible}
+          onOk={handleConfirmAddPort}
+          onCancel={() => {
+            setAddPortModalVisible(false);
+            addPortForm.resetFields();
+          }}
+          okText="添加"
+          cancelText="取消"
+        >
+          <Form
+            form={addPortForm}
+            layout="vertical"
+          >
+            <Form.Item
+              name="portType"
+              label="端口类型"
+              rules={[{ required: true, message: '请选择端口类型' }]}
+            >
+              <Select
+                options={PORT_TYPE_OPTIONS}
+                placeholder="选择端口类型"
+              />
+            </Form.Item>
+            <Form.Item
+              name="label"
+              label="端口标签（可选）"
+            >
+              <Input placeholder="例如：Uplink1, Management" />
+            </Form.Item>
+          </Form>
+        </Modal>
+
         {/* 工具栏 */}
         <Row gutter={16}>
           <Col span={12}>
@@ -530,6 +606,25 @@ export default function PanelTemplateEditor({
                   {group.name} ({group.portNumbers.join(', ')})
                 </Tag>
               ))}
+            </Space>
+          </Card>
+        )}
+
+        {/* 端口类型图例 */}
+        {ports.length > 0 && (
+          <Card size="small" title="端口类型">
+            <Space wrap>
+              {Array.from(new Set(ports.map(p => p.portType).filter(Boolean))).map((portType) => {
+                const portSize = getPortSize(portType as PortType);
+                return (
+                  <Tag
+                    key={portType}
+                    color={portSize.color}
+                  >
+                    {portSize.label} - {portSize.width}×{portSize.height}mm
+                  </Tag>
+                );
+              })}
             </Space>
           </Card>
         )}

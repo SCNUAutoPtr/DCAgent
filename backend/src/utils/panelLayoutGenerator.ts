@@ -1,4 +1,5 @@
 import { PanelType } from '@prisma/client';
+import { PortType, getPortSize } from '../constants/portSizes';
 
 /**
  * 面板布局生成器（后端版本）
@@ -11,24 +12,21 @@ const PANEL_DIMENSIONS = {
   height: 44.45,
 };
 
-// 标准端口尺寸 (mm)
-const PORT_SIZES: Record<string, { width: number; height: number }> = {
-  ETHERNET: { width: 16, height: 14 }, // RJ45 端口
-  FIBER: { width: 12, height: 12 }, // LC/SC 光纤端口
-  POWER: { width: 20, height: 15 }, // 电源插座
-  SERIAL: { width: 25, height: 13 }, // DB9/RS232
-  USB: { width: 12, height: 6 }, // USB-A
-  OTHER: { width: 15, height: 12 },
-};
-
-// 端口间距 (mm)
+// 端口间距 (mm) - 根据端口类型
 const PORT_SPACING: Record<string, number> = {
-  ETHERNET: 2,
-  FIBER: 1.5,
-  POWER: 5,
-  SERIAL: 3,
-  USB: 2,
-  OTHER: 2,
+  [PortType.RJ45]: 2,
+  [PortType.SFP]: 0.5,
+  [PortType.SFP_PLUS]: 0.5,
+  [PortType.QSFP]: 1,
+  [PortType.QSFP28]: 1,
+  [PortType.QSFP_DD]: 1.5,
+  [PortType.LC]: 1,
+  [PortType.SC]: 2,
+  [PortType.USB_A]: 2,
+  [PortType.USB_C]: 1.5,
+  [PortType.SERIAL]: 3,
+  [PortType.POWER_C13]: 5,
+  [PortType.POWER_C19]: 6,
 };
 
 // 边距 (mm)
@@ -48,6 +46,7 @@ interface Port {
   id: string;
   number: string;
   label?: string | null;
+  portType?: string | null; // 端口类型 (RJ45, SFP, 等)
   status: string;
   panelId: string;
   positionX?: number | null;
@@ -113,14 +112,101 @@ function getLayoutConfig(panelType: PanelType, portCount: number): LayoutConfig 
 
 /**
  * 为端口数组生成物理布局位置
+ * 支持混合端口类型的布局
  */
 export function generatePortLayout(ports: Port[], panel: Panel): Port[] {
   if (ports.length === 0) return ports;
 
   const panelType = panel.type;
-  const portSize = PORT_SIZES[panelType] || PORT_SIZES.OTHER;
-  const spacing = PORT_SPACING[panelType] || PORT_SPACING.OTHER;
-  const config = getLayoutConfig(panelType, ports.length);
+
+  // 检测是否是混合端口类型
+  const portTypes = new Set(ports.map(p => p.portType).filter(Boolean));
+  const isMixedPortTypes = portTypes.size > 1;
+
+  // 如果端口有指定类型，使用端口自己的类型；否则根据面板类型推断默认类型
+  const getDefaultPortType = (panelType: PanelType): PortType => {
+    switch (panelType) {
+      case 'ETHERNET': return PortType.RJ45;
+      case 'FIBER': return PortType.SFP;
+      case 'POWER': return PortType.POWER_C13;
+      case 'SERIAL': return PortType.SERIAL;
+      case 'USB': return PortType.USB_A;
+      default: return PortType.RJ45;
+    }
+  };
+
+  const defaultPortType = getDefaultPortType(panelType);
+
+  // 为每个端口确定尺寸和间距
+  const portsWithSize = ports.map(port => {
+    const portType = (port.portType as PortType) || defaultPortType;
+    const portSize = getPortSize(portType);
+    const spacing = PORT_SPACING[portType] || 2;
+    return {
+      ...port,
+      portType,
+      portSize: { width: portSize.width, height: portSize.height },
+      spacing,
+    };
+  });
+
+  // 如果是混合类型或使用模板定义的布局，使用简单的顺序排列
+  if (isMixedPortTypes) {
+    return generateMixedPortLayout(portsWithSize, panel);
+  }
+
+  // 否则使用传统的按面板类型布局
+  return generateUniformPortLayout(portsWithSize, panel, defaultPortType);
+}
+
+/**
+ * 混合端口类型布局 - 简单的顺序排列
+ */
+function generateMixedPortLayout(ports: any[], panel: Panel) {
+  const availableWidth = PANEL_DIMENSIONS.width - MARGIN.left - MARGIN.right;
+  const availableHeight = PANEL_DIMENSIONS.height - MARGIN.top - MARGIN.bottom;
+
+  let currentX = MARGIN.left;
+  let currentY = MARGIN.top;
+  let maxHeightInRow = 0;
+  let rowStartIndex = 0;
+
+  return ports.map((port, index) => {
+    const portWidth = port.portSize.width;
+    const portHeight = port.portSize.height;
+    const spacing = port.spacing;
+
+    // 检查是否需要换行
+    if (currentX + portWidth > PANEL_DIMENSIONS.width - MARGIN.right && index > rowStartIndex) {
+      // 换行
+      currentX = MARGIN.left;
+      currentY += maxHeightInRow + 5; // 行间距 5mm
+      maxHeightInRow = 0;
+      rowStartIndex = index;
+    }
+
+    const x = currentX;
+    const y = currentY;
+
+    // 更新位置
+    currentX += portWidth + spacing;
+    maxHeightInRow = Math.max(maxHeightInRow, portHeight);
+
+    return {
+      ...port,
+      position: { x, y },
+      size: { width: portWidth, height: portHeight },
+    };
+  });
+}
+
+/**
+ * 统一端口类型布局 - 传统的对齐布局
+ */
+function generateUniformPortLayout(ports: any[], panel: Panel, portType: PortType) {
+  const portSize = ports[0].portSize;
+  const spacing = ports[0].spacing;
+  const config = getLayoutConfig(panel.type, ports.length);
 
   // 计算面板可用宽度
   const availableWidth = PANEL_DIMENSIONS.width - MARGIN.left - MARGIN.right;
@@ -130,13 +216,13 @@ export function generatePortLayout(ports: Port[], panel: Panel): Port[] {
   const rows = Math.ceil(ports.length / config.portsPerRow);
 
   // 交换机类型使用交错排列：1 3 5 7... (上行) 和 2 4 6 8... (下行)
-  const isEthernetSwitch = panelType === 'ETHERNET' && ports.length > 8;
+  const isEthernetSwitch = panel.type === 'ETHERNET' && ports.length > 8;
 
   if (isEthernetSwitch) {
     // 交错排列算法
     const portsPerColumn = Math.ceil(ports.length / 2);
 
-    return ports.map((port, index) => {
+    return ports.map((port: any, index: number) => {
       // 奇数端口在上行，偶数端口在下行
       const isOddPort = index % 2 === 0; // 0-indexed，所以 index 0 对应端口 1
       const row = isOddPort ? 0 : 1;
@@ -166,7 +252,7 @@ export function generatePortLayout(ports: Port[], panel: Panel): Port[] {
   // 其他类型使用标准顺序排列
   const portsInLastRow = ports.length % config.portsPerRow || config.portsPerRow;
 
-  return ports.map((port, index) => {
+  return ports.map((port: any, index: number) => {
     const row = Math.floor(index / config.portsPerRow);
     const col = index % config.portsPerRow;
 

@@ -77,8 +77,10 @@ export interface PanelTemplate {
   layoutConfig?: any;
   portDefinitions: Array<{
     number: string;
+    portType: string; // 端口类型 (RJ45, SFP, SFP+, QSFP等)
     position: { x: number; y: number };
     size: { width: number; height: number };
+    label?: string; // 可选的端口标签
   }>;
   // 视觉样式
   backgroundColor?: string;
