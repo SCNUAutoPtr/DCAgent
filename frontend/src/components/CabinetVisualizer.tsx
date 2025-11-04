@@ -62,8 +62,8 @@ const DEVICE_CONFIG: Record<DeviceType, {
   },
 };
 
-// 标准1U高度（像素）
-const U_HEIGHT = 20;
+// 标准1U高度（像素）- 增加高度以容纳所有文字
+const U_HEIGHT = 40;
 const U_WIDTH = 80;
 const U_DEPTH = 120; // 侧视图深度
 
@@ -216,7 +216,7 @@ export const CabinetVisualizer: React.FC<CabinetVisualizerProps> = ({
   // 生成2D前面板形状（2D视图）
   const render2DShape = (device: Device, position: any) => {
     const config = DEVICE_CONFIG[device.type];
-    const panelWidth = 450; // 2D视图下使用更宽的面板
+    const panelWidth = 420; // 减小宽度以适应左右 10px 的偏移（总宽度 450px）
 
     return (
       <g className="device-shape-2d">
@@ -421,7 +421,7 @@ export const CabinetVisualizer: React.FC<CabinetVisualizerProps> = ({
 
   // 渲染2D前面板视图
   const render2DView = () => {
-    const panelWidth = 450;
+    const panelWidth = 430; // 与 render2DShape 中保持一致
     return (
       <svg
         width={panelWidth + 20}
@@ -441,9 +441,9 @@ export const CabinetVisualizer: React.FC<CabinetVisualizerProps> = ({
             rx="2"
           />
 
-          {/* 右侧立柱 */}
+          {/* 右侧立柱 - 调整位置以适应新的面板宽度 */}
           <rect
-            x={panelWidth - 6}
+            x={panelWidth + 4}
             y="0"
             width="6"
             height={cabinet.height * U_HEIGHT}
@@ -497,6 +497,7 @@ export const CabinetVisualizer: React.FC<CabinetVisualizerProps> = ({
               opacity="0.2"
               transform="translate(10, 0)"
             >
+              {/* 空U位指示器 - 使用新的面板宽度 */}
               <rect
                 x="4"
                 y={y + 2}
