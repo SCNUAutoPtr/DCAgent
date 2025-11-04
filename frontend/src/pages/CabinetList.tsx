@@ -83,7 +83,7 @@ export default function CabinetList() {
       if (searchQuery) {
         data = await cabinetService.search(searchQuery);
       } else if (roomId) {
-        data = await cabinetService.getByRoom(roomId);
+        data = await cabinetService.getAll(roomId);
       } else {
         data = await cabinetService.getAll();
       }

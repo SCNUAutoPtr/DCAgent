@@ -54,7 +54,7 @@ export default function RoomList() {
       if (searchQuery) {
         data = await roomService.search(searchQuery);
       } else if (dataCenterId) {
-        data = await roomService.getByDataCenter(dataCenterId);
+        data = await roomService.getAll(dataCenterId);
       } else {
         data = await roomService.getAll();
       }

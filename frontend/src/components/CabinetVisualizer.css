@@ -69,13 +69,56 @@
   user-select: none;
 }
 
-/* 机柜SVG容器 */
+/* 机柜SVG容器 - 默认3D视图 */
 .cabinet-svg-container {
   flex: 1;
   background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
   border-radius: 8px;
   padding: 20px 10px 20px 10px;
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 2D视图SVG容器 - 支持滚动 */
+.cabinet-svg-container--2d {
+  flex: 1;
+  background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 2D视图容器布局 */
+.cabinet-container--2d {
+  gap: 8px;
+}
+
+/* 2D视图SVG特殊样式 */
+.cabinet-svg-2d {
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1));
+}
+
+/* 滚动条美化 */
+.cabinet-svg-container--2d::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cabinet-svg-container--2d::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.cabinet-svg-container--2d::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.cabinet-svg-container--2d::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 .cabinet-svg {
@@ -98,6 +141,25 @@
 
 .device-shape {
   transition: all 0.2s ease;
+}
+
+/* 2D设备形状交互效果 */
+.device-group:hover .device-shape-2d {
+  filter: brightness(1.05) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
+}
+
+.device-group:active .device-shape-2d {
+  filter: brightness(0.95);
+}
+
+.device-shape-2d {
+  transition: all 0.2s ease;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1));
+}
+
+/* 2D视图机柜框架样式 */
+.cabinet-frame-2d {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
 }
 
 /* 空U位效果 */

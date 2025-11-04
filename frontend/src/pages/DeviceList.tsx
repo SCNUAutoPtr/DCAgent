@@ -77,7 +77,7 @@ export default function DeviceList() {
       if (searchQuery) {
         data = await deviceService.search(searchQuery);
       } else if (cabinetId) {
-        data = await deviceService.getByCabinet(cabinetId);
+        data = await deviceService.getAll(cabinetId);
       } else {
         data = await deviceService.getAll();
       }

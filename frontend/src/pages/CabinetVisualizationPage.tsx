@@ -19,6 +19,8 @@ import {
   Statistic,
   Row,
   Col,
+  Radio,
+  Tooltip,
 } from 'antd';
 import {
   InboxOutlined,
@@ -28,6 +30,8 @@ import {
   PlusOutlined,
   EyeOutlined,
   SettingOutlined,
+  AppstoreOutlined,
+  BlockOutlined,
 } from '@ant-design/icons';
 import {
   Cabinet,
@@ -40,7 +44,7 @@ import { cabinetService } from '@/services/cabinetService';
 import { deviceService } from '@/services/deviceService';
 import { roomService } from '@/services/roomService';
 import { dataCenterService } from '@/services/dataCenterService';
-import { CabinetVisualizer } from '@/components/CabinetVisualizer';
+import { CabinetVisualizer, ViewMode } from '@/components/CabinetVisualizer';
 import './CabinetVisualizationPage.css';
 
 const { Sider, Content } = Layout;
@@ -65,6 +69,11 @@ export default function CabinetVisualizationPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [dataCenters, setDataCenters] = useState<DataCenter[]>([]);
   const [selectedCabinet, setSelectedCabinet] = useState<Cabinet | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    // 从 localStorage 读取用户偏好，默认使用 2D
+    const saved = localStorage.getItem('cabinet-view-mode');
+    return (saved === '3d' ? '3d' : '2d') as ViewMode;
+  });
   const [loading, setLoading] = useState(false);
 
   // 对话框状态
@@ -101,6 +110,12 @@ export default function CabinetVisualizationPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // 视图模式切换处理
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('cabinet-view-mode', mode);
+  };
 
   // 选择机柜
   const handleSelectCabinet = (cabinet: Cabinet) => {
@@ -260,12 +275,41 @@ export default function CabinetVisualizationPage() {
 
   return (
     <div className="cabinet-visualization-page">
-      <Title level={2}>
-        <InboxOutlined /> 机柜可视化
-      </Title>
-      <Text type="secondary" style={{ marginBottom: 24, display: 'block' }}>
-        2.5D立体视图展示机柜U位分布和设备布局
-      </Text>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div>
+          <Title level={2} style={{ marginBottom: 8 }}>
+            <InboxOutlined /> 机柜可视化
+          </Title>
+          <Text type="secondary">
+            {viewMode === '3d' ? '2.5D立体视图展示机柜U位分布和设备布局' : '2D前面板视图展示机柜设备详情'}
+          </Text>
+        </div>
+
+        {/* 视图模式切换器 */}
+        <Space>
+          <Text type="secondary">视图模式：</Text>
+          <Button.Group>
+            <Tooltip title="2D前面板视图">
+              <Button
+                type={viewMode === '2d' ? 'primary' : 'default'}
+                icon={<AppstoreOutlined />}
+                onClick={() => handleViewModeChange('2d')}
+              >
+                2D视图
+              </Button>
+            </Tooltip>
+            <Tooltip title="3D立体视图">
+              <Button
+                type={viewMode === '3d' ? 'primary' : 'default'}
+                icon={<BlockOutlined />}
+                onClick={() => handleViewModeChange('3d')}
+              >
+                3D视图
+              </Button>
+            </Tooltip>
+          </Button.Group>
+        </Space>
+      </div>
 
       <Layout style={{ background: '#fff', minHeight: 'calc(100vh - 200px)' }}>
         {/* 左侧：机柜列表 */}
@@ -461,6 +505,7 @@ export default function CabinetVisualizationPage() {
               <CabinetVisualizer
                 cabinet={selectedCabinet}
                 devices={getCabinetDevices(selectedCabinet.id)}
+                viewMode={viewMode}
                 onDeviceClick={handleOpenDeviceModal}
                 onDeviceEdit={handleOpenDeviceModal}
                 onDeviceDelete={handleDeleteDevice}

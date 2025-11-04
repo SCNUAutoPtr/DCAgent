@@ -70,9 +70,13 @@ const U_DEPTH = 120; // 侧视图深度
 // 立体效果角度
 const ISOMETRIC_ANGLE = 30;
 
+// 视图模式类型
+export type ViewMode = '2d' | '3d';
+
 interface CabinetVisualizerProps {
   cabinet: Cabinet;
   devices: Device[];
+  viewMode?: ViewMode; // 视图模式：2D或3D，默认3D
   onDeviceClick?: (device: Device) => void;
   onDeviceEdit?: (device: Device) => void;
   onDeviceDelete?: (device: Device) => void;
@@ -82,6 +86,7 @@ interface CabinetVisualizerProps {
 export const CabinetVisualizer: React.FC<CabinetVisualizerProps> = ({
   cabinet,
   devices,
+  viewMode = '2d', // 默认使用2D视图
   onDeviceClick,
   onDeviceEdit,
   onDeviceDelete,
@@ -128,7 +133,7 @@ export const CabinetVisualizer: React.FC<CabinetVisualizerProps> = ({
     };
   };
 
-  // 生成2.5D立体形状
+  // 生成2.5D立体形状（3D视图）
   const renderIsometricShape = (device: Device, position: any) => {
     const config = DEVICE_CONFIG[device.type];
 
@@ -208,6 +213,308 @@ export const CabinetVisualizer: React.FC<CabinetVisualizerProps> = ({
     );
   };
 
+  // 生成2D前面板形状（2D视图）
+  const render2DShape = (device: Device, position: any) => {
+    const config = DEVICE_CONFIG[device.type];
+    const panelWidth = 450; // 2D视图下使用更宽的面板
+
+    return (
+      <g className="device-shape-2d">
+        {/* 前面板矩形 */}
+        <rect
+          x="0"
+          y={position.y}
+          width={panelWidth}
+          height={position.height}
+          fill={config.color}
+          stroke="#d9d9d9"
+          strokeWidth="2"
+          rx="4"
+        />
+
+        {/* 内部边框效果 */}
+        <rect
+          x="4"
+          y={position.y + 4}
+          width={panelWidth - 8}
+          height={position.height - 8}
+          fill="none"
+          stroke="#fff"
+          strokeWidth="1"
+          strokeOpacity="0.3"
+          rx="2"
+        />
+
+        {/* 设备名称 */}
+        <text
+          x="12"
+          y={position.y + position.height / 2 - 8}
+          textAnchor="start"
+          dominantBaseline="middle"
+          fill="#fff"
+          fontSize="14"
+          fontWeight="bold"
+        >
+          {device.name}
+        </text>
+
+        {/* 设备类型和型号 */}
+        <text
+          x="12"
+          y={position.y + position.height / 2 + 8}
+          textAnchor="start"
+          dominantBaseline="middle"
+          fill="#fff"
+          fontSize="11"
+          opacity="0.9"
+        >
+          {config.label} {device.model ? `• ${device.model}` : ''}
+        </text>
+
+        {/* U位标识 */}
+        <text
+          x={panelWidth - 12}
+          y={position.y + position.height / 2}
+          textAnchor="end"
+          dominantBaseline="middle"
+          fill="#fff"
+          fontSize="12"
+          fontWeight="500"
+        >
+          U{device.uPosition} ({device.uHeight}U)
+        </text>
+
+        {/* 装饰性螺丝孔 */}
+        <circle cx="8" cy={position.y + 8} r="3" fill="#333" opacity="0.4" />
+        <circle cx="8" cy={position.y + position.height - 8} r="3" fill="#333" opacity="0.4" />
+        <circle cx={panelWidth - 8} cy={position.y + 8} r="3" fill="#333" opacity="0.4" />
+        <circle cx={panelWidth - 8} cy={position.y + position.height - 8} r="3" fill="#333" opacity="0.4" />
+      </g>
+    );
+  };
+
+  // 渲染3D立体视图
+  const render3DView = () => {
+    return (
+      <svg
+        width={U_WIDTH + U_DEPTH + 20}
+        height={cabinet.height * U_HEIGHT + 20}
+        viewBox={`0 0 ${U_WIDTH + U_DEPTH + 20} ${cabinet.height * U_HEIGHT + 20}`}
+        className="cabinet-svg"
+      >
+        {/* 机柜框架 */}
+        <g className="cabinet-frame">
+          {/* 左侧立柱 */}
+          <rect
+            x="0"
+            y="0"
+            width="4"
+            height={cabinet.height * U_HEIGHT}
+            fill="#333"
+          />
+
+          {/* 右侧立柱 */}
+          <rect
+            x={U_WIDTH - 4}
+            y="0"
+            width="4"
+            height={cabinet.height * U_HEIGHT}
+            fill="#333"
+          />
+
+          {/* 后面立柱（立体效果） */}
+          <rect
+            x={Math.cos(ISOMETRIC_ANGLE * Math.PI / 180) * U_DEPTH}
+            y={-Math.sin(ISOMETRIC_ANGLE * Math.PI / 180) * U_DEPTH * 0.3}
+            width="4"
+            height={cabinet.height * U_HEIGHT}
+            fill="#666"
+            opacity="0.7"
+          />
+
+          <rect
+            x={U_WIDTH + Math.cos(ISOMETRIC_ANGLE * Math.PI / 180) * U_DEPTH - 4}
+            y={-Math.sin(ISOMETRIC_ANGLE * Math.PI / 180) * U_DEPTH * 0.3}
+            width="4"
+            height={cabinet.height * U_HEIGHT}
+            fill="#666"
+            opacity="0.7"
+          />
+
+          {/* 机柜顶部框架 */}
+          <path
+            d={`
+              M 0 0
+              L ${Math.cos(ISOMETRIC_ANGLE * Math.PI / 180) * U_DEPTH}
+                ${-Math.sin(ISOMETRIC_ANGLE * Math.PI / 180) * U_DEPTH * 0.3}
+              L ${U_WIDTH + Math.cos(ISOMETRIC_ANGLE * Math.PI / 180) * U_DEPTH}
+                ${-Math.sin(ISOMETRIC_ANGLE * Math.PI / 180) * U_DEPTH * 0.3}
+              L ${U_WIDTH} 0
+              Z
+            `}
+            fill="#444"
+            stroke="#222"
+            strokeWidth="1"
+          />
+        </g>
+
+        {/* 渲染设备 - 按U位从高到低排序 */}
+        {devices
+          .sort((a, b) => (b.uPosition || 0) - (a.uPosition || 0))
+          .map(device => {
+            const position = calculateDevicePosition(device);
+            return (
+              <g
+                key={device.id}
+                className="device-group"
+                onClick={() => onDeviceClick?.(device)}
+                style={{ cursor: 'pointer' }}
+              >
+                <Tooltip
+                  title={
+                    <div>
+                      <div><strong>{device.name}</strong></div>
+                      <div>类型: {DEVICE_CONFIG[device.type].label}</div>
+                      <div>型号: {device.model || '未知'}</div>
+                      <div>位置: U{device.uPosition} (高{device.uHeight}U)</div>
+                      {device.serialNo && <div>序列号: {device.serialNo}</div>}
+                      {device.ipAddresses && (
+                        <div>IP: {device.ipAddresses.join(', ')}</div>
+                      )}
+                    </div>
+                  }
+                >
+                  {renderIsometricShape(device, position)}
+                </Tooltip>
+              </g>
+            );
+          })}
+
+        {/* 空U位指示器 */}
+        {createUnits().map(unit => {
+          if (isUnitOccupied(unit)) return null;
+          const y = (cabinet.height - unit) * U_HEIGHT;
+
+          return (
+            <g
+              key={`empty-${unit}`}
+              className="empty-slot"
+              opacity="0.3"
+            >
+              <rect
+                x="8"
+                y={y + 2}
+                width={U_WIDTH - 16}
+                height={U_HEIGHT - 4}
+                fill="none"
+                stroke="#999"
+                strokeWidth="1"
+                strokeDasharray="3,3"
+                rx="1"
+              />
+            </g>
+          );
+        })}
+      </svg>
+    );
+  };
+
+  // 渲染2D前面板视图
+  const render2DView = () => {
+    const panelWidth = 450;
+    return (
+      <svg
+        width={panelWidth + 20}
+        height={cabinet.height * U_HEIGHT + 20}
+        viewBox={`0 0 ${panelWidth + 20} ${cabinet.height * U_HEIGHT + 20}`}
+        className="cabinet-svg cabinet-svg-2d"
+      >
+        {/* 机柜框架 - 简化的2D版本 */}
+        <g className="cabinet-frame-2d">
+          {/* 左侧立柱 */}
+          <rect
+            x="0"
+            y="0"
+            width="6"
+            height={cabinet.height * U_HEIGHT}
+            fill="#2c3e50"
+            rx="2"
+          />
+
+          {/* 右侧立柱 */}
+          <rect
+            x={panelWidth - 6}
+            y="0"
+            width="6"
+            height={cabinet.height * U_HEIGHT}
+            fill="#2c3e50"
+            rx="2"
+          />
+        </g>
+
+        {/* 渲染设备 - 按U位从高到低排序 */}
+        {devices
+          .sort((a, b) => (b.uPosition || 0) - (a.uPosition || 0))
+          .map(device => {
+            const position = calculateDevicePosition(device);
+            return (
+              <g
+                key={device.id}
+                className="device-group"
+                onClick={() => onDeviceClick?.(device)}
+                style={{ cursor: 'pointer' }}
+                transform="translate(10, 0)"
+              >
+                <Tooltip
+                  title={
+                    <div>
+                      <div><strong>{device.name}</strong></div>
+                      <div>类型: {DEVICE_CONFIG[device.type].label}</div>
+                      <div>型号: {device.model || '未知'}</div>
+                      <div>位置: U{device.uPosition} (高{device.uHeight}U)</div>
+                      {device.serialNo && <div>序列号: {device.serialNo}</div>}
+                      {device.ipAddresses && (
+                        <div>IP: {device.ipAddresses.join(', ')}</div>
+                      )}
+                    </div>
+                  }
+                >
+                  {render2DShape(device, position)}
+                </Tooltip>
+              </g>
+            );
+          })}
+
+        {/* 空U位指示器 */}
+        {createUnits().map(unit => {
+          if (isUnitOccupied(unit)) return null;
+          const y = (cabinet.height - unit) * U_HEIGHT;
+
+          return (
+            <g
+              key={`empty-${unit}`}
+              className="empty-slot"
+              opacity="0.2"
+              transform="translate(10, 0)"
+            >
+              <rect
+                x="4"
+                y={y + 2}
+                width={panelWidth - 8}
+                height={U_HEIGHT - 4}
+                fill="none"
+                stroke="#999"
+                strokeWidth="1"
+                strokeDasharray="5,5"
+                rx="2"
+              />
+            </g>
+          );
+        })}
+      </svg>
+    );
+  };
+
   return (
     <div className="cabinet-visualizer">
       <Card className="cabinet-card">
@@ -219,142 +526,25 @@ export const CabinetVisualizer: React.FC<CabinetVisualizerProps> = ({
           </Space>
         </div>
 
-        <div className="cabinet-container">
-          {/* U位标尺 */}
-          <div className="u-ruler">
-            {createUnits().map(unit => (
-              <div
-                key={unit}
-                className={`u-mark ${isUnitOccupied(unit) ? 'occupied' : 'available'}`}
-                style={{ height: U_HEIGHT }}
-              >
-                <span className="u-number">{unit}</span>
-              </div>
-            ))}
-          </div>
+        <div className={`cabinet-container cabinet-container--${viewMode}`}>
+          {/* U位标尺 - 在2D视图中隐藏，在3D视图中显示 */}
+          {viewMode === '3d' && (
+            <div className="u-ruler">
+              {createUnits().map(unit => (
+                <div
+                  key={unit}
+                  className={`u-mark ${isUnitOccupied(unit) ? 'occupied' : 'available'}`}
+                  style={{ height: U_HEIGHT }}
+                >
+                  <span className="u-number">{unit}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
-          {/* 机柜SVG视图 */}
-          <div className="cabinet-svg-container">
-            <svg
-              width={U_WIDTH + U_DEPTH + 20}
-              height={cabinet.height * U_HEIGHT + 20}
-              viewBox={`0 0 ${U_WIDTH + U_DEPTH + 20} ${cabinet.height * U_HEIGHT + 20}`}
-              className="cabinet-svg"
-            >
-              {/* 机柜框架 */}
-              <g className="cabinet-frame">
-                {/* 左侧立柱 */}
-                <rect
-                  x="0"
-                  y="0"
-                  width="4"
-                  height={cabinet.height * U_HEIGHT}
-                  fill="#333"
-                />
-
-                {/* ��侧立柱 */}
-                <rect
-                  x={U_WIDTH - 4}
-                  y="0"
-                  width="4"
-                  height={cabinet.height * U_HEIGHT}
-                  fill="#333"
-                />
-
-                {/* 后面立柱（立体效果） */}
-                <rect
-                  x={Math.cos(ISOMETRIC_ANGLE * Math.PI / 180) * U_DEPTH}
-                  y={-Math.sin(ISOMETRIC_ANGLE * Math.PI / 180) * U_DEPTH * 0.3}
-                  width="4"
-                  height={cabinet.height * U_HEIGHT}
-                  fill="#666"
-                  opacity="0.7"
-                />
-
-                <rect
-                  x={U_WIDTH + Math.cos(ISOMETRIC_ANGLE * Math.PI / 180) * U_DEPTH - 4}
-                  y={-Math.sin(ISOMETRIC_ANGLE * Math.PI / 180) * U_DEPTH * 0.3}
-                  width="4"
-                  height={cabinet.height * U_HEIGHT}
-                  fill="#666"
-                  opacity="0.7"
-                />
-
-                {/* 机柜顶部框架 */}
-                <path
-                  d={`
-                    M 0 0
-                    L ${Math.cos(ISOMETRIC_ANGLE * Math.PI / 180) * U_DEPTH}
-                      ${-Math.sin(ISOMETRIC_ANGLE * Math.PI / 180) * U_DEPTH * 0.3}
-                    L ${U_WIDTH + Math.cos(ISOMETRIC_ANGLE * Math.PI / 180) * U_DEPTH}
-                      ${-Math.sin(ISOMETRIC_ANGLE * Math.PI / 180) * U_DEPTH * 0.3}
-                    L ${U_WIDTH} 0
-                    Z
-                  `}
-                  fill="#444"
-                  stroke="#222"
-                  strokeWidth="1"
-                />
-              </g>
-
-              {/* 渲染设备 - 按U位从高到低排序，确保高U位设备在底层 */}
-              {devices
-                .sort((a, b) => (b.uPosition || 0) - (a.uPosition || 0))
-                .map(device => {
-                const position = calculateDevicePosition(device);
-                return (
-                  <g
-                    key={device.id}
-                    className="device-group"
-                    onClick={() => onDeviceClick?.(device)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <Tooltip
-                      title={
-                        <div>
-                          <div><strong>{device.name}</strong></div>
-                          <div>类型: {DEVICE_CONFIG[device.type].label}</div>
-                          <div>型号: {device.model || '未知'}</div>
-                          <div>位置: U{device.uPosition} (高{device.uHeight}U)</div>
-                          {device.serialNo && <div>序列号: {device.serialNo}</div>}
-                          {device.ipAddresses && (
-                            <div>IP: {device.ipAddresses.join(', ')}</div>
-                          )}
-                        </div>
-                      }
-                    >
-                      {renderIsometricShape(device, position)}
-                    </Tooltip>
-                  </g>
-                );
-              })}
-
-              {/* 空U位指示器 */}
-              {createUnits().map(unit => {
-                if (isUnitOccupied(unit)) return null;
-                const y = (cabinet.height - unit) * U_HEIGHT;
-
-                return (
-                  <g
-                    key={`empty-${unit}`}
-                    className="empty-slot"
-                    opacity="0.3"
-                  >
-                    <rect
-                      x="8"
-                      y={y + 2}
-                      width={U_WIDTH - 16}
-                      height={U_HEIGHT - 4}
-                      fill="none"
-                      stroke="#999"
-                      strokeWidth="1"
-                      strokeDasharray="3,3"
-                      rx="1"
-                    />
-                  </g>
-                );
-              })}
-            </svg>
+          {/* 机柜SVG视图 - 根据viewMode渲染不同视图 */}
+          <div className={`cabinet-svg-container cabinet-svg-container--${viewMode}`}>
+            {viewMode === '3d' ? render3DView() : render2DView()}
           </div>
         </div>
 
