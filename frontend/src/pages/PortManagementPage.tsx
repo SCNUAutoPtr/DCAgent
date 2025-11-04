@@ -384,23 +384,6 @@ export default function PortManagementPage() {
     setBulkCreateModalVisible(true);
   };
 
-  const handleBulkCreate = async () => {
-    try {
-      const values = await bulkCreateForm.validateFields();
-      await portService.createBulk(values.panelId, values.count, values.prefix);
-      message.success(`成功创建 ${values.count} 个端口`);
-      setBulkCreateModalVisible(false);
-      bulkCreateForm.resetFields();
-      if (selectedPanel) {
-        loadPorts(selectedPanel.id);
-      }
-    } catch (error: any) {
-      if (error.errorFields) return;
-      message.error('批量创建失败');
-      console.error(error);
-    }
-  };
-
   // 按设备分组面板
   const panelsByDevice = devices.map((device) => ({
     device,
