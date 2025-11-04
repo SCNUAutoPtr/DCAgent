@@ -20,6 +20,8 @@ tags:
     description: 设备管理
   - name: Panels
     description: 面板管理
+  - name: PanelTemplates
+    description: 面板模板管理
   - name: Ports
     description: 端口管理
   - name: Cables
@@ -184,6 +186,107 @@ components:
         deviceId:
           type: string
           format: uuid
+        templateId:
+          type: string
+          format: uuid
+          nullable: true
+        isCustomized:
+          type: boolean
+          default: false
+        positionX:
+          type: number
+          nullable: true
+        positionY:
+          type: number
+          nullable: true
+        width:
+          type: number
+          nullable: true
+        height:
+          type: number
+          nullable: true
+        backgroundColor:
+          type: string
+          nullable: true
+        image:
+          type: string
+          nullable: true
+        svgPath:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PanelTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: 模板名称，如 "24口交换机面板"
+        type:
+          $ref: '#/components/schemas/PanelType'
+        portCount:
+          type: integer
+          minimum: 1
+          description: 端口数量
+        description:
+          type: string
+          nullable: true
+          description: 模板描述
+        width:
+          type: number
+          default: 482.6
+          description: 面板宽度（mm）
+        height:
+          type: number
+          default: 44.45
+          description: 面板高度（mm），标准1U为44.45mm
+        layoutConfig:
+          type: object
+          nullable: true
+          description: 布局规则配置
+        portDefinitions:
+          type: array
+          description: 端口定义数组
+          items:
+            type: object
+            properties:
+              number:
+                type: string
+              position:
+                type: object
+                properties:
+                  x:
+                    type: number
+                  y:
+                    type: number
+              size:
+                type: object
+                properties:
+                  width:
+                    type: number
+                  height:
+                    type: number
+        backgroundColor:
+          type: string
+          nullable: true
+        image:
+          type: string
+          nullable: true
+        svgPath:
+          type: string
+          nullable: true
+        isSystem:
+          type: boolean
+          default: false
+          description: 是否为系统预设模板
         createdAt:
           type: string
           format: date-time
@@ -763,6 +866,278 @@ paths:
                   $ref: '#/components/schemas/Port'
         '400':
           description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /panel-templates:
+    get:
+      tags:
+        - PanelTemplates
+      summary: 获取所有面板模板
+      parameters:
+        - in: query
+          name: type
+          schema:
+            $ref: '#/components/schemas/PanelType'
+          description: 按面板类型筛选
+      responses:
+        '200':
+          description: 成功返回模板列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PanelTemplate'
+    post:
+      tags:
+        - PanelTemplates
+      summary: 创建面板模板
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - type
+                - portCount
+              properties:
+                name:
+                  type: string
+                type:
+                  $ref: '#/components/schemas/PanelType'
+                portCount:
+                  type: integer
+                  minimum: 1
+                description:
+                  type: string
+                width:
+                  type: number
+                height:
+                  type: number
+                layoutConfig:
+                  type: object
+                backgroundColor:
+                  type: string
+                image:
+                  type: string
+                svgPath:
+                  type: string
+      responses:
+        '201':
+          description: 模板创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PanelTemplate'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /panel-templates/{id}:
+    get:
+      tags:
+        - PanelTemplates
+      summary: 获取模板详情
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功返回模板详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PanelTemplate'
+        '404':
+          description: 模板不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - PanelTemplates
+      summary: 更新面板模板
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                portCount:
+                  type: integer
+                portDefinitions:
+                  type: array
+                  items:
+                    type: object
+                layoutConfig:
+                  type: object
+                backgroundColor:
+                  type: string
+                image:
+                  type: string
+                svgPath:
+                  type: string
+      responses:
+        '200':
+          description: 模板更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PanelTemplate'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 不允许修改系统预设模板
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - PanelTemplates
+      summary: 删除面板模板
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 模板删除成功
+        '400':
+          description: 删除失败（可能有面板正在使用）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /panel-templates/{id}/create-panel:
+    post:
+      tags:
+        - PanelTemplates
+      summary: 从模板创建面板
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: 模板ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - deviceId
+              properties:
+                deviceId:
+                  type: string
+                  format: uuid
+                  description: 设备ID
+                panelName:
+                  type: string
+                  description: 面板名称（可选，默认使用模板名称）
+      responses:
+        '201':
+          description: 面板创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  panel:
+                    $ref: '#/components/schemas/Panel'
+                  ports:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Port'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /panel-templates/unbind/{panelId}:
+    post:
+      tags:
+        - PanelTemplates
+      summary: 解绑面板与模板
+      description: 将面板从模板解绑，允许自定义端口布局
+      parameters:
+        - in: path
+          name: panelId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 解绑成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Panel'
+        '400':
+          description: 解绑失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /panel-templates/init-system-templates:
+    post:
+      tags:
+        - PanelTemplates
+      summary: 初始化系统预设模板
+      description: 创建系统预设的常用面板模板（24口交换机、48口交换机等）
+      responses:
+        '200':
+          description: 初始化成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 系统预设模板初始化成功
+        '500':
+          description: 初始化失败
           content:
             application/json:
               schema:
