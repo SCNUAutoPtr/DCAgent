@@ -86,7 +86,10 @@ export class PanelTemplateService {
   async updateTemplate(id: string, data: Partial<PanelTemplateData>) {
     // 不允许修改系统模板
     const template = await prisma.panelTemplate.findUnique({ where: { id } });
-    if (template?.isSystem) {
+    if (!template) {
+      throw new Error('模板不存在');
+    }
+    if (template.isSystem) {
       throw new Error('不允许修改系统预设模板');
     }
 
@@ -104,6 +107,8 @@ export class PanelTemplateService {
           portDefinitions: this.generatePortDefinitions(template.type, data.portCount),
         }),
         ...(data.layoutConfig && { layoutConfig: data.layoutConfig }),
+        // 如果直接传了端口定义，使用传入的定义（来自可视化编辑器）
+        ...(data.portDefinitions && { portDefinitions: data.portDefinitions }),
       },
     });
   }
