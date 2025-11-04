@@ -79,8 +79,19 @@ export default function PanelTemplateEditor({
   const [groups, setGroups] = useState<PortGroup[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
   const [history, setHistory] = useState<PortDefinition[][]>([initialPorts]);
   const [historyIndex, setHistoryIndex] = useState(0);
+
+  // 当initialPorts改变时重新初始化编辑器状态
+  useEffect(() => {
+    setPorts(initialPorts);
+    setSelectedPorts(new Set());
+    setGroups([]);
+    setHistory([initialPorts]);
+    setHistoryIndex(0);
+    setZoom(1.5);
+  }, [initialPorts]);
 
   // 绘制画布
   useEffect(() => {
@@ -142,11 +153,25 @@ export default function PanelTemplateEditor({
       );
     });
 
-    // 绘制选择框
-    if (isDragging && dragStart) {
-      // 这里可以添加拖拽选择框的绘制逻辑
+    // 绘制拖拽选择框
+    if (isDragging && dragStart && dragCurrent) {
+      const x1 = Math.min(dragStart.x, dragCurrent.x) * zoom;
+      const y1 = Math.min(dragStart.y, dragCurrent.y) * zoom;
+      const x2 = Math.max(dragStart.x, dragCurrent.x) * zoom;
+      const y2 = Math.max(dragStart.y, dragCurrent.y) * zoom;
+
+      // 绘制选择框背景
+      ctx.fillStyle = 'rgba(24, 144, 255, 0.1)';
+      ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+
+      // 绘制选择框边框
+      ctx.strokeStyle = '#1890ff';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+      ctx.setLineDash([]);
     }
-  }, [ports, selectedPorts, groups, zoom, width, height, isDragging, dragStart]);
+  }, [ports, selectedPorts, groups, zoom, width, height, isDragging, dragStart, dragCurrent]);
 
   // 添加到历史记录
   const addToHistory = (newPorts: PortDefinition[]) => {
@@ -172,8 +197,8 @@ export default function PanelTemplateEditor({
     }
   };
 
-  // 画布点击事件
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // 鼠标按下事件
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -191,6 +216,7 @@ export default function PanelTemplateEditor({
     );
 
     if (clickedPort) {
+      // 点击端口
       const newSelected = new Set(selectedPorts);
       if (e.ctrlKey || e.metaKey) {
         // Ctrl/Cmd + 点击：多选
@@ -201,14 +227,80 @@ export default function PanelTemplateEditor({
         }
       } else {
         // 单选
-        newSelected.clear();
-        newSelected.add(clickedPort.number);
+        if (!newSelected.has(clickedPort.number)) {
+          newSelected.clear();
+          newSelected.add(clickedPort.number);
+        }
       }
       setSelectedPorts(newSelected);
     } else {
-      // 点击空白处取消选择
-      setSelectedPorts(new Set());
+      // 点击空白处，开始拖拽选框
+      if (!e.ctrlKey && !e.metaKey) {
+        setSelectedPorts(new Set());
+      }
+      setIsDragging(true);
+      setDragStart({ x, y });
+      setDragCurrent({ x, y });
     }
+  };
+
+  // 鼠标移动事件
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDragging || !dragStart) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / zoom;
+    const y = (e.clientY - rect.top) / zoom;
+
+    setDragCurrent({ x, y });
+  };
+
+  // 鼠标释放事件
+  const handleCanvasMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDragging || !dragStart || !dragCurrent) {
+      setIsDragging(false);
+      return;
+    }
+
+    // 计算选择框范围
+    const x1 = Math.min(dragStart.x, dragCurrent.x);
+    const y1 = Math.min(dragStart.y, dragCurrent.y);
+    const x2 = Math.max(dragStart.x, dragCurrent.x);
+    const y2 = Math.max(dragStart.y, dragCurrent.y);
+
+    // 找出选择框内的所有端口
+    const portsInSelection = ports.filter((port) => {
+      const portCenterX = port.position.x + port.size.width / 2;
+      const portCenterY = port.position.y + port.size.height / 2;
+      return (
+        portCenterX >= x1 &&
+        portCenterX <= x2 &&
+        portCenterY >= y1 &&
+        portCenterY <= y2
+      );
+    });
+
+    // 更新选中状态
+    if (portsInSelection.length > 0) {
+      const newSelected = new Set(selectedPorts);
+      if (e.ctrlKey || e.metaKey) {
+        // Ctrl/Cmd：添加到现有选择
+        portsInSelection.forEach((port) => newSelected.add(port.number));
+      } else {
+        // 替换选择
+        newSelected.clear();
+        portsInSelection.forEach((port) => newSelected.add(port.number));
+      }
+      setSelectedPorts(newSelected);
+    }
+
+    // 重置拖拽状态
+    setIsDragging(false);
+    setDragStart(null);
+    setDragCurrent(null);
   };
 
   // 添加端口
@@ -458,9 +550,12 @@ export default function PanelTemplateEditor({
             ref={canvasRef}
             width={width * zoom}
             height={height * zoom}
-            onClick={handleCanvasClick}
+            onMouseDown={handleCanvasMouseDown}
+            onMouseMove={handleCanvasMouseMove}
+            onMouseUp={handleCanvasMouseUp}
+            onMouseLeave={handleCanvasMouseUp}
             style={{
-              cursor: 'crosshair',
+              cursor: isDragging ? 'crosshair' : 'default',
               boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
             }}
           />
@@ -488,7 +583,8 @@ export default function PanelTemplateEditor({
         <Card size="small" title="操作提示" style={{ backgroundColor: '#e6f7ff' }}>
           <ul style={{ margin: 0, paddingLeft: 20 }}>
             <li>点击端口进行选择，Ctrl/Cmd + 点击可多选</li>
-            <li>使用移动按钮调整选中端口的位置</li>
+            <li>在空白处拖拽可框选多个端口，Ctrl/Cmd + 拖拽可添加到现有选择</li>
+            <li>使用移动按钮调整选中端口的位置（5mm步进）</li>
             <li>选中多个端口后可创建端口组，方便批量管理</li>
             <li>使用缩放按钮调整视图大小以便精确编辑</li>
             <li>支持撤销/重做操作（Ctrl+Z / Ctrl+Y）</li>
