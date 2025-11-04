@@ -24,6 +24,8 @@ import {
   Collapse,
   Divider,
   Tooltip,
+  Descriptions,
+  Alert,
 } from 'antd';
 import {
   PlusOutlined,
@@ -34,13 +36,19 @@ import {
   SettingOutlined,
   AppstoreOutlined,
   BlockOutlined,
+  CloudServerOutlined,
 } from '@ant-design/icons';
-import { Cabinet, Room, DataCenter, Device, DeviceType } from '@/types';
+import { Cabinet, Room, DataCenter, Device, DeviceType, Panel, Port } from '@/types';
 import { cabinetService } from '@/services/cabinetService';
 import { roomService } from '@/services/roomService';
 import { dataCenterService } from '@/services/dataCenterService';
 import { deviceService } from '@/services/deviceService';
+import { panelService } from '@/services/panelService';
+import { portService } from '@/services/portService';
+import { panelTemplateService } from '@/services/panelTemplateService';
 import { CabinetVisualizer, ViewMode } from '@/components/CabinetVisualizer';
+import { PanelVisualizer } from '@/components/PanelVisualizer';
+import { generatePortLayout, sortPortsByNumber } from '@/utils/panelLayoutGenerator';
 
 
 interface CascaderOption {
@@ -75,8 +83,12 @@ export default function CabinetList() {
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [deviceModalVisible, setDeviceModalVisible] = useState(false);
+  const [panelViewModalVisible, setPanelViewModalVisible] = useState(false);
   const [editingCabinet, setEditingCabinet] = useState<Cabinet | null>(null);
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
+  const [viewingDevice, setViewingDevice] = useState<Device | null>(null);
+  const [devicePanels, setDevicePanels] = useState<Panel[]>([]);
+  const [panelPorts, setPanelPorts] = useState<Map<string, Port[]>>(new Map());
   const [selectedRoom, setSelectedRoom] = useState<string>();
   const [selectedCabinet, setSelectedCabinet] = useState<Cabinet | null>(null);
   const [activeTab, setActiveTab] = useState('list');
@@ -269,6 +281,58 @@ export default function CabinetList() {
       }
     }
     setDeviceModalVisible(true);
+  };
+
+  // 打开设备面板查看对话框（左键点击）
+  const handleViewDevicePanels = async (device: Device) => {
+    try {
+      setViewingDevice(device);
+      const panels = await panelService.getByDevice(device.id);
+      setDevicePanels(panels);
+
+      // 加载每个面板的端口数据并生成布局
+      const portsMap = new Map<string, Port[]>();
+      await Promise.all(
+        panels.map(async (panel) => {
+          let ports = await portService.getByPanel(panel.id);
+
+          // 按端口编号排序
+          ports = sortPortsByNumber(ports);
+
+          // 检查端口是否已有布局位置，如果没有则自动生成
+          const hasLayout = ports.some(p => p.position);
+          if (!hasLayout && ports.length > 0) {
+            // 自动生成端口布局
+            ports = generatePortLayout(ports, panel);
+          }
+
+          portsMap.set(panel.id, ports);
+        })
+      );
+      setPanelPorts(portsMap);
+
+      setPanelViewModalVisible(true);
+    } catch (error) {
+      console.error('Error loading device panels:', error);
+      message.error('加载设备面板失败');
+    }
+  };
+
+  // 解绑面板与模板
+  const handleUnbindPanel = async (panelId: string) => {
+    try {
+      await panelTemplateService.unbindPanel(panelId);
+      message.success('面板已从模板解绑，现在可以自定义端口布局');
+
+      // 重新加载面板信息
+      if (viewingDevice) {
+        const panels = await panelService.getByDevice(viewingDevice.id);
+        setDevicePanels(panels);
+      }
+    } catch (error: any) {
+      message.error('解绑失败: ' + error.message);
+      console.error('Error unbinding panel:', error);
+    }
   };
 
   // 保存设备
@@ -654,7 +718,7 @@ export default function CabinetList() {
                     cabinet={selectedCabinet}
                     devices={getCabinetDevices(selectedCabinet.id)}
                     viewMode={viewMode}
-                    onDeviceClick={handleOpenDeviceModal}
+                    onDeviceClick={handleViewDevicePanels}
                     onDeviceEdit={handleOpenDeviceModal}
                     onDeviceDelete={handleDeleteDevice}
                   />
@@ -838,6 +902,133 @@ export default function CabinetList() {
             </Form.Item>
           </Space>
         </Form>
+      </Modal>
+
+      {/* 设备面板查看对话框 */}
+      <Modal
+        title={
+          <Space>
+            <CloudServerOutlined />
+            {viewingDevice?.name} - 面板视图
+          </Space>
+        }
+        open={panelViewModalVisible}
+        onCancel={() => {
+          setPanelViewModalVisible(false);
+          setViewingDevice(null);
+          setDevicePanels([]);
+          setPanelPorts(new Map());
+        }}
+        footer={[
+          <Button
+            key="edit"
+            icon={<EditOutlined />}
+            onClick={() => {
+              setPanelViewModalVisible(false);
+              handleOpenDeviceModal(viewingDevice || undefined);
+            }}
+          >
+            编辑设备
+          </Button>,
+          <Button
+            key="close"
+            type="primary"
+            onClick={() => {
+              setPanelViewModalVisible(false);
+              setViewingDevice(null);
+              setDevicePanels([]);
+              setPanelPorts(new Map());
+            }}
+          >
+            关闭
+          </Button>,
+        ]}
+        width={900}
+        style={{ top: 20 }}
+      >
+        {viewingDevice && (
+          <div>
+            <Descriptions column={2} size="small" bordered style={{ marginBottom: 16 }}>
+              <Descriptions.Item label="设备类型">
+                <Tag color={deviceTypeMap[viewingDevice.type]?.color}>
+                  {deviceTypeMap[viewingDevice.type]?.label || viewingDevice.type}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="型号">
+                {viewingDevice.model || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="序列号">
+                {viewingDevice.serialNo || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="U位">
+                U{viewingDevice.uPosition} (高度: {viewingDevice.uHeight}U)
+              </Descriptions.Item>
+            </Descriptions>
+
+            <Divider orientation="left">设备面板</Divider>
+
+            {devicePanels.length === 0 ? (
+              <Empty description="该设备暂无面板" />
+            ) : (
+              <Tabs defaultActiveKey="0">
+                {devicePanels.map((panel, index) => {
+                  const ports = panelPorts.get(panel.id) || [];
+                  const hasTemplate = panel.templateId && !panel.isCustomized;
+
+                  return (
+                    <TabPane
+                      tab={
+                        <Space>
+                          {panel.name} ({panel.type})
+                          {hasTemplate && <Tag color="blue">模板</Tag>}
+                          {panel.isCustomized && <Tag color="orange">已自定义</Tag>}
+                        </Space>
+                      }
+                      key={index.toString()}
+                    >
+                      {hasTemplate && (
+                        <Alert
+                          message="此面板使用模板"
+                          description={
+                            <Space>
+                              <span>该面板基于模板创建，端口布局由模板定义。</span>
+                              <Popconfirm
+                                title="确认解绑模板？"
+                                description="解绑后可以自定义端口布局，但将失去模板更新。"
+                                onConfirm={() => handleUnbindPanel(panel.id)}
+                                okText="确认"
+                                cancelText="取消"
+                              >
+                                <Button type="link" size="small">
+                                  解绑模板
+                                </Button>
+                              </Popconfirm>
+                            </Space>
+                          }
+                          type="info"
+                          showIcon
+                          style={{ marginBottom: 16 }}
+                        />
+                      )}
+
+                      {ports.length === 0 ? (
+                        <Empty description="该面板暂无端口" />
+                      ) : (
+                        <PanelVisualizer
+                          panel={panel}
+                          ports={ports}
+                          onPortClick={(port) => {
+                            message.info(`端口: ${port.number} - 状态: ${port.status}`);
+                          }}
+                        />
+                      )}
+                    </TabPane>
+                  );
+                })}
+              </Tabs>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );

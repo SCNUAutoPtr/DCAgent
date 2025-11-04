@@ -86,25 +86,55 @@ enum PanelType {
   OTHER
 }
 
-// 面板（设备上的接口面板）
-model Panel {
+// 面板模板（可复用的面板配置）
+model PanelTemplate {
   id              String    @id @default(uuid())
-  name            String
-  type            PanelType
-  deviceId        String
-  device          Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
-  ports           Port[]
-  // 物理布局信息（单位：mm）
-  positionX       Float?    // X坐标
-  positionY       Float?    // Y坐标
-  width           Float?    // 宽度
-  height          Float?    // 高度
+  name            String    // 模板名称，如 "24口交换机面板"
+  type            PanelType // 面板类型
+  portCount       Int       // 端口数量
+  description     String?   // 模板描述
+  // 物理尺寸（单位：mm）
+  width           Float     @default(482.6) // 标准1U面板宽度
+  height          Float     @default(44.45) // 标准1U面板高度
+  // 布局配置（JSON存储）
+  layoutConfig    Json?     // 布局规则配置：{ portsPerRow, rowSpacing, portSize, spacing }
+  // 端口定义（JSON数组）
+  portDefinitions Json      // 端口定义数组：[{ number, position: {x,y}, size: {width,height} }]
   // 视觉样式
   backgroundColor String?   // 背景颜色
   image           String?   // 图片URL
   svgPath         String?   // SVG路径
+  // 是否为系统预设模板
+  isSystem        Boolean   @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  // 使用该模板的面板
+  panels          Panel[]
+}
+
+// 面板（设备上的接口面板）
+model Panel {
+  id              String         @id @default(uuid())
+  name            String
+  type            PanelType
+  deviceId        String
+  device          Device         @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  ports           Port[]
+  // 模板引用（可选）
+  templateId      String?
+  template        PanelTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  isCustomized    Boolean        @default(false) // 是否已从模板自定义（解绑）
+  // 物理布局信息（单位：mm）
+  positionX       Float?         // X坐标
+  positionY       Float?         // Y坐标
+  width           Float?         // 宽度
+  height          Float?         // 高度
+  // 视觉样式
+  backgroundColor String?        // 背景颜色
+  image           String?        // 图片URL
+  svgPath         String?        // SVG路径
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 }
 
 // 端口状态枚举

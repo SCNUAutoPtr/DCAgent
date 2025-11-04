@@ -12,6 +12,7 @@ import panelsRouter from './routes/panels';
 import portsRouter from './routes/ports';
 import cablesRouter from './routes/cables';
 import searchRouter from './routes/search';
+import panelTemplateRouter from './routes/panelTemplateRoutes';
 
 dotenv.config();
 
@@ -48,7 +49,8 @@ app.get('/api/v1', (req: Request, res: Response) => {
       panels: '/api/v1/panels',
       ports: '/api/v1/ports',
       cables: '/api/v1/cables',
-      search: '/api/v1/search'
+      search: '/api/v1/search',
+      panelTemplates: '/api/v1/panel-templates'
     }
   });
 });
@@ -62,6 +64,7 @@ app.use('/api/v1/panels', panelsRouter);
 app.use('/api/v1/ports', portsRouter);
 app.use('/api/v1/cables', cablesRouter);
 app.use('/api/v1/search', searchRouter);
+app.use('/api/v1/panel-templates', panelTemplateRouter);
 
 // Swagger UI (需要先安装依赖: npm install swagger-ui-express yamljs @types/yamljs)
 // app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));

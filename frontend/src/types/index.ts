@@ -64,11 +64,39 @@ export enum PanelType {
   OTHER = 'OTHER',
 }
 
+export interface PanelTemplate {
+  id: string;
+  name: string;
+  type: PanelType;
+  portCount: number;
+  description?: string;
+  // 物理尺寸
+  width: number;
+  height: number;
+  // 布局配置
+  layoutConfig?: any;
+  portDefinitions: Array<{
+    number: string;
+    position: { x: number; y: number };
+    size: { width: number; height: number };
+  }>;
+  // 视觉样式
+  backgroundColor?: string;
+  image?: string;
+  svgPath?: string;
+  isSystem: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Panel {
   id: string;
   name: string;
   type: PanelType;
   deviceId: string;
+  // 模板引用
+  templateId?: string;
+  isCustomized: boolean;
   // 物理布局信息
   position?: {
     x: number;      // X坐标 (mm)

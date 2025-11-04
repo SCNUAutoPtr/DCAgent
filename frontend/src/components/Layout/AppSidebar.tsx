@@ -6,6 +6,7 @@ import {
   InboxOutlined,
   ApartmentOutlined,
   CloudUploadOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -76,6 +77,11 @@ export default function AppSidebar() {
       key: '/bulk-deployment',
       icon: <CloudUploadOutlined />,
       label: '批量上架',
+    },
+    {
+      key: '/panel-templates',
+      icon: <FileTextOutlined />,
+      label: '面板模板',
     },
   ];
 

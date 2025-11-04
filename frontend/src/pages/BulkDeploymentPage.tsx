@@ -1,4 +1,5 @@
-import { Typography, Card, Alert, Tabs, Space, Button } from 'antd';
+import { useState, useEffect } from 'react';
+import { Typography, Card, Alert, Tabs, Space, Button, Modal, Form, Select, message } from 'antd';
 import {
   CloudUploadOutlined,
   DatabaseOutlined,
@@ -6,6 +7,9 @@ import {
   ApiOutlined,
   LinkOutlined,
 } from '@ant-design/icons';
+import { PanelTemplate, Device } from '@/types';
+import { panelTemplateService } from '@/services/panelTemplateService';
+import { deviceService } from '@/services/deviceService';
 
 const { Title, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -15,6 +19,53 @@ const { TabPane } = Tabs;
  * 用于批量初始化新购买的服务器和设备
  */
 export default function BulkDeploymentPage() {
+  const [templates, setTemplates] = useState<PanelTemplate[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [templateModalVisible, setTemplateModalVisible] = useState(false);
+  const [form] = Form.useForm();
+
+  useEffect(() => {
+    loadTemplates();
+    loadDevices();
+  }, []);
+
+  const loadTemplates = async () => {
+    try {
+      const data = await panelTemplateService.getAll();
+      setTemplates(data);
+    } catch (error: any) {
+      message.error('加载模板失败: ' + error.message);
+    }
+  };
+
+  const loadDevices = async () => {
+    try {
+      const data = await deviceService.getAll();
+      setDevices(data);
+    } catch (error: any) {
+      message.error('加载设备失败: ' + error.message);
+    }
+  };
+
+  const handleCreateFromTemplate = () => {
+    form.resetFields();
+    setTemplateModalVisible(true);
+  };
+
+  const handleTemplateSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      const { templateId, deviceId } = values;
+
+      await panelTemplateService.createPanelFromTemplate(templateId, deviceId);
+      message.success('从模板创建面板成功！');
+      setTemplateModalVisible(false);
+      form.resetFields();
+    } catch (error: any) {
+      message.error('创建失败: ' + error.message);
+    }
+  };
+
   return (
     <div>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -84,8 +135,8 @@ export default function BulkDeploymentPage() {
                 <li>存储设备面板模板</li>
                 <li>PDU电源面板模板</li>
               </ul>
-              <Button type="primary" disabled>
-                选择模板
+              <Button type="primary" onClick={handleCreateFromTemplate}>
+                从模板创建面板
               </Button>
             </Card>
           </TabPane>
@@ -152,6 +203,45 @@ export default function BulkDeploymentPage() {
           showIcon
         />
       </Space>
+
+      {/* 从模板创建面板 Modal */}
+      <Modal
+        title="从模板创建面板"
+        open={templateModalVisible}
+        onOk={handleTemplateSubmit}
+        onCancel={() => setTemplateModalVisible(false)}
+        width={600}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            name="templateId"
+            label="选择模板"
+            rules={[{ required: true, message: '请选择模板' }]}
+          >
+            <Select placeholder="选择面板模板">
+              {templates.map((template) => (
+                <Select.Option key={template.id} value={template.id}>
+                  {template.name} ({template.type} - {template.portCount}口)
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="deviceId"
+            label="选择设备"
+            rules={[{ required: true, message: '请选择设备' }]}
+          >
+            <Select placeholder="选择目标设备">
+              {devices.map((device) => (
+                <Select.Option key={device.id} value={device.id}>
+                  {device.name} ({device.type})
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }
