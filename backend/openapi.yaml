@@ -24,6 +24,8 @@ tags:
     description: 端口管理
   - name: Cables
     description: 线缆管理
+  - name: Search
+    description: 全局搜索
 
 components:
   schemas:
@@ -267,6 +269,40 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    EntityType:
+      type: string
+      enum:
+        - DataCenter
+        - Room
+        - Cabinet
+        - Device
+        - Cable
+        - Panel
+        - Port
+
+    SearchResult:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/EntityType'
+        id:
+          type: string
+          format: uuid
+        shortId:
+          type: integer
+        name:
+          type: string
+          nullable: true
+        label:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
 
 paths:
   # Panel endpoints

@@ -1,6 +1,9 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+// import swaggerUi from 'swagger-ui-express';  // 需要安装: npm install swagger-ui-express
+// import YAML from 'yamljs';  // 需要安装: npm install yamljs @types/yamljs
 import datacentersRouter from './routes/datacenters';
 import roomsRouter from './routes/rooms';
 import cabinetsRouter from './routes/cabinets';
@@ -14,6 +17,9 @@ dotenv.config();
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
+
+// 加载 OpenAPI 文档（需要先安装依赖）
+// const openApiDocument = YAML.load(path.join(__dirname, '../openapi.yaml'));
 
 // Middleware
 app.use(cors());
@@ -57,6 +63,9 @@ app.use('/api/v1/ports', portsRouter);
 app.use('/api/v1/cables', cablesRouter);
 app.use('/api/v1/search', searchRouter);
 
+// Swagger UI (需要先安装依赖: npm install swagger-ui-express yamljs @types/yamljs)
+// app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
+
 // Error handling
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
@@ -75,7 +84,8 @@ app.use((req: Request, res: Response) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
-  console.log(`📡 API endpoints: http://localhost:${PORT}/api`);
+  console.log(`📡 API endpoints: http://localhost:${PORT}/api/v1`);
+  console.log(`📖 API docs (需要安装依赖): http://localhost:${PORT}/api-docs`);
 });
 
 export default app;

@@ -1,0 +1,498 @@
+# 这是需要添加到 openapi.yaml 的新端点定义
+
+# DataCenters endpoints
+/datacenters:
+  get:
+    tags:
+      - DataCenters
+    summary: 获取数据中心列表
+    parameters:
+      - name: search
+        in: query
+        schema:
+          type: string
+        description: 搜索关键词
+    responses:
+      '200':
+        description: 成功返回数据中心列表
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/DataCenter'
+
+/datacenters/get:
+  post:
+    tags:
+      - DataCenters
+    summary: 获取数据中心详情
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - id
+            properties:
+              id:
+                type: string
+                format: uuid
+    responses:
+      '200':
+        description: 成功返回数据中心详情
+      '404':
+        description: 数据中心不存在
+
+/datacenters/by-shortid:
+  post:
+    tags:
+      - DataCenters
+    summary: 根据shortId获取数据中心
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - shortId
+            properties:
+              shortId:
+                type: integer
+    responses:
+      '200':
+        description: 成功返回数据中心详情
+      '404':
+        description: 数据中心不存在
+
+/datacenters/create:
+  post:
+    tags:
+      - DataCenters
+    summary: 创建数据中心
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - name
+            properties:
+              name:
+                type: string
+              location:
+                type: string
+    responses:
+      '201':
+        description: 数据中心创建成功
+
+/datacenters/update:
+  post:
+    tags:
+      - DataCenters
+    summary: 更新数据中心
+
+/datacenters/delete:
+  post:
+    tags:
+      - DataCenters
+    summary: 删除数据中心
+
+# Rooms endpoints
+/rooms:
+  get:
+    tags:
+      - Rooms
+    summary: 获取机房列表
+    parameters:
+      - name: dataCenterId
+        in: query
+        schema:
+          type: string
+      - name: search
+        in: query
+        schema:
+          type: string
+
+/rooms/get:
+  post:
+    tags:
+      - Rooms
+    summary: 获取机房详情
+
+/rooms/by-shortid:
+  post:
+    tags:
+      - Rooms
+    summary: 根据shortId获取机房
+
+/rooms/create:
+  post:
+    tags:
+      - Rooms
+    summary: 创建机房
+
+/rooms/update:
+  post:
+    tags:
+      - Rooms
+    summary: 更新机房
+
+/rooms/delete:
+  post:
+    tags:
+      - Rooms
+    summary: 删除机房
+
+# Cabinets endpoints
+/cabinets:
+  get:
+    tags:
+      - Cabinets
+    summary: 获取机柜列表
+    parameters:
+      - name: roomId
+        in: query
+        schema:
+          type: string
+      - name: search
+        in: query
+        schema:
+          type: string
+
+/cabinets/get:
+  post:
+    tags:
+      - Cabinets
+    summary: 获取机柜详情
+
+/cabinets/by-shortid:
+  post:
+    tags:
+      - Cabinets
+    summary: 根据shortId获取机柜
+
+/cabinets/create:
+  post:
+    tags:
+      - Cabinets
+    summary: 创建机柜
+
+/cabinets/update:
+  post:
+    tags:
+      - Cabinets
+    summary: 更新机柜
+
+/cabinets/delete:
+  post:
+    tags:
+      - Cabinets
+    summary: 删除机柜
+
+# Devices endpoints
+/devices:
+  get:
+    tags:
+      - Devices
+    summary: 获取设备列表
+    parameters:
+      - name: cabinetId
+        in: query
+        schema:
+          type: string
+      - name: search
+        in: query
+        schema:
+          type: string
+
+/devices/get:
+  post:
+    tags:
+      - Devices
+    summary: 获取设备详情
+
+/devices/by-shortid:
+  post:
+    tags:
+      - Devices
+    summary: 根据shortId获取设备
+
+/devices/create:
+  post:
+    tags:
+      - Devices
+    summary: 创建设备
+
+/devices/update:
+  post:
+    tags:
+      - Devices
+    summary: 更新设备
+
+/devices/delete:
+  post:
+    tags:
+      - Devices
+    summary: 删除设备
+
+# Cables endpoints
+/cables:
+  get:
+    tags:
+      - Cables
+    summary: 获取线缆列表
+    parameters:
+      - name: search
+        in: query
+        schema:
+          type: string
+
+/cables/get:
+  post:
+    tags:
+      - Cables
+    summary: 获取线缆详情
+
+/cables/by-shortid:
+  post:
+    tags:
+      - Cables
+    summary: 根据shortId获取线缆
+
+/cables/create:
+  post:
+    tags:
+      - Cables
+    summary: 创建线缆
+
+/cables/update:
+  post:
+    tags:
+      - Cables
+    summary: 更新线缆
+
+/cables/delete:
+  post:
+    tags:
+      - Cables
+    summary: 删除线缆
+
+/cables/port-connection:
+  post:
+    tags:
+      - Cables
+    summary: 获取端口连接
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - portId
+            properties:
+              portId:
+                type: string
+                format: uuid
+
+/cables/panel-connections:
+  post:
+    tags:
+      - Cables
+    summary: 获取面板连接
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - panelId
+            properties:
+              panelId:
+                type: string
+                format: uuid
+
+/cables/network-topology:
+  post:
+    tags:
+      - Cables
+    summary: 获取网络拓扑
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - panelId
+            properties:
+              panelId:
+                type: string
+                format: uuid
+              depth:
+                type: integer
+                default: 3
+
+/cables/endpoints:
+  post:
+    tags:
+      - Cables
+    summary: 获取线缆端点信息
+    description: 返回线缆连接的两个端口及其完整层级信息
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - id
+            properties:
+              id:
+                type: string
+                format: uuid
+    responses:
+      '200':
+        description: 成功返回线缆端点信息
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cable:
+                  $ref: '#/components/schemas/Cable'
+                portA:
+                  $ref: '#/components/schemas/Port'
+                portB:
+                  $ref: '#/components/schemas/Port'
+
+/cables/endpoints-by-shortid:
+  post:
+    tags:
+      - Cables
+    summary: 根据shortId获取线缆端点信息
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - shortId
+            properties:
+              shortId:
+                type: integer
+    responses:
+      '200':
+        description: 成功返回线缆端点信息
+
+# Panels by-shortid
+/panels/by-shortid:
+  post:
+    tags:
+      - Panels
+    summary: 根据shortId获取面板
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - shortId
+            properties:
+              shortId:
+                type: integer
+    responses:
+      '200':
+        description: 成功返回面板详情
+      '404':
+        description: 面板不存在
+
+# Ports by-shortid
+/ports/by-shortid:
+  post:
+    tags:
+      - Ports
+    summary: 根据shortId获取端口
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - shortId
+            properties:
+              shortId:
+                type: integer
+    responses:
+      '200':
+        description: 成功返回端口详情
+      '404':
+        description: 端口不存在
+
+# Search endpoints
+/search/global:
+  post:
+    tags:
+      - Search
+    summary: 全局搜索
+    description: 在所有实体中搜索关键词
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - query
+            properties:
+              query:
+                type: string
+                minLength: 1
+    responses:
+      '200':
+        description: 成功返回搜索结果
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/SearchResult'
+      '400':
+        description: 请求参数错误
+
+/search/by-shortid:
+  post:
+    tags:
+      - Search
+    summary: 根据shortId查找实体
+    description: 在所有实体类型中查找匹配的shortId
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - shortId
+            properties:
+              shortId:
+                type: integer
+    responses:
+      '200':
+        description: 成功找到实体
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchResult'
+      '404':
+        description: 未找到匹配的实体
+      '400':
+        description: 请求参数错误
