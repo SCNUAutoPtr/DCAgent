@@ -19,6 +19,7 @@ dotenv.config();
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0'; // 监听所有网络接口
 
 // 加载 OpenAPI 文档（需要先安装依赖）
 // const openApiDocument = YAML.load(path.join(__dirname, '../openapi.yaml'));
@@ -89,11 +90,11 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
-  console.log(`📡 API endpoints: http://localhost:${PORT}/api/v1`);
-  console.log(`📖 API docs (需要安装依赖): http://localhost:${PORT}/api-docs`);
+app.listen(Number(PORT), HOST, () => {
+  console.log(`🚀 Server is running on http://${HOST}:${PORT}`);
+  console.log(`📊 Health check: http://${HOST}:${PORT}/health`);
+  console.log(`📡 API endpoints: http://${HOST}:${PORT}/api/v1`);
+  console.log(`📖 API docs (需要安装依赖): http://${HOST}:${PORT}/api-docs`);
 });
 
 export default app;

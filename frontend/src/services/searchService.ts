@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:3000/api/v1';
+import api from './api';
 
 export interface SearchResult {
   type: 'DataCenter' | 'Room' | 'Cabinet' | 'Device' | 'Cable' | 'Panel' | 'Port';
@@ -17,7 +15,7 @@ class SearchService {
    * 全局搜索
    */
   async globalSearch(query: string): Promise<SearchResult[]> {
-    const response = await axios.post(`${API_BASE_URL}/search/global`, { query });
+    const response = await api.post('/search/global', { query });
     return response.data;
   }
 
@@ -26,7 +24,7 @@ class SearchService {
    */
   async findByShortId(shortId: number): Promise<SearchResult | null> {
     try {
-      const response = await axios.post(`${API_BASE_URL}/search/by-shortid`, { shortId });
+      const response = await api.post('/search/by-shortid', { shortId });
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 404) {
@@ -41,7 +39,7 @@ class SearchService {
    */
   async getCableEndpointsByShortId(shortId: number) {
     try {
-      const response = await axios.post(`${API_BASE_URL}/cables/endpoints-by-shortid`, { shortId });
+      const response = await api.post('/cables/endpoints-by-shortid', { shortId });
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 404) {
