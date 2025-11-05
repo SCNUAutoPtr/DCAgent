@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Typography,
   Card,
@@ -22,6 +22,8 @@ import {
   DownloadOutlined,
   PlusOutlined,
   ScanOutlined,
+  InfoCircleOutlined,
+  LinkOutlined,
 } from '@ant-design/icons';
 import ReactFlow, {
   Node,
@@ -43,12 +45,33 @@ import { cableService } from '@/services/cableService';
 import { panelService } from '@/services/panelService';
 import { deviceService } from '@/services/deviceService';
 import { cabinetService } from '@/services/cabinetService';
-import type { Panel as PanelType, Device, Cabinet } from '@/types';
+import { portService } from '@/services/portService';
+import { roomService } from '@/services/roomService';
+import type { Panel as PanelType, Device, Cabinet, Port, Room } from '@/types';
 import CreateCableModal from '@/components/CreateCableModal';
 import PanelCanvasEditor, { PortDefinition } from '@/components/PanelCanvasEditor';
+import { getPortSize } from '@/constants/portSizes';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+
+// 扩展的端口类型，支持连接状态
+function getEnhancedPortColor(portType: string, isConnected: boolean): string {
+  const basePortType = portType.replace('_CONNECTED', '') as any;
+  try {
+    const portSize = getPortSize(basePortType);
+    if (isConnected) {
+      // 已连接：使用更深的颜色
+      return portSize.color ? `${portSize.color}dd` : '#1890ffdd';
+    } else {
+      // 未连接：使用更浅的颜色（降低透明度）
+      return portSize.color ? `${portSize.color}40` : '#1890ff40';
+    }
+  } catch {
+    // 如果端口类型不存在，返回默认颜色
+    return isConnected ? '#1890ffdd' : '#1890ff40';
+  }
+}
 
 // 节点类型颜色映射
 const nodeTypeColors: Record<string, string> = {
@@ -77,23 +100,31 @@ const cableTypeColors: Record<string, string> = {
 };
 
 // 获取设备位置信息的辅助函数
-const getDeviceLocation = (device: Device, cabinets: Cabinet[]) => {
+const getDeviceLocation = (device: Device, cabinets: Cabinet[], rooms: Room[]) => {
   if (!device?.cabinetId) return null;
   const cabinet = cabinets.find(c => c.id === device.cabinetId);
   if (!cabinet) return null;
+
+  // 查找机房信息
+  const room = rooms.find(r => r.id === cabinet.roomId);
+  const roomName = room?.name || '未知机房';
+
   const uPosition = device.uPosition ? `U${device.uPosition}` : '';
   const uHeight = device.uHeight ? `(${device.uHeight}U)` : '';
+
   return {
+    roomName,
     cabinetName: cabinet.name,
-    position: uPosition ? `${uPosition}${uHeight}` : null
+    position: uPosition ? `${uPosition}${uHeight}` : null,
+    fullLocation: `${roomName} - ${cabinet.name}${uPosition ? ` - ${uPosition}${uHeight}` : ''}`
   };
 };
 
 // 自定义节点组件
 function DeviceNode({ data }: { data: any }) {
-  const { device, panel, ports, cabinets, onPortHover, highlightedNodeIds } = data;
+  const { device, panel, ports, cabinets, rooms, onPortHover, highlightedNodeIds } = data;
   const deviceColor = nodeTypeColors[device?.type || 'OTHER'] || '#8c8c8c';
-  const location = getDeviceLocation(device, cabinets);
+  const location = getDeviceLocation(device, cabinets, rooms || []);
   const isHighlighted = highlightedNodeIds?.includes(panel?.id);
 
   return (
@@ -130,7 +161,7 @@ function DeviceNode({ data }: { data: any }) {
       {/* 位置信息 */}
       {location && (
         <div style={{ fontSize: '11px', color: '#722ed1', marginBottom: '4px' }}>
-          <div>{location.cabinetName} {location.position && `- ${location.position}`}</div>
+          <div>{location.fullLocation}</div>
         </div>
       )}
 
@@ -195,6 +226,7 @@ function CableTopologyContent() {
   const [panels, setPanels] = useState<PanelType[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [cabinets, setCabinets] = useState<Cabinet[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
   const [filteredPanels, setFilteredPanels] = useState<PanelType[]>([]);
   const [selectedPanelId, setSelectedPanelId] = useState<string>('');
@@ -231,10 +263,11 @@ function CableTopologyContent() {
     },
   }));
 
-  // 加载所有面板、设备和机柜
+  // 加载所有面板、设备、机柜和机房
   useEffect(() => {
     loadPanelsAndDevices();
     loadCabinets();
+    loadRooms();
   }, []);
 
   // 当选择设备时，筛选该设备下的面板
@@ -282,6 +315,17 @@ function CableTopologyContent() {
     } catch (error) {
       console.error('Failed to load cabinets:', error);
       message.error('加载机柜列表失败');
+    }
+  };
+
+  const loadRooms = async () => {
+    try {
+      const roomsData = await roomService.getAll();
+      setRooms(roomsData);
+      console.log('Loaded rooms:', roomsData.length);
+    } catch (error) {
+      console.error('Failed to load rooms:', error);
+      message.error('加载机房列表失败');
     }
   };
 
@@ -406,6 +450,7 @@ function CableTopologyContent() {
             device: deviceA,
             ports: [portA],
             cabinets: cabinets,
+            rooms: rooms,
             onPortHover: handlePortHover,
             highlightedNodeIds: highlightedNodeIds,
           },
@@ -428,6 +473,7 @@ function CableTopologyContent() {
             device: deviceB,
             ports: [portB],
             cabinets: cabinets,
+            rooms: rooms,
             onPortHover: handlePortHover,
             highlightedNodeIds: highlightedNodeIds,
           },
@@ -894,15 +940,113 @@ function CableTopologyContent() {
   );
 }
 
-// 接口可视化组件 - 复用PanelCanvasEditor
+// 接口可视化组件 - 显示所有端口，用颜色区分连接状态
 function PortVisualization({ device, panel, ports, edges }: {
   device: Device;
   panel: PanelType;
   ports: any[];
   edges: Edge[]
 }) {
-  // 转换端口数据格式
-  const portDefinitions: PortDefinition[] = ports.map((port: any) => {
+  const [allPorts, setAllPorts] = useState<Port[]>([]);
+  const [loadingPorts, setLoadingPorts] = useState(false);
+  const [allDevices, setAllDevices] = useState<Device[]>([]);
+  const [devicesMap, setDevicesMap] = useState<Map<string, Device>>(new Map());
+  const [allCabinets, setAllCabinets] = useState<Cabinet[]>([]);
+  const [cabinetsMap, setCabinetsMap] = useState<Map<string, Cabinet>>(new Map());
+  const [allRooms, setAllRooms] = useState<Room[]>([]);
+  const [roomsMap, setRoomsMap] = useState<Map<string, Room>>(new Map());
+  const [panelToDeviceMap, setPanelToDeviceMap] = useState<Map<string, Device>>(new Map());
+
+  // 加载所有设备和机柜信息
+  useEffect(() => {
+    const loadAllData = async () => {
+      try {
+        // 加载设备信息
+        const devicesData = await deviceService.getAll();
+        const devicesList = Array.isArray(devicesData) ? devicesData : [];
+        setAllDevices(devicesList);
+
+        // 创建设备映射表，方便快速查找
+        const deviceMap = new Map<string, Device>();
+        devicesList.forEach((device: Device) => {
+          deviceMap.set(device.id, device);
+        });
+        setDevicesMap(deviceMap);
+
+        // 创建面板到设备的映射表
+        const panelDeviceMap = new Map<string, Device>();
+        for (const device of devicesList) {
+          if (!device.id) continue;
+          try {
+            const devicePanels = await panelService.getByDevice(device.id);
+            devicePanels.forEach((panel: PanelType) => {
+              if (panel.id) {
+                panelDeviceMap.set(panel.id, device);
+              }
+            });
+          } catch (error) {
+            console.error(`Failed to load panels for device ${device.id}:`, error);
+          }
+        }
+        setPanelToDeviceMap(panelDeviceMap);
+
+        // 加载机柜信息
+        const cabinetsData = await cabinetService.getAll();
+        const cabinetsList = Array.isArray(cabinetsData) ? cabinetsData : [];
+        setAllCabinets(cabinetsList);
+
+        // 创建机柜映射表
+        const cabinetMap = new Map<string, Cabinet>();
+        cabinetsList.forEach((cabinet: Cabinet) => {
+          cabinetMap.set(cabinet.id, cabinet);
+        });
+        setCabinetsMap(cabinetMap);
+
+        // 加载机房信息
+        const roomsData = await roomService.getAll();
+        const roomsList = Array.isArray(roomsData) ? roomsData : [];
+        setAllRooms(roomsList);
+
+        // 创建机房映射表
+        const roomMap = new Map<string, Room>();
+        roomsList.forEach((room: Room) => {
+          roomMap.set(room.id, room);
+        });
+        setRoomsMap(roomMap);
+
+        console.log('Loaded devices:', devicesList.length, 'cabinets:', cabinetsList.length, 'rooms:', roomsList.length, 'panel mappings:', panelDeviceMap.size);
+      } catch (error) {
+        console.error('Failed to load data:', error);
+        message.error('加载设备或机柜信息失败');
+      }
+    };
+
+    loadAllData();
+  }, []);
+
+  // 加载面板的所有端口
+  useEffect(() => {
+    const loadAllPorts = async () => {
+      if (!panel?.id) return;
+
+      try {
+        setLoadingPorts(true);
+        const panelPorts = await portService.getAll(panel.id);
+        setAllPorts(panelPorts);
+      } catch (error) {
+        console.error('Failed to load all ports:', error);
+        message.error('加载端口信息失败');
+        setAllPorts([]);
+      } finally {
+        setLoadingPorts(false);
+      }
+    };
+
+    loadAllPorts();
+  }, [panel?.id]);
+
+  // 转换端口数据格式，包含所有端口
+  const portDefinitions: PortDefinition[] = allPorts.map((port: Port) => {
     // 获取端口连接的边来判断连接状态
     const connectedEdges = edges.filter(edge => {
       const { portA, portB } = edge.data || {};
@@ -911,22 +1055,119 @@ function PortVisualization({ device, panel, ports, edges }: {
 
     const isConnected = connectedEdges.length > 0;
 
-    // 获取对端端口信息
-    const connectedPort = edges.find(edge => {
+    // 获取连接的边的详细信息
+    const connectedEdge = edges.find(edge => {
       const { portA, portB } = edge.data || {};
       return portA?.id === port.id || portB?.id === port.id;
-    })?.data;
+    });
+
+    // 获取对端端口信息
+    const connectedPort = connectedEdge?.data;
+    const targetPort = connectedPort?.portA?.id === port.id ? connectedPort?.portB : connectedPort?.portA;
+
+    // 调试信息
+    if (isConnected) {
+      console.log('=== 连接信息调试 ===');
+      console.log('当前端口:', port.id, port.label);
+      console.log('连接边数据:', connectedEdge?.data);
+      console.log('对端端口:', targetPort);
+      console.log('edges 数据结构:', edges.slice(0, 1));
+    }
+
+    // 获取对端面板和设备信息
+    let targetPanel = null;
+    let targetDevice = null;
+
+    if (targetPort && targetPort.panelId) {
+      // 通过拓扑数据查找对端设备（更可靠的方式）
+      const targetEdge = edges.find(edge => {
+        const { portA, portB } = edge.data || {};
+        return (portA?.id === port.id || portB?.id === port.id);
+      });
+
+      if (targetEdge && targetEdge.data) {
+        const { portA, portB, deviceA, deviceB } = targetEdge.data;
+
+        // 确定对端端口和设备
+        const isPortA = portA?.id === port.id;
+        const targetPortFromEdge = isPortA ? portB : portA;
+        const targetDeviceFromEdge = isPortA ? deviceB : deviceA;
+
+        console.log('查找对端设备:', {
+          isPortA,
+          targetPortFromEdge,
+          targetDeviceFromEdge,
+          availableDevices: Array.from(devicesMap.entries()).slice(0, 5)
+        });
+
+        // 查找对端设备信息
+        if (targetDeviceFromEdge?.id) {
+          targetDevice = devicesMap.get(targetDeviceFromEdge.id);
+        }
+
+        // 如果通过边数据没找到设备，尝试通过面板ID查找
+        if (!targetDevice && targetPortFromEdge?.panelId) {
+          targetDevice = panelToDeviceMap.get(targetPortFromEdge.panelId);
+          console.log('通过面板ID查找设备:', {
+            panelId: targetPortFromEdge.panelId,
+            foundDevice: targetDevice?.name || '未找到',
+            panelMapSize: panelToDeviceMap.size
+          });
+        }
+
+        // 构建对端面板信息
+        if (targetDevice) {
+          targetPanel = {
+            id: targetPortFromEdge?.panelId || targetPort.panelId,
+            name: `${targetDevice.name} - 面板`,
+            type: 'NETWORK',
+            deviceId: targetDevice.id,
+            size: { width: 482.6, height: 44.45 },
+            backgroundColor: '#FFFFFF'
+          };
+
+          console.log('成功找到对端设备:', {
+            deviceName: targetDevice.name,
+            deviceType: targetDevice.type,
+            cabinetId: targetDevice.cabinetId,
+            uPosition: targetDevice.uPosition
+          });
+        }
+      }
+    }
+
+    // 创建一个特殊的端口类型来标识连接状态
+    const enhancedPortType = isConnected ? `${port.portType || 'RJ45'}_CONNECTED` : (port.portType || 'RJ45');
+
+    // 构建连接信息
+    let connectionLabel = undefined;
+    if (isConnected && targetPort) {
+      connectionLabel = `→ ${targetPort.label || targetPort.number}`;
+      // 如果有线缆信息，也添加进去
+      if (connectedEdge?.data?.cable) {
+        connectionLabel += ` [${connectedEdge.data.cable.type || '线缆'}]`;
+      }
+    }
 
     return {
       id: port.id,
-      number: port.label || port.number,
-      portType: port.portType || 'RJ45',
-      position: port.position || { x: 20 + (parseInt(port.number) - 1) * 25, y: 20 },
+      number: isConnected ? `●${port.label || port.number}` : `○${port.label || port.number}`, // 用符号区分连接状态
+      portType: enhancedPortType,
+      position: port.position || {
+        x: 20 + (parseInt(port.number) - 1) * 25,
+        y: 20
+      },
       size: port.size || { width: 20, height: 12 },
-      label: isConnected ? `→ ${connectedPort?.portA?.id === port.id ?
-        (connectedPort?.portB?.label || connectedPort?.portB?.number) :
-        (connectedPort?.portA?.label || connectedPort?.portA?.number)}` : undefined,
+      label: connectionLabel,
       rotation: port.rotation || 0,
+      // 额外的连接信息用于点击显示
+      connectionInfo: {
+        targetPort: targetPort,
+        targetPanel: targetPanel,
+        targetDevice: targetDevice,
+        cable: connectedEdge?.data?.cable,
+        edge: connectedEdge
+      }
     };
   });
 
@@ -934,30 +1175,452 @@ function PortVisualization({ device, panel, ports, edges }: {
   const panelHeight = panel.size?.height || 44.45;
   const backgroundColor = panel.backgroundColor || '#FFFFFF';
 
+  const connectedPortsCount = allPorts.filter(port => {
+    return edges.some(edge => {
+      const { portA, portB } = edge.data || {};
+      return portA?.id === port.id || portB?.id === port.id;
+    });
+  }).length;
+
   return (
     <div style={{ padding: '20px' }}>
       <div style={{ marginBottom: '16px' }}>
         <h3>{device.name} - {panel.name} 接口图</h3>
-        <p>设备类型: {device.type} | 端口总数: {ports.length} | 面板尺寸: {panelWidth} × {panelHeight} mm</p>
+        <p>
+          设备类型: {device.type} |
+          总端口: {allPorts.length} |
+          已连接: {connectedPortsCount} |
+          未连接: {allPorts.length - connectedPortsCount} |
+          面板尺寸: {panelWidth} × {panelHeight} mm
+        </p>
       </div>
 
-      {/* 使用PanelCanvasEditor显示接口图 */}
-      <PanelCanvasEditor
-        width={panelWidth}
-        height={panelHeight}
-        backgroundColor={backgroundColor}
-        initialPorts={portDefinitions}
-        readOnly={true}
+      {loadingPorts ? (
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <Spin size="large" tip="加载端口信息..." />
+        </div>
+      ) : (
+        <>
+          {/* 使用自定义端口可视化显示接口图 */}
+          <CustomPortVisualization
+            width={panelWidth}
+            height={panelHeight}
+            backgroundColor={backgroundColor}
+            ports={portDefinitions}
+            cabinetsMap={cabinetsMap}
+            roomsMap={roomsMap}
+            device={device}
+          />
+
+          <div style={{ marginTop: '16px', fontSize: '12px', color: '#666' }}>
+            <div>端口状态说明:</div>
+            <div style={{ display: 'flex', gap: '16px', marginTop: '8px', flexWrap: 'wrap' }}>
+              <span>● 深色端口: 已连接</span>
+              <span>● 浅色端口: 未连接</span>
+              <span>● 端口标签: 显示对端连接信息</span>
+              <span>● 不同颜色: 不同端口类型</span>
+              <span>● 实际比例: 真实面板尺寸</span>
+            </div>
+            <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#e6f7ff', borderRadius: '4px' }}>
+              <div style={{ color: '#1890ff', marginBottom: '4px' }}>
+                <InfoCircleOutlined style={{ marginRight: '4px' }} />
+                交互功能
+              </div>
+              <div>• 点击已连接端口可查看详细连接信息</div>
+              <div>• 虚线框表示可点击的连接端口</div>
+              <div>• 连接端口会闪烁显示</div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// 扩展的端口可视化组件，支持连接状态闪烁和端口点击
+function CustomPortVisualization({ width, height, backgroundColor, ports, cabinetsMap, roomsMap, device }: {
+  width: number;
+  height: number;
+  backgroundColor: string;
+  ports: PortDefinition[];
+  cabinetsMap: Map<string, Cabinet>;
+  roomsMap: Map<string, Room>;
+  device: Device;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [zoom] = useState(1.5);
+  const [time, setTime] = useState(0);
+  const [clickedPortInfo, setClickedPortInfo] = useState<any>(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+
+  // 动画循环
+  useEffect(() => {
+    let animationId: number;
+
+    const animate = () => {
+      setTime(prev => prev + 0.05); // 控制闪烁速度
+      animationId = requestAnimationFrame(animate);
+    };
+
+    animationId = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+    };
+  }, []);
+
+  // 处理端口点击 - 显示对端设备信息
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / zoom;
+    const y = (e.clientY - rect.top) / zoom;
+
+    // 查找点击的端口
+    const clickedPort = ports.find(
+      (port) =>
+        x >= port.position.x &&
+        x <= port.position.x + port.size.width &&
+        y >= port.position.y &&
+        y <= port.position.y + port.size.height
+    );
+
+    if (clickedPort && clickedPort.portType?.includes('_CONNECTED')) {
+      // 如果点击的是已连接的端口，显示详细信息
+      const portNumber = clickedPort.number.replace(/[●○]/, '');
+      const connectionInfo = (clickedPort as any).connectionInfo;
+
+      setClickedPortInfo({
+        port: clickedPort,
+        portNumber: portNumber,
+        targetPort: connectionInfo?.targetPort,
+        targetPanel: connectionInfo?.targetPanel,
+        targetDevice: connectionInfo?.targetDevice,
+        cable: connectionInfo?.cable,
+        edge: connectionInfo?.edge
+      });
+      setDetailModalVisible(true);
+    }
+  };
+
+  // 绘制端口
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // 清空画布
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 绘制面板背景
+    ctx.fillStyle = backgroundColor;
+    ctx.fillRect(0, 0, width * zoom, height * zoom);
+
+    // 绘制边框
+    ctx.strokeStyle = '#d9d9d9';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, 0, width * zoom, height * zoom);
+
+    // 绘制端口
+    ports.forEach((port) => {
+      const isConnected = port.portType?.includes('_CONNECTED');
+      const basePortType = port.portType?.replace('_CONNECTED', '') || 'RJ45';
+
+      let portColor = '#8c8c8c'; // 默认颜色
+      try {
+        const portSize = getPortSize(basePortType as any);
+        portColor = portSize.color || '#8c8c8c';
+      } catch {
+        // 使用默认颜色
+      }
+
+      // 计算闪烁效果（已连接的端口会闪烁）
+      let alpha = 1;
+      if (isConnected) {
+        alpha = 0.5 + 0.5 * Math.sin(time * 3); // 闪烁效果
+      } else {
+        alpha = 0.4; // 未连接端口半透明
+      }
+
+      // 保存当前画布状态
+      ctx.save();
+
+      // 计算端口中心点
+      const centerX = (port.position.x + port.size.width / 2) * zoom;
+      const centerY = (port.position.y + port.size.height / 2) * zoom;
+
+      // 移动到端口中心
+      ctx.translate(centerX, centerY);
+      if (port.rotation) {
+        ctx.rotate((port.rotation * Math.PI) / 180);
+      }
+
+      // 绘制端口矩形
+      ctx.fillStyle = portColor + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+      ctx.fillRect(
+        (-port.size.width / 2) * zoom,
+        (-port.size.height / 2) * zoom,
+        port.size.width * zoom,
+        port.size.height * zoom
+      );
+
+      // 绘制端口边框
+      ctx.strokeStyle = isConnected ? '#0050b3' : '#8c8c8c';
+      ctx.lineWidth = isConnected ? 2 : 1;
+      ctx.strokeRect(
+        (-port.size.width / 2) * zoom,
+        (-port.size.height / 2) * zoom,
+        port.size.width * zoom,
+        port.size.height * zoom
+      );
+
+      // 为已连接的端口添加点击提示效果
+      if (isConnected) {
+        ctx.strokeStyle = '#1890ff40';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 2]);
+        ctx.strokeRect(
+          (-port.size.width / 2 - 2) * zoom,
+          (-port.size.height / 2 - 2) * zoom,
+          (port.size.width + 4) * zoom,
+          (port.size.height + 4) * zoom
+        );
+        ctx.setLineDash([]);
+      }
+
+      // 绘制端口编号
+      ctx.fillStyle = isConnected ? '#fff' : '#666';
+      ctx.font = `${10 * zoom}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(port.number.replace(/[●○]/, ''), 0, 0); // 移除连接状态符号
+
+      // 恢复画布状态
+      ctx.restore();
+
+      // 如果有端口类型标签，在端口下方显示（不旋转）
+      if (port.portType && !isConnected) {
+        ctx.fillStyle = '#595959';
+        ctx.font = `${8 * zoom}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        const displayPortType = port.portType.replace('_CONNECTED', '');
+        ctx.fillText(
+          displayPortType,
+          centerX,
+          (port.position.y + port.size.height + 2) * zoom
+        );
+      }
+    });
+
+    // 绘制连接状态的端口标签
+    ports.forEach((port) => {
+      const isConnected = port.portType?.includes('_CONNECTED');
+      if (isConnected && port.label) {
+        const centerX = (port.position.x + port.size.width / 2) * zoom;
+        const centerY = (port.position.y + port.size.height + 15) * zoom;
+
+        ctx.fillStyle = '#1890ff';
+        ctx.font = `${8 * zoom}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(port.label, centerX, centerY);
+      }
+    });
+
+  }, [ports, zoom, width, height, backgroundColor, time]);
+
+  return (
+    <div
+      style={{
+        border: '1px solid #d9d9d9',
+        borderRadius: '4px',
+        overflow: 'auto',
+        maxHeight: '600px',
+        backgroundColor: '#fafafa',
+        padding: '20px',
+      }}
+    >
+      <canvas
+        ref={canvasRef}
+        width={width * zoom}
+        height={height * zoom}
+        onClick={handleCanvasClick}
+        style={{
+          cursor: 'pointer',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+        }}
       />
 
-      <div style={{ marginTop: '16px', fontSize: '12px', color: '#666' }}>
-        <div>连接说明:</div>
-        <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-          <span>● 端口标签显示对端连接信息</span>
-          <span>● 不同端口类型用不同颜色表示</span>
-          <span>● 实际比例显示面板和端口</span>
-        </div>
-      </div>
+      {/* 对端设备信息模态框 */}
+      <Modal
+        title="端口连接详情"
+        open={detailModalVisible}
+        onCancel={() => {
+          setDetailModalVisible(false);
+          setClickedPortInfo(null);
+        }}
+        footer={[
+          <Button key="close" onClick={() => setDetailModalVisible(false)}>
+            关闭
+          </Button>,
+          clickedPortInfo?.targetPort && (
+            <Button
+              key="navigate"
+              type="primary"
+              icon={<LinkOutlined />}
+              onClick={() => {
+                // 这里可以添加导航到对端设备的逻辑
+                message.info('导航功能正在开发中...');
+              }}
+            >
+              查看对端设备
+            </Button>
+          )
+        ]}
+        width={600}
+      >
+        {clickedPortInfo && (
+          <div>
+            <Descriptions column={1} bordered size="small">
+              <Descriptions.Item label="当前端口">
+                <Tag color="blue">{clickedPortInfo.portNumber}</Tag>
+                <span style={{ marginLeft: '8px' }}>
+                  {clickedPortInfo.port?.portType?.replace('_CONNECTED', '')}
+                </span>
+              </Descriptions.Item>
+              {clickedPortInfo.targetPort && (
+                <Descriptions.Item label="对端端口">
+                  <Tag color="green">
+                    {clickedPortInfo.targetPort?.label || clickedPortInfo.targetPort?.number}
+                  </Tag>
+                  <span style={{ marginLeft: '8px' }}>
+                    {clickedPortInfo.targetPort?.portType}
+                  </span>
+                </Descriptions.Item>
+              )}
+
+              {clickedPortInfo.targetDevice && (
+                <>
+                  <Descriptions.Item label="对端设备">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Tag color="purple">{clickedPortInfo.targetDevice.type}</Tag>
+                      <span style={{ fontWeight: 600 }}>{clickedPortInfo.targetDevice.name}</span>
+                    </div>
+                  </Descriptions.Item>
+
+                  {clickedPortInfo.targetDevice.model && (
+                    <Descriptions.Item label="设备型号">
+                      {clickedPortInfo.targetDevice.model}
+                    </Descriptions.Item>
+                  )}
+
+                  {clickedPortInfo.targetDevice.cabinetId && (
+                    <Descriptions.Item label="设备位置">
+                      <div style={{ color: '#722ed1', fontWeight: 500 }}>
+                        {(() => {
+                          const cabinetId = clickedPortInfo.targetDevice.cabinetId;
+                          const cabinet = cabinetsMap.get(cabinetId);
+                          const room = cabinet?.roomId ? roomsMap.get(cabinet.roomId) : null;
+                          const roomName = room?.name || '未知机房';
+                          const cabinetName = cabinet?.name || `机柜ID: ${cabinetId}`;
+                          const uPosition = clickedPortInfo.targetDevice.uPosition ? `U${clickedPortInfo.targetDevice.uPosition}` : '';
+                          const uHeight = clickedPortInfo.targetDevice.uHeight ? `(${clickedPortInfo.targetDevice.uHeight}U)` : '';
+
+                          return `${roomName} - ${cabinetName}${uPosition ? ` - ${uPosition}${uHeight}` : ''}`;
+                        })()}
+                      </div>
+                    </Descriptions.Item>
+                  )}
+
+                  {clickedPortInfo.targetPanel && (
+                    <Descriptions.Item label="对端面板">
+                      <Tag color="cyan">{clickedPortInfo.targetPanel.name}</Tag>
+                      <span style={{ marginLeft: '8px', color: '#666' }}>
+                        {clickedPortInfo.targetPanel.type}
+                      </span>
+                    </Descriptions.Item>
+                  )}
+                </>
+              )}
+              <Descriptions.Item label="线缆类型">
+                {clickedPortInfo.cable ? (
+                  <Tag color="orange">{clickedPortInfo.cable.type || '标准线缆'}</Tag>
+                ) : (
+                  <span style={{ color: '#999' }}>未知线缆类型</span>
+                )}
+              </Descriptions.Item>
+              {clickedPortInfo.cable?.length && (
+                <Descriptions.Item label="线缆长度">
+                  {clickedPortInfo.cable.length}m
+                </Descriptions.Item>
+              )}
+              {clickedPortInfo.cable?.color && (
+                <Descriptions.Item label="线缆颜色">
+                  <Tag color={clickedPortInfo.cable.color === 'blue' ? 'blue' :
+                            clickedPortInfo.cable.color === 'red' ? 'red' : 'default'}>
+                    {clickedPortInfo.cable.color}
+                  </Tag>
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+
+            {clickedPortInfo.targetDevice && (
+              <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#e6f7ff', borderRadius: '6px' }}>
+                <div style={{ fontSize: '12px', color: '#1890ff', marginBottom: '8px' }}>
+                  <InfoCircleOutlined style={{ marginRight: '4px' }} />
+                  设备连接路径
+                </div>
+                <div style={{ fontSize: '12px', color: '#666' }}>
+                  <div>• 本设备: {device.name}</div>
+                  <div>• 本端口: {clickedPortInfo.portNumber}</div>
+                  <div>• 对端设备: {clickedPortInfo.targetDevice.name}</div>
+                  {clickedPortInfo.targetPort && (
+                    <div>• 对端端口: {clickedPortInfo.targetPort.label || clickedPortInfo.targetPort.number}</div>
+                  )}
+                  {clickedPortInfo.targetDevice.cabinetId && (
+                    <div>• 对端位置: {(() => {
+                      const cabinet = cabinetsMap.get(clickedPortInfo.targetDevice.cabinetId);
+                      const room = cabinet?.roomId ? roomsMap.get(cabinet.roomId) : null;
+                      const roomName = room?.name || '未知机房';
+                      const cabinetName = cabinet?.name || `机柜${clickedPortInfo.targetDevice.cabinetId}`;
+                      return `${roomName} - ${cabinetName}`;
+                    })()}
+                      {clickedPortInfo.targetDevice.uPosition && ` - U${clickedPortInfo.targetDevice.uPosition}`}
+                    </div>
+                  )}
+                  {clickedPortInfo.cable && (
+                    <div>• 连接线缆: {clickedPortInfo.cable.type || '标准线缆'}</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {clickedPortInfo.cable && (
+              <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#fff2e8', borderRadius: '6px' }}>
+                <div style={{ fontSize: '12px', color: '#fa8c16', marginBottom: '8px' }}>
+                  线缆详情
+                </div>
+                <div style={{ fontSize: '12px', color: '#666' }}>
+                  <div>• 线缆标识: {clickedPortInfo.cable.id}</div>
+                  {clickedPortInfo.cable.description && (
+                    <div>• 描述: {clickedPortInfo.cable.description}</div>
+                  )}
+                  {clickedPortInfo.cable.installDate && (
+                    <div>• 安装日期: {new Date(clickedPortInfo.cable.installDate).toLocaleDateString()}</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
