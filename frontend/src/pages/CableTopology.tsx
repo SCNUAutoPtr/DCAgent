@@ -42,8 +42,10 @@ import 'reactflow/dist/style.css';
 import { cableService } from '@/services/cableService';
 import { panelService } from '@/services/panelService';
 import { deviceService } from '@/services/deviceService';
-import type { Panel as PanelType, Device } from '@/types';
+import { cabinetService } from '@/services/cabinetService';
+import type { Panel as PanelType, Device, Cabinet } from '@/types';
 import CreateCableModal from '@/components/CreateCableModal';
+import PanelCanvasEditor, { PortDefinition } from '@/components/PanelCanvasEditor';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -74,21 +76,40 @@ const cableTypeColors: Record<string, string> = {
   OTHER: '#8c8c8c',
 };
 
+// 获取设备位置信息的辅助函数
+const getDeviceLocation = (device: Device, cabinets: Cabinet[]) => {
+  if (!device?.cabinetId) return null;
+  const cabinet = cabinets.find(c => c.id === device.cabinetId);
+  if (!cabinet) return null;
+  const uPosition = device.uPosition ? `U${device.uPosition}` : '';
+  const uHeight = device.uHeight ? `(${device.uHeight}U)` : '';
+  return {
+    cabinetName: cabinet.name,
+    position: uPosition ? `${uPosition}${uHeight}` : null
+  };
+};
+
 // 自定义节点组件
 function DeviceNode({ data }: { data: any }) {
-  const { device, panel, ports } = data;
+  const { device, panel, ports, cabinets, onPortHover, highlightedNodeIds } = data;
   const deviceColor = nodeTypeColors[device?.type || 'OTHER'] || '#8c8c8c';
+  const location = getDeviceLocation(device, cabinets);
+  const isHighlighted = highlightedNodeIds?.includes(panel?.id);
 
   return (
     <div
       style={{
         padding: '12px 16px',
         borderRadius: '8px',
-        border: `2px solid ${deviceColor}`,
-        background: '#fff',
-        minWidth: '200px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+        border: `2px solid ${isHighlighted ? '#1890ff' : deviceColor}`,
+        background: isHighlighted ? '#e6f7ff' : '#fff',
+        minWidth: '240px',
+        boxShadow: isHighlighted
+          ? '0 4px 16px rgba(24,144,255,0.3)'
+          : '0 2px 8px rgba(0,0,0,0.15)',
         position: 'relative',
+        transition: 'all 0.2s ease',
+        cursor: 'pointer',
       }}
     >
       {/* 添加连接句柄 */}
@@ -98,17 +119,63 @@ function DeviceNode({ data }: { data: any }) {
       <Handle type="source" position={Position.Right} />
 
       <div style={{ marginBottom: '8px' }}>
-        <Tag color={deviceColor} style={{ marginBottom: '4px' }}>
+        <Tag color={isHighlighted ? '#1890ff' : deviceColor} style={{ marginBottom: '4px' }}>
           {device?.type || 'UNKNOWN'}
         </Tag>
         <div style={{ fontWeight: 600, fontSize: '14px' }}>
           {device?.name || '未命名设备'}
         </div>
       </div>
+
+      {/* 位置信息 */}
+      {location && (
+        <div style={{ fontSize: '11px', color: '#722ed1', marginBottom: '4px' }}>
+          <div>{location.cabinetName} {location.position && `- ${location.position}`}</div>
+        </div>
+      )}
+
       {panel && (
         <div style={{ fontSize: '12px', color: '#666' }}>
           <div>面板: {panel.name}</div>
           <div>端口: {ports?.length || 0} 个</div>
+
+          {/* 端口列表 */}
+          {ports && ports.length > 0 && (
+            <div style={{
+              marginTop: '8px',
+              maxHeight: '120px',
+              overflowY: 'auto',
+              border: '1px solid #f0f0f0',
+              borderRadius: '4px',
+              padding: '4px',
+              backgroundColor: '#fafafa'
+            }}>
+              {ports.map((port: any) => (
+                <div
+                  key={port.id}
+                  style={{
+                    padding: '2px 6px',
+                    margin: '1px 0',
+                    fontSize: '10px',
+                    borderRadius: '3px',
+                    cursor: 'pointer',
+                    backgroundColor: '#fff',
+                    border: '1px solid #e8e8e8',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={() => onPortHover?.(port.id)}
+                  onMouseLeave={() => onPortHover?.(null)}
+                >
+                  {port.label || port.number}
+                  {port.portType && (
+                    <span style={{ color: '#999', marginLeft: '4px' }}>
+                      ({port.portType})
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -127,6 +194,7 @@ function CableTopologyContent() {
   const [loading, setLoading] = useState(false);
   const [panels, setPanels] = useState<PanelType[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [cabinets, setCabinets] = useState<Cabinet[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
   const [filteredPanels, setFilteredPanels] = useState<PanelType[]>([]);
   const [selectedPanelId, setSelectedPanelId] = useState<string>('');
@@ -134,13 +202,39 @@ function CableTopologyContent() {
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [createCableModalVisible, setCreateCableModalVisible] = useState(false);
+  const [portModalVisible, setPortModalVisible] = useState(false);
+  const [selectedDeviceForPorts, setSelectedDeviceForPorts] = useState<any>(null);
+  const [hoveredPortId, setHoveredPortId] = useState<string | null>(null);
+  const [highlightedEdgeIds, setHighlightedEdgeIds] = useState<string[]>([]);
+  const [highlightedNodeIds, setHighlightedNodeIds] = useState<string[]>([]);
   const [scanInput, setScanInput] = useState('');
+  const [clickTimer, setClickTimer] = useState<NodeJS.Timeout | null>(null);
 
   const { fitView, zoomIn, zoomOut } = useReactFlow();
 
-  // 加载所有面板和设备
+  // 根据高亮状态动态生成边和节点样式
+  const styledEdges = edges.map(edge => ({
+    ...edge,
+    style: {
+      ...edge.style,
+      strokeWidth: highlightedEdgeIds.includes(edge.id) ? 4 : 2,
+      opacity: highlightedEdgeIds.length > 0 && !highlightedEdgeIds.includes(edge.id) ? 0.3 : 1,
+    },
+    animated: highlightedEdgeIds.includes(edge.id) ? true : edge.animated,
+  }));
+
+  const styledNodes = nodes.map(node => ({
+    ...node,
+    style: {
+      ...node.style,
+      opacity: highlightedNodeIds.length > 0 && !highlightedNodeIds.includes(node.id) ? 0.3 : 1,
+    },
+  }));
+
+  // 加载所有面板、设备和机柜
   useEffect(() => {
     loadPanelsAndDevices();
+    loadCabinets();
   }, []);
 
   // 当选择设备时，筛选该设备下的面板
@@ -177,6 +271,17 @@ function CableTopologyContent() {
     } catch (error) {
       console.error('Failed to load panels and devices:', error);
       message.error('加载面板和设备列表失败');
+    }
+  };
+
+  const loadCabinets = async () => {
+    try {
+      const cabinetsData = await cabinetService.getAll();
+      setCabinets(cabinetsData);
+      console.log('Loaded cabinets:', cabinetsData.length);
+    } catch (error) {
+      console.error('Failed to load cabinets:', error);
+      message.error('加载机柜列表失败');
     }
   };
 
@@ -300,6 +405,9 @@ function CableTopologyContent() {
             panel: panelA,
             device: deviceA,
             ports: [portA],
+            cabinets: cabinets,
+            onPortHover: handlePortHover,
+            highlightedNodeIds: highlightedNodeIds,
           },
         });
       } else if (portA?.panelId) {
@@ -319,6 +427,9 @@ function CableTopologyContent() {
             panel: panelB,
             device: deviceB,
             ports: [portB],
+            cabinets: cabinets,
+            onPortHover: handlePortHover,
+            highlightedNodeIds: highlightedNodeIds,
           },
         });
       } else if (portB?.panelId) {
@@ -376,10 +487,70 @@ function CableTopologyContent() {
   };
 
   // 处理节点点击
-  const onNodeClick = useCallback((_event: any, node: Node) => {
-    setSelectedNode(node);
-    setDetailModalVisible(true);
-  }, []);
+  const onNodeClick = useCallback((event: any, node: Node) => {
+    // 清除之前的计时器
+    if (clickTimer) {
+      clearTimeout(clickTimer);
+      setClickTimer(null);
+    }
+
+    // 设置新的计时器
+    const timer = setTimeout(() => {
+      setSelectedNode(node);
+      setDetailModalVisible(true);
+      setClickTimer(null);
+    }, 200);
+
+    setClickTimer(timer);
+  }, [clickTimer]);
+
+  // 处理节点双击 - 显示接口可视化
+  const onNodeDoubleClick = useCallback((_event: any, node: Node) => {
+    // 清除单击计时器
+    if (clickTimer) {
+      clearTimeout(clickTimer);
+      setClickTimer(null);
+    }
+
+    setSelectedDeviceForPorts(node);
+    setPortModalVisible(true);
+  }, [clickTimer]);
+
+  // 处理端口悬浮 - 高亮连接的线和对端面板
+  const handlePortHover = useCallback((portId: string | null) => {
+    setHoveredPortId(portId);
+
+    if (portId) {
+      // 找到所有与这个端口连接的边
+      const connectedEdgeIds = edges
+        .filter(edge => {
+          const { portA, portB } = edge.data || {};
+          return portA?.id === portId || portB?.id === portId;
+        })
+        .map(edge => edge.id);
+
+      // 找到这些边连接的对端节点
+      const connectedNodeIds = edges
+        .filter(edge => connectedEdgeIds.includes(edge.id))
+        .map(edge => {
+          const { portA, portB } = edge.data || {};
+          // 找到对端端口对应的panelId
+          const targetPortId = portA?.id === portId ? portB?.id : portA?.id;
+          // 找到包含这个端口的节点
+          const node = nodes.find(node =>
+            node.data?.ports?.some((port: any) => port.id === targetPortId)
+          );
+          return node?.id;
+        })
+        .filter(Boolean);
+
+      setHighlightedEdgeIds(connectedEdgeIds);
+      setHighlightedNodeIds(connectedNodeIds);
+    } else {
+      setHighlightedEdgeIds([]);
+      setHighlightedNodeIds([]);
+    }
+  }, [edges, nodes]);
 
   // 处理边点击
   const onEdgeClick = useCallback((_event: any, edge: Edge) => {
@@ -609,11 +780,12 @@ function CableTopologyContent() {
           ) : null}
 
           <ReactFlow
-            nodes={nodes}
-            edges={edges}
+            nodes={styledNodes}
+            edges={styledEdges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onNodeClick={onNodeClick}
+            onNodeDoubleClick={onNodeDoubleClick}
             onEdgeClick={onEdgeClick}
             nodeTypes={nodeTypes}
             connectionMode={ConnectionMode.Loose}
@@ -694,6 +866,98 @@ function CableTopologyContent() {
         onSuccess={handleCreateCableSuccess}
         initialPanelAId={selectedPanelId}
       />
+
+      {/* 接口可视化模态框 */}
+      <Modal
+        title="设备接口可视化"
+        open={portModalVisible}
+        onCancel={() => {
+          setPortModalVisible(false);
+          setSelectedDeviceForPorts(null); // 清除选中设备
+        }}
+        footer={null}
+        width={1000}
+        style={{ top: 20 }}
+        destroyOnClose={true}
+      >
+        {selectedDeviceForPorts && (
+          <PortVisualization
+            key={`${selectedDeviceForPorts.id}-${selectedDeviceForPorts.data?.panel?.id}`} // 添加复合key
+            device={selectedDeviceForPorts.data?.device}
+            panel={selectedDeviceForPorts.data?.panel}
+            ports={selectedDeviceForPorts.data?.ports || []}
+            edges={edges}
+          />
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+// 接口可视化组件 - 复用PanelCanvasEditor
+function PortVisualization({ device, panel, ports, edges }: {
+  device: Device;
+  panel: PanelType;
+  ports: any[];
+  edges: Edge[]
+}) {
+  // 转换端口数据格式
+  const portDefinitions: PortDefinition[] = ports.map((port: any) => {
+    // 获取端口连接的边来判断连接状态
+    const connectedEdges = edges.filter(edge => {
+      const { portA, portB } = edge.data || {};
+      return portA?.id === port.id || portB?.id === port.id;
+    });
+
+    const isConnected = connectedEdges.length > 0;
+
+    // 获取对端端口信息
+    const connectedPort = edges.find(edge => {
+      const { portA, portB } = edge.data || {};
+      return portA?.id === port.id || portB?.id === port.id;
+    })?.data;
+
+    return {
+      id: port.id,
+      number: port.label || port.number,
+      portType: port.portType || 'RJ45',
+      position: port.position || { x: 20 + (parseInt(port.number) - 1) * 25, y: 20 },
+      size: port.size || { width: 20, height: 12 },
+      label: isConnected ? `→ ${connectedPort?.portA?.id === port.id ?
+        (connectedPort?.portB?.label || connectedPort?.portB?.number) :
+        (connectedPort?.portA?.label || connectedPort?.portA?.number)}` : undefined,
+      rotation: port.rotation || 0,
+    };
+  });
+
+  const panelWidth = panel.size?.width || 482.6;
+  const panelHeight = panel.size?.height || 44.45;
+  const backgroundColor = panel.backgroundColor || '#FFFFFF';
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <div style={{ marginBottom: '16px' }}>
+        <h3>{device.name} - {panel.name} 接口图</h3>
+        <p>设备类型: {device.type} | 端口总数: {ports.length} | 面板尺寸: {panelWidth} × {panelHeight} mm</p>
+      </div>
+
+      {/* 使用PanelCanvasEditor显示接口图 */}
+      <PanelCanvasEditor
+        width={panelWidth}
+        height={panelHeight}
+        backgroundColor={backgroundColor}
+        initialPorts={portDefinitions}
+        readOnly={true}
+      />
+
+      <div style={{ marginTop: '16px', fontSize: '12px', color: '#666' }}>
+        <div>连接说明:</div>
+        <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+          <span>● 端口标签显示对端连接信息</span>
+          <span>● 不同端口类型用不同颜色表示</span>
+          <span>● 实际比例显示面板和端口</span>
+        </div>
+      </div>
     </div>
   );
 }
