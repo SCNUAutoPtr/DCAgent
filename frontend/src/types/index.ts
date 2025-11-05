@@ -91,11 +91,19 @@ export interface PanelTemplate {
   updatedAt: string;
 }
 
+export enum PanelPosition {
+  FRONT = 'FRONT',   // 前面板
+  REAR = 'REAR',     // 后面板
+  CUSTOM = 'CUSTOM', // 自定义位置
+}
+
 export interface Panel {
   id: string;
   name: string;
   type: PanelType;
   deviceId: string;
+  // 面板位置
+  panelPosition?: PanelPosition;
   // 模板引用
   templateId?: string;
   isCustomized: boolean;

@@ -37,6 +37,8 @@ import {
   AppstoreOutlined,
   BlockOutlined,
   CloudServerOutlined,
+  SendOutlined,
+  CopyOutlined,
 } from '@ant-design/icons';
 import { Cabinet, Room, DataCenter, Device, DeviceType, Panel, Port } from '@/types';
 import { cabinetService } from '@/services/cabinetService';
@@ -48,6 +50,7 @@ import { portService } from '@/services/portService';
 import { panelTemplateService } from '@/services/panelTemplateService';
 import { CabinetVisualizer, ViewMode } from '@/components/CabinetVisualizer';
 import { PanelVisualizer } from '@/components/PanelVisualizer';
+import { DevicePanelEditor } from '@/components/DevicePanelEditor';
 import { generatePortLayout, sortPortsByNumber } from '@/utils/panelLayoutGenerator';
 
 
@@ -84,6 +87,8 @@ export default function CabinetList() {
   const [modalVisible, setModalVisible] = useState(false);
   const [deviceModalVisible, setDeviceModalVisible] = useState(false);
   const [panelViewModalVisible, setPanelViewModalVisible] = useState(false);
+  const [panelEditorVisible, setPanelEditorVisible] = useState(false);
+  const [editingPanel, setEditingPanel] = useState<Panel | null>(null);
   const [editingCabinet, setEditingCabinet] = useState<Cabinet | null>(null);
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
   const [viewingDevice, setViewingDevice] = useState<Device | null>(null);
@@ -98,6 +103,9 @@ export default function CabinetList() {
   });
   const [form] = Form.useForm();
   const [deviceForm] = Form.useForm();
+  const [deviceTransferVisible, setDeviceTransferVisible] = useState(false);
+  const [deviceCopyVisible, setDeviceCopyVisible] = useState(false);
+  const [selectedDeviceForAction, setSelectedDeviceForAction] = useState<Device | null>(null);
 
   // 加载所有相关数据
   const loadAllData = async () => {
@@ -379,6 +387,129 @@ export default function CabinetList() {
     });
   };
 
+  // 打开设备面板编辑器
+  const handleOpenPanelEditor = (panel?: Panel) => {
+    setEditingPanel(panel || null);
+    setPanelEditorVisible(true);
+  };
+
+  // 保存面板
+  const handleSavePanel = async (panelData: Partial<Panel>) => {
+    try {
+      if (editingPanel) {
+        await panelService.update(editingPanel.id, panelData);
+      } else {
+        await panelService.create(panelData);
+      }
+
+      // 重新加载设备面板信息
+      if (viewingDevice) {
+        const panels = await panelService.getByDevice(viewingDevice.id);
+        setDevicePanels(panels);
+      }
+
+      await loadAllData();
+    } catch (error) {
+      console.error('Failed to save panel:', error);
+      throw error;
+    }
+  };
+
+  // 打开设备发送对话框
+  const handleOpenDeviceTransfer = (device: Device) => {
+    setSelectedDeviceForAction(device);
+    setDeviceTransferVisible(true);
+  };
+
+  // 打开设备复制对话框
+  const handleOpenDeviceCopy = (device: Device) => {
+    setSelectedDeviceForAction(device);
+    setDeviceCopyVisible(true);
+  };
+
+  // 设备发送功能
+  const handleDeviceTransfer = async (targetCabinetId: string, targetUPosition: number) => {
+    if (!selectedDeviceForAction) return;
+
+    try {
+      // 检查目标位置是否可用
+      const targetCabinetDevices = devices.filter(
+        (device) => device.cabinetId === targetCabinetId
+      );
+      const isPositionAvailable = !targetCabinetDevices.some(
+        (device) =>
+          device.uPosition && device.uHeight &&
+          targetUPosition >= device.uPosition &&
+          targetUPosition < device.uPosition + device.uHeight
+      );
+
+      if (!isPositionAvailable) {
+        message.error(`目标位置 U${targetUPosition} 已被占用`);
+        return;
+      }
+
+      // 更新设备位置
+      await deviceService.update(selectedDeviceForAction.id, {
+        cabinetId: targetCabinetId,
+        uPosition: targetUPosition,
+      });
+
+      message.success(`设备 ${selectedDeviceForAction.name} 已移动到新位置`);
+      setDeviceTransferVisible(false);
+      setSelectedDeviceForAction(null);
+
+      await loadAllData();
+      await loadCabinets();
+    } catch (error) {
+      message.error('设备移动失败');
+      console.error('Failed to transfer device:', error);
+    }
+  };
+
+  // 设备复制功能
+  const handleDeviceCopy = async (targetCabinetId: string, targetUPosition: number) => {
+    if (!selectedDeviceForAction) return;
+
+    try {
+      // 检查目标位置是否可用
+      const targetCabinetDevices = devices.filter(
+        (device) => device.cabinetId === targetCabinetId
+      );
+      const isPositionAvailable = !targetCabinetDevices.some(
+        (device) =>
+          device.uPosition && device.uHeight &&
+          targetUPosition >= device.uPosition &&
+          targetUPosition < device.uPosition + device.uHeight
+      );
+
+      if (!isPositionAvailable) {
+        message.error(`目标位置 U${targetUPosition} 已被占用`);
+        return;
+      }
+
+      // 创建设备副本
+      const deviceCopy = {
+        name: `${selectedDeviceForAction.name}_副本`,
+        type: selectedDeviceForAction.type,
+        model: selectedDeviceForAction.model,
+        cabinetId: targetCabinetId,
+        uPosition: targetUPosition,
+        uHeight: selectedDeviceForAction.uHeight || 1,
+      };
+
+      await deviceService.create(deviceCopy);
+      message.success(`设备 ${selectedDeviceForAction.name} 复制成功`);
+      setDeviceCopyVisible(false);
+      setSelectedDeviceForAction(null);
+
+      await loadAllData();
+      await loadCabinets();
+    } catch (error) {
+      message.error('设备复制失败');
+      console.error('Failed to copy device:', error);
+    }
+  };
+
   const columns = [
     {
       title: 'ID',
@@ -510,6 +641,10 @@ export default function CabinetList() {
               dataSource={cabinets}
               loading={loading}
               rowKey="id"
+              onRow={(record) => ({
+                onClick: () => handleViewCabinet(record),
+                style: { cursor: 'pointer' },
+              })}
               pagination={{
                 pageSize: 10,
                 showSizeChanger: true,
@@ -744,6 +879,33 @@ export default function CabinetList() {
                             <Button
                               type="link"
                               size="small"
+                              icon={<SettingOutlined />}
+                              onClick={() => handleOpenPanelEditor()}
+                              key="panels"
+                            >
+                              面板
+                            </Button>,
+                            <Button
+                              type="link"
+                              size="small"
+                              icon={<SendOutlined />}
+                              onClick={() => handleOpenDeviceTransfer(device)}
+                              key="transfer"
+                            >
+                              发送
+                            </Button>,
+                            <Button
+                              type="link"
+                              size="small"
+                              icon={<CopyOutlined />}
+                              onClick={() => handleOpenDeviceCopy(device)}
+                              key="copy"
+                            >
+                              复制
+                            </Button>,
+                            <Button
+                              type="link"
+                              size="small"
                               danger
                               icon={<DeleteOutlined />}
                               onClick={() => handleDeleteDevice(device)}
@@ -968,7 +1130,17 @@ export default function CabinetList() {
             <Divider orientation="left">设备面板</Divider>
 
             {devicePanels.length === 0 ? (
-              <Empty description="该设备暂无面板" />
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <Empty description="该设备暂无面板" />
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => handleOpenPanelEditor()}
+                  style={{ marginTop: 16 }}
+                >
+                  添加面板
+                </Button>
+              </div>
             ) : (
               <Tabs defaultActiveKey="0">
                 {devicePanels.map((panel, index) => {
@@ -986,25 +1158,34 @@ export default function CabinetList() {
                       }
                       key={index.toString()}
                     >
+                      <div style={{ marginBottom: 16 }}>
+                        <Space>
+                          <Button
+                            icon={<EditOutlined />}
+                            onClick={() => handleOpenPanelEditor(panel)}
+                          >
+                            编辑面板
+                          </Button>
+                          {hasTemplate && (
+                            <Popconfirm
+                              title="确认解绑模板？"
+                              description="解绑后可以自定义端口布局，但将失去模板更新。"
+                              onConfirm={() => handleUnbindPanel(panel.id)}
+                              okText="确认"
+                              cancelText="取消"
+                            >
+                              <Button type="link" size="small">
+                                解绑模板
+                              </Button>
+                            </Popconfirm>
+                          )}
+                        </Space>
+                      </div>
+
                       {hasTemplate && (
                         <Alert
                           message="此面板使用模板"
-                          description={
-                            <Space>
-                              <span>该面板基于模板创建，端口布局由模板定义。</span>
-                              <Popconfirm
-                                title="确认解绑模板？"
-                                description="解绑后可以自定义端口布局，但将失去模板更新。"
-                                onConfirm={() => handleUnbindPanel(panel.id)}
-                                okText="确认"
-                                cancelText="取消"
-                              >
-                                <Button type="link" size="small">
-                                  解绑模板
-                                </Button>
-                              </Popconfirm>
-                            </Space>
-                          }
+                          description="该面板基于模板创建，端口布局由模板定义。解绑后可以自定义端口布局。"
                           type="info"
                           showIcon
                           style={{ marginBottom: 16 }}
@@ -1028,6 +1209,160 @@ export default function CabinetList() {
               </Tabs>
             )}
           </div>
+        )}
+      </Modal>
+
+      {/* 设备面板编辑器 */}
+      <DevicePanelEditor
+        visible={panelEditorVisible}
+        onCancel={() => {
+          setPanelEditorVisible(false);
+          setEditingPanel(null);
+        }}
+        onSave={handleSavePanel}
+        device={viewingDevice!}
+        panel={editingPanel || undefined}
+      />
+
+      {/* 设备发送对话框 */}
+      <Modal
+        title={`发送设备: ${selectedDeviceForAction?.name}`}
+        open={deviceTransferVisible}
+        onCancel={() => {
+          setDeviceTransferVisible(false);
+          setSelectedDeviceForAction(null);
+        }}
+        footer={null}
+        width={600}
+      >
+        {selectedDeviceForAction && (
+          <Form layout="vertical" onFinish={(values) => {
+            handleDeviceTransfer(values.cabinetId, values.uPosition);
+          }}>
+            <Alert
+              message="设备移动"
+              description={`设备 ${selectedDeviceForAction.name} 将从当前位置移动到目标位置，原位置将被释放。`}
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+
+            <Form.Item
+              name="cabinetId"
+              label="目标机柜"
+              rules={[{ required: true, message: '请选择目标机柜' }]}
+            >
+              <Select placeholder="选择目标机柜" showSearch optionFilterProp="children">
+                {cabinets.map((cabinet) => {
+                  const room = rooms.find((r) => r.id === cabinet.roomId);
+                  const dc = dataCenters.find((d) => d.id === room?.dataCenterId);
+                  return (
+                    <Option key={cabinet.id} value={cabinet.id}>
+                      {dc?.name} - {room?.name} - {cabinet.name}
+                    </Option>
+                  );
+                })}
+              </Select>
+            </Form.Item>
+
+            <Form.Item
+              name="uPosition"
+              label="目标U位"
+              rules={[{ required: true, message: '请输入目标U位' }]}
+            >
+              <InputNumber
+                style={{ width: '100%' }}
+                placeholder="输入U位数字"
+                min={1}
+                max={52}
+              />
+            </Form.Item>
+
+            <Form.Item>
+              <Space>
+                <Button type="primary" htmlType="submit">
+                  确认发送
+                </Button>
+                <Button onClick={() => {
+                  setDeviceTransferVisible(false);
+                  setSelectedDeviceForAction(null);
+                }}>
+                  取消
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        )}
+      </Modal>
+
+      {/* 设备复制对话框 */}
+      <Modal
+        title={`复制设备: ${selectedDeviceForAction?.name}`}
+        open={deviceCopyVisible}
+        onCancel={() => {
+          setDeviceCopyVisible(false);
+          setSelectedDeviceForAction(null);
+        }}
+        footer={null}
+        width={600}
+      >
+        {selectedDeviceForAction && (
+          <Form layout="vertical" onFinish={(values) => {
+            handleDeviceCopy(values.cabinetId, values.uPosition);
+          }}>
+            <Alert
+              message="设备复制"
+              description={`将创建设备 ${selectedDeviceForAction.name} 的副本，包含基本配置信息。`}
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+
+            <Form.Item
+              name="cabinetId"
+              label="目标机柜"
+              rules={[{ required: true, message: '请选择目标机柜' }]}
+            >
+              <Select placeholder="选择目标机柜" showSearch optionFilterProp="children">
+                {cabinets.map((cabinet) => {
+                  const room = rooms.find((r) => r.id === cabinet.roomId);
+                  const dc = dataCenters.find((d) => d.id === room?.dataCenterId);
+                  return (
+                    <Option key={cabinet.id} value={cabinet.id}>
+                      {dc?.name} - {room?.name} - {cabinet.name}
+                    </Option>
+                  );
+                })}
+              </Select>
+            </Form.Item>
+
+            <Form.Item
+              name="uPosition"
+              label="目标U位"
+              rules={[{ required: true, message: '请输入目标U位' }]}
+            >
+              <InputNumber
+                style={{ width: '100%' }}
+                placeholder="输入U位数字"
+                min={1}
+                max={52}
+              />
+            </Form.Item>
+
+            <Form.Item>
+              <Space>
+                <Button type="primary" htmlType="submit">
+                  确认复制
+                </Button>
+                <Button onClick={() => {
+                  setDeviceCopyVisible(false);
+                  setSelectedDeviceForAction(null);
+                }}>
+                  取消
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
         )}
       </Modal>
     </div>
