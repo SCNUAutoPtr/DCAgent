@@ -12,6 +12,7 @@ import {
   Divider,
   Modal,
   Descriptions,
+  Input,
 } from 'antd';
 import {
   ZoomInOutlined,
@@ -20,6 +21,7 @@ import {
   ReloadOutlined,
   DownloadOutlined,
   PlusOutlined,
+  ScanOutlined,
 } from '@ant-design/icons';
 import ReactFlow, {
   Node,
@@ -33,6 +35,8 @@ import ReactFlow, {
   Panel,
   useReactFlow,
   ReactFlowProvider,
+  Handle,
+  Position,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { cableService } from '@/services/cableService';
@@ -84,8 +88,15 @@ function DeviceNode({ data }: { data: any }) {
         background: '#fff',
         minWidth: '200px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+        position: 'relative',
       }}
     >
+      {/* 添加连接句柄 */}
+      <Handle type="target" position={Position.Top} />
+      <Handle type="source" position={Position.Bottom} />
+      <Handle type="target" position={Position.Left} />
+      <Handle type="source" position={Position.Right} />
+
       <div style={{ marginBottom: '8px' }}>
         <Tag color={deviceColor} style={{ marginBottom: '4px' }}>
           {device?.type || 'UNKNOWN'}
@@ -115,30 +126,57 @@ function CableTopologyContent() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(false);
   const [panels, setPanels] = useState<PanelType[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+  const [filteredPanels, setFilteredPanels] = useState<PanelType[]>([]);
   const [selectedPanelId, setSelectedPanelId] = useState<string>('');
   const [depth, setDepth] = useState(3);
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [createCableModalVisible, setCreateCableModalVisible] = useState(false);
+  const [scanInput, setScanInput] = useState('');
 
   const { fitView, zoomIn, zoomOut } = useReactFlow();
 
-  // 加载所有面板
+  // 加载所有面板和设备
   useEffect(() => {
-    loadPanels();
+    loadPanelsAndDevices();
   }, []);
 
-  const loadPanels = async () => {
+  // 当选择设备时，筛选该设备下的面板
+  useEffect(() => {
+    if (selectedDeviceId) {
+      const filtered = panels.filter(p => p.deviceId === selectedDeviceId);
+      setFilteredPanels(filtered);
+      // 清空面板选择
+      setSelectedPanelId('');
+    } else {
+      setFilteredPanels([]);
+      setSelectedPanelId('');
+    }
+  }, [selectedDeviceId, panels]);
+
+  const loadPanelsAndDevices = async () => {
     try {
-      const data = await panelService.getAll();
-      setPanels(data);
-      if (data.length > 0 && !selectedPanelId) {
-        setSelectedPanelId(data[0].id);
-        loadTopology(data[0].id, depth);
-      }
+      // 加载所有面板（包含设备信息）
+      const panelsData = await panelService.getAll();
+      setPanels(panelsData);
+
+      // 提取唯一的设备列表
+      const deviceMap = new Map<string, Device>();
+      panelsData.forEach(panel => {
+        if (panel.device && !deviceMap.has(panel.device.id)) {
+          deviceMap.set(panel.device.id, panel.device);
+        }
+      });
+      const uniqueDevices = Array.from(deviceMap.values());
+      setDevices(uniqueDevices);
+
+      console.log('Loaded panels:', panelsData.length);
+      console.log('Loaded devices:', uniqueDevices.length);
     } catch (error) {
-      console.error('Failed to load panels:', error);
-      message.error('加载面板列表失败');
+      console.error('Failed to load panels and devices:', error);
+      message.error('加载面板和设备列表失败');
     }
   };
 
@@ -206,12 +244,21 @@ function CableTopologyContent() {
       const { cable, portA, portB } = conn;
 
       console.log('Processing connection:', { cable, portA, portB });
+      console.log('portA structure:', portA);
+      console.log('portB structure:', portB);
 
       // Neo4j返回的端口对象只有properties，需要提取panelId
       const panelIdA = portA?.panelId;
       const panelIdB = portB?.panelId;
 
       console.log('Panel IDs:', { panelIdA, panelIdB });
+
+      if (!panelIdA) {
+        console.error('Missing panelIdA! portA:', portA);
+      }
+      if (!panelIdB) {
+        console.error('Missing panelIdB! portB:', portB);
+      }
 
       // 获取端口A的面板和设备信息
       if (panelIdA && !panelCache.has(panelIdA)) {
@@ -281,7 +328,7 @@ function CableTopologyContent() {
 
       // 创建边
       if (portA?.panelId && portB?.panelId) {
-        edgeList.push({
+        const edge = {
           id: cable.id || `edge-${portA.id}-${portB.id}`,
           source: portA.panelId,
           target: portB.panelId,
@@ -293,13 +340,21 @@ function CableTopologyContent() {
           },
           label: cable.label || `${cable.type}`,
           data: { cable, portA, portB },
-        });
+        };
+        console.log('Created edge:', edge);
+        edgeList.push(edge);
+      } else {
+        console.warn('Cannot create edge, missing panel IDs:', { portA, portB });
       }
     }
 
     // 应用力导向布局
     const nodeList = Array.from(nodeMap.values());
     applyForceLayout(nodeList);
+
+    console.log('Final nodes:', nodeList.length);
+    console.log('Final edges:', edgeList.length);
+    console.log('Edges:', edgeList);
 
     setNodes(nodeList);
     setEdges(edgeList);
@@ -378,22 +433,70 @@ function CableTopologyContent() {
     handleRefresh();
   };
 
+  // 处理扫码输入
+  const handleScanInput = async (value: string) => {
+    setScanInput(value);
+    if (!value.trim()) return;
+
+    const shortId = parseInt(value.trim(), 10);
+    if (isNaN(shortId)) {
+      message.error('请输入有效的数字ID');
+      return;
+    }
+
+    try {
+      const panel = await panelService.getByShortId(shortId);
+      if (panel) {
+        message.success(`已加载面板：${panel.name}`);
+
+        // 自动选择对应的设备和面板
+        if (panel.deviceId) {
+          setSelectedDeviceId(panel.deviceId);
+          // 等待 filteredPanels 更新后设置面板
+          setTimeout(() => {
+            setSelectedPanelId(panel.id);
+            loadTopology(panel.id, depth);
+          }, 100);
+        }
+
+        // 清空输入框
+        setScanInput('');
+      }
+    } catch (error) {
+      console.error('Failed to load panel by shortId:', error);
+      message.error('未找到该ID对应的面板');
+    }
+  };
+
   return (
     <div>
       <Title level={2}>线缆拓扑图</Title>
 
       <Card style={{ marginBottom: '16px' }}>
         <Space wrap>
-          <Text strong>选择面板:</Text>
+          <Input
+            prefix={<ScanOutlined />}
+            placeholder="扫描面板二维码或输入ID快速定位"
+            value={scanInput}
+            onChange={(e) => setScanInput(e.target.value)}
+            onPressEnter={(e) => handleScanInput((e.target as HTMLInputElement).value)}
+            style={{ width: 300 }}
+            size="large"
+            allowClear
+          />
+
+          <Divider type="vertical" style={{ height: 32 }} />
+
+          <Text strong>选择设备:</Text>
           <Select
             showSearch
-            style={{ width: 300 }}
-            placeholder="选择一个面板查看拓扑"
-            value={selectedPanelId}
+            style={{ width: 280 }}
+            placeholder="先选择一个设备"
+            value={selectedDeviceId}
             onChange={(value) => {
-              setSelectedPanelId(value);
-              loadTopology(value, depth);
+              setSelectedDeviceId(value);
             }}
+            allowClear
             filterOption={(input, option) => {
               const label = option?.label;
               if (typeof label === 'string') {
@@ -402,9 +505,35 @@ function CableTopologyContent() {
               return false;
             }}
           >
-            {panels.map((panel) => (
-              <Option key={panel.id} value={panel.id}>
-                {panel.name} ({panel.type})
+            {devices.map((device) => (
+              <Option key={device.id} value={device.id} label={device.name}>
+                {device.name} <Tag color={nodeTypeColors[device.type] || '#8c8c8c'}>{device.type}</Tag>
+              </Option>
+            ))}
+          </Select>
+
+          <Text strong>选择面板:</Text>
+          <Select
+            showSearch
+            style={{ width: 280 }}
+            placeholder={selectedDeviceId ? '选择该设备下的面板' : '请先选择设备'}
+            value={selectedPanelId}
+            onChange={(value) => {
+              setSelectedPanelId(value);
+              loadTopology(value, depth);
+            }}
+            disabled={!selectedDeviceId || filteredPanels.length === 0}
+            filterOption={(input, option) => {
+              const label = option?.label;
+              if (typeof label === 'string') {
+                return label.toLowerCase().includes(input.toLowerCase());
+              }
+              return false;
+            }}
+          >
+            {filteredPanels.map((panel) => (
+              <Option key={panel.id} value={panel.id} label={panel.name}>
+                {panel.name} <Tag>{panel.type}</Tag>
               </Option>
             ))}
           </Select>

@@ -102,6 +102,7 @@ export interface Panel {
   name: string;
   type: PanelType;
   deviceId: string;
+  device?: Device; // 关联的设备信息
   // 面板位置
   panelPosition?: PanelPosition;
   // 模板引用

@@ -118,7 +118,7 @@ class CableGraphService {
   }
 
   /**
-   * 查询面板的所有连接关系
+   * 查询面板的所有连接关系（双向）
    */
   async findPanelConnections(panelId: string): Promise<ConnectionQueryResult[]> {
     const session = neo4jConnection.getSession();
@@ -126,9 +126,10 @@ class CableGraphService {
       const result = await session.run(
         `
         MATCH (panel1:Panel {id: $panelId})-[:HAS_PORT]->(port1:Port)
-              -[:CONNECTED_BY]->(cable:Cable)-[:CONNECTED_BY]->(port2:Port)
+              -[:CONNECTED_BY]-(cable:Cable)-[:CONNECTED_BY]-(port2:Port)
               <-[:HAS_PORT]-(panel2:Panel)
-        RETURN cable, port1, port2, panel2
+        WHERE panel1 <> panel2
+        RETURN DISTINCT cable, port1, port2, panel2
         `,
         { panelId }
       );
@@ -172,6 +173,7 @@ class CableGraphService {
   async syncPortNode(portId: string, portData: any): Promise<void> {
     const session = neo4jConnection.getSession();
     try {
+      // 创建/更新 Port 节点
       await session.run(
         `
         MERGE (port:Port {id: $portId})
@@ -186,6 +188,20 @@ class CableGraphService {
           panelId: portData.panelId,
         }
       );
+
+      // 创建 HAS_PORT 关系（如果 panelId 存在）
+      if (portData.panelId) {
+        await session.run(
+          `
+          MATCH (panel:Panel {id: $panelId}), (port:Port {id: $portId})
+          MERGE (panel)-[:HAS_PORT]->(port)
+          `,
+          {
+            panelId: portData.panelId,
+            portId,
+          }
+        );
+      }
     } finally {
       await session.close();
     }
