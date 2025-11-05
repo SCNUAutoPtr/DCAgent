@@ -65,10 +65,7 @@ export default function PanelTemplateManagementPage() {
   };
 
   const handleEdit = (template: PanelTemplate) => {
-    if (template.isSystem) {
-      message.warning('系统预设模板不可编辑');
-      return;
-    }
+    // 允许编辑系统模板的布局和样式
     setEditingTemplate(template);
     form.setFieldsValue({
       name: template.name,

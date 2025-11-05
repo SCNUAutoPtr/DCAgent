@@ -10,6 +10,8 @@ interface PanelVisualizerProps {
   ports: Port[];
   onPortClick?: (port: Port) => void;
   scale?: number; // 缩放比例，默认 1mm = 1px
+  labelMode?: 'always' | 'hover'; // 标签显示模式：always=始终显示，hover=悬浮显示
+  showPortNumber?: boolean; // 是否显示端口编号（默认true）
 }
 
 // 端口状态颜色映射
@@ -33,7 +35,11 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
   ports,
   onPortClick,
   scale = 1,
+  labelMode = 'always', // 默认始终显示标签
+  showPortNumber = true, // 默认显示端口编号
 }) => {
+  const [hoveredPortId, setHoveredPortId] = React.useState<string | null>(null);
+
   // 默认使用标准 1U 尺寸（19 英寸机架）
   const panelWidth = panel.size?.width || 482.6;
   const panelHeight = panel.size?.height || 44.45;
@@ -42,6 +48,27 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
   const padding = 20;
   const viewBoxWidth = panelWidth + padding * 2;
   const viewBoxHeight = panelHeight + padding * 2;
+
+  // 检测标签是否会被遮挡（超出面板边界或与其他端口重叠）
+  const shouldLabelBeAbove = (port: Port): boolean => {
+    if (!port.position) return false;
+
+    const { x, y } = port.position;
+    const labelHeight = 12; // 标签文字高度估计
+
+    // 如果端口在面板底部1/3区域，标签显示在上方
+    if (y > panelHeight * 2 / 3) {
+      return true;
+    }
+
+    // 如果端口编号较大（意味着可能在底部行），显示在上方
+    const portNum = parseInt(port.number);
+    if (!isNaN(portNum) && portNum > ports.length / 2) {
+      return true;
+    }
+
+    return false;
+  };
 
   // 渲染单个端口
   const renderPort = (port: Port) => {
@@ -57,6 +84,13 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
     const portTypeInfo = port.portType ? getPortSize(port.portType as PortType) : null;
     const portIcon = port.portType ? getPortIcon(port.portType as PortType) : null;
 
+    // 判断标签应该显示在上方还是下方
+    const labelAbove = shouldLabelBeAbove(port);
+    const labelY = labelAbove ? -4 : height + 12; // 上方4px 或 下方12px
+
+    // 根据模式决定是否显示标签
+    const showLabel = showPortNumber && (labelMode === 'always' || hoveredPortId === port.id);
+
     return (
       <Tooltip
         key={port.id}
@@ -65,6 +99,7 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
             <div><strong>{port.label || `端口 ${port.number}`}</strong></div>
             <div>编号: {port.number}</div>
             {portTypeInfo && <div>类型: {portTypeInfo.label}</div>}
+            {portTypeInfo && <div>描述: {portTypeInfo.description}</div>}
             <div>状态: {portStatusLabels[port.status]}</div>
             {port.ipAddress && <div>IP: {port.ipAddress}</div>}
             {port.vlan && <div>VLAN: {port.vlan}</div>}
@@ -75,6 +110,8 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
         <g
           className="port"
           onClick={() => onPortClick?.(port)}
+          onMouseEnter={() => setHoveredPortId(port.id)}
+          onMouseLeave={() => setHoveredPortId(null)}
           style={{ cursor: onPortClick ? 'pointer' : 'default' }}
         >
           {/* 如果有端口类型图标，使用SVG图标 */}
@@ -97,18 +134,20 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
                 dangerouslySetInnerHTML={{ __html: portIcon }}
                 transform={`scale(${width / getPortSize(port.portType as PortType).width}, ${height / getPortSize(port.portType as PortType).height})`}
               />
-              {/* 端口编号 - 显示在图标上方 */}
-              <text
-                x={width / 2}
-                y={-4}
-                textAnchor="middle"
-                fill="#333"
-                fontSize="10"
-                fontWeight="bold"
-                style={{ pointerEvents: 'none', userSelect: 'none' }}
-              >
-                {port.number}
-              </text>
+              {/* 端口编号 - 智能位置（上方或下方） */}
+              {showLabel && (
+                <text
+                  x={width / 2}
+                  y={labelY}
+                  textAnchor="middle"
+                  fill="#333"
+                  fontSize="10"
+                  fontWeight="bold"
+                  style={{ pointerEvents: 'none', userSelect: 'none' }}
+                >
+                  {port.number}
+                </text>
+              )}
             </g>
           ) : (
             /* 没有图标时，使用原有的矩形显示 */

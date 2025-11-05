@@ -1,5 +1,6 @@
 import { PrismaClient, PanelType } from '@prisma/client';
 import { generatePortLayout } from '../utils/panelLayoutGenerator';
+import { PortType as PortTypeEnum } from '../constants/portSizes';
 
 const prisma = new PrismaClient();
 
@@ -84,14 +85,12 @@ export class PanelTemplateService {
    * 更新模板
    */
   async updateTemplate(id: string, data: Partial<PanelTemplateData>) {
-    // 不允许修改系统模板
+    // 检查模板是否存在
     const template = await prisma.panelTemplate.findUnique({ where: { id } });
     if (!template) {
       throw new Error('模板不存在');
     }
-    if (template.isSystem) {
-      throw new Error('不允许修改系统预设模板');
-    }
+    // 允许编辑系统模板的布局和样式，但会保留 isSystem 标记
 
     return await prisma.panelTemplate.update({
       where: { id },
@@ -209,11 +208,26 @@ export class PanelTemplateService {
    * 生成端口定义（使用现有的布局生成器）
    */
   private generatePortDefinitions(type: PanelType, portCount: number) {
-    // 创建虚拟端口数组
+    // 根据面板类型确定默认端口类型
+    const getDefaultPortType = (panelType: PanelType): string => {
+      switch (panelType) {
+        case 'NETWORK': return PortTypeEnum.RJ45;  // 网络面板默认RJ45
+        case 'POWER': return PortTypeEnum.POWER_C13;
+        case 'CONSOLE': return PortTypeEnum.SERIAL;
+        case 'USB': return PortTypeEnum.USB_A;
+        case 'MIXED': return PortTypeEnum.RJ45;  // 混合面板默认RJ45
+        default: return PortTypeEnum.RJ45;
+      }
+    };
+
+    const defaultPortType = getDefaultPortType(type);
+
+    // 创建虚拟端口数组 - 添加portType
     const virtualPorts = Array.from({ length: portCount }, (_, i) => ({
       id: `temp-${i}`,
       number: `${i + 1}`,
       label: null,
+      portType: defaultPortType, // 添加默认端口类型
       status: 'AVAILABLE' as const,
       panelId: 'temp',
       positionX: null,
@@ -246,9 +260,10 @@ export class PanelTemplateService {
     // 使用布局生成器计算位置
     const portsWithLayout = generatePortLayout(virtualPorts, virtualPanel);
 
-    // 转换为端口定义格式
+    // 转换为端口定义格式 - 包含portType
     return portsWithLayout.map((port) => ({
       number: port.number,
+      portType: port.portType || defaultPortType, // 保存端口类型
       position: {
         x: port.position?.x || 0,
         y: port.position?.y || 0,
@@ -266,45 +281,66 @@ export class PanelTemplateService {
   async initializeSystemTemplates() {
     const systemTemplates = [
       {
-        name: '24口交换机面板',
-        type: 'ETHERNET' as PanelType,
+        name: '24口RJ45交换机',
+        type: 'NETWORK' as PanelType,
         portCount: 24,
-        description: '标准24口网络交换机，双行交错排列',
+        description: '标准24口RJ45网络交换机，双行交错排列',
         isSystem: true,
       },
       {
-        name: '48口交换机面板',
-        type: 'ETHERNET' as PanelType,
+        name: '48口RJ45交换机',
+        type: 'NETWORK' as PanelType,
         portCount: 48,
-        description: '标准48口网络交换机，双行交错排列',
+        description: '标准48口RJ45网络交换机，双行交错排列',
+        isSystem: true,
+      },
+      {
+        name: '24口SFP+光纤交换机',
+        type: 'NETWORK' as PanelType,
+        portCount: 24,
+        description: '24口SFP+光模块交换机，高密度排列',
         isSystem: true,
       },
       {
         name: '服务器双网口',
-        type: 'ETHERNET' as PanelType,
+        type: 'NETWORK' as PanelType,
         portCount: 2,
-        description: '标准服务器双网口配置',
+        description: '标准服务器双RJ45网口配置',
         isSystem: true,
       },
       {
         name: '服务器四网口',
-        type: 'ETHERNET' as PanelType,
+        type: 'NETWORK' as PanelType,
         portCount: 4,
-        description: '标准服务器四网口配置',
+        description: '标准服务器四RJ45网口配置',
         isSystem: true,
       },
       {
-        name: '24口光纤配线架',
-        type: 'FIBER' as PanelType,
+        name: '24口LC光纤配线架',
+        type: 'NETWORK' as PanelType,
         portCount: 24,
         description: 'LC双工光纤配线架',
         isSystem: true,
       },
       {
-        name: '8口PDU',
+        name: '8口PDU电源分配',
         type: 'POWER' as PanelType,
         portCount: 8,
-        description: '标准8口电源分配单元',
+        description: '标准8口C13电源分配单元',
+        isSystem: true,
+      },
+      {
+        name: '16口PDU电源分配',
+        type: 'POWER' as PanelType,
+        portCount: 16,
+        description: '16口C13电源分配单元',
+        isSystem: true,
+      },
+      {
+        name: '串口控制台面板',
+        type: 'CONSOLE' as PanelType,
+        portCount: 16,
+        description: '16口DB9串口控制台面板',
         isSystem: true,
       },
     ];

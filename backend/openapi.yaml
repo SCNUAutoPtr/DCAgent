@@ -4,7 +4,7 @@ info:
   description: 数据中心全生命周期管理系统 API
   version: 1.0.0
   contact:
-    name: DCAgent Team
+    name: 株式会社CiDERWORKS
 servers:
   - url: http://localhost:3000/api/v1
     description: 本地开发服务器

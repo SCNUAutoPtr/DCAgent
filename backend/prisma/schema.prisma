@@ -78,12 +78,12 @@ model Device {
 
 // 面板类型枚举
 enum PanelType {
-  ETHERNET
-  FIBER
-  POWER
-  SERIAL
-  USB
-  OTHER
+  NETWORK      // 网络面板（可包含RJ45, SFP, QSFP等混合端口）
+  POWER        // 电源面板
+  CONSOLE      // 控制台/串口面板
+  USB          // USB面板
+  MIXED        // 混合功能面板
+  OTHER        // 其他
 }
 
 // 面板模板（可复用的面板配置）

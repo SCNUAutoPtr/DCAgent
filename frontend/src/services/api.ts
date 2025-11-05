@@ -27,8 +27,24 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    // 统一错误处理
+    // 统一错误处理 - 提取后端返回的错误消息
     console.error('API Error:', error);
+
+    // 从后端响应中提取错误消息
+    const backendMessage = error.response?.data?.error
+                        || error.response?.data?.message
+                        || error.response?.data?.msg;
+
+    // 如果后端有返回错误消息，创建新的错误对象包含这个消息
+    if (backendMessage) {
+      const apiError = new Error(backendMessage);
+      // 保留原始响应信息
+      (apiError as any).response = error.response;
+      (apiError as any).status = error.response?.status;
+      (apiError as any).data = error.response?.data;
+      return Promise.reject(apiError);
+    }
+
     return Promise.reject(error);
   }
 );

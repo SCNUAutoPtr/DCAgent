@@ -84,8 +84,10 @@ export default function PanelTemplateEditor({
   const [selectedPorts, setSelectedPorts] = useState<Set<string>>(new Set());
   const [groups, setGroups] = useState<PortGroup[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [isDraggingPorts, setIsDraggingPorts] = useState(false); // 新增：是否正在拖拽端口
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
+  const [draggedPortsInitialPos, setDraggedPortsInitialPos] = useState<Map<string, { x: number; y: number }>>(new Map()); // 新增：记录被拖拽端口的初始位置
   const [history, setHistory] = useState<PortDefinition[][]>([initialPorts]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [addPortModalVisible, setAddPortModalVisible] = useState(false);
@@ -248,14 +250,26 @@ export default function PanelTemplateEditor({
         } else {
           newSelected.add(clickedPort.number);
         }
+        setSelectedPorts(newSelected);
       } else {
-        // 单选
+        // 单选 或 开始拖拽
         if (!newSelected.has(clickedPort.number)) {
           newSelected.clear();
           newSelected.add(clickedPort.number);
+          setSelectedPorts(newSelected);
         }
+        // 记录拖拽起始位置和所有选中端口的初始位置
+        setIsDraggingPorts(true);
+        setDragStart({ x, y });
+
+        const initialPositions = new Map<string, { x: number; y: number }>();
+        ports.forEach(port => {
+          if (newSelected.has(port.number)) {
+            initialPositions.set(port.number, { ...port.position });
+          }
+        });
+        setDraggedPortsInitialPos(initialPositions);
       }
-      setSelectedPorts(newSelected);
     } else {
       // 点击空白处，开始拖拽选框
       if (!e.ctrlKey && !e.metaKey) {
@@ -269,8 +283,6 @@ export default function PanelTemplateEditor({
 
   // 鼠标移动事件
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging || !dragStart) return;
-
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -278,52 +290,93 @@ export default function PanelTemplateEditor({
     const x = (e.clientX - rect.left) / zoom;
     const y = (e.clientY - rect.top) / zoom;
 
-    setDragCurrent({ x, y });
+    if (isDraggingPorts && dragStart) {
+      // 拖拽端口：计算偏移并更新所有选中端口的位置
+      const deltaX = x - dragStart.x;
+      const deltaY = y - dragStart.y;
+
+      const newPorts = ports.map(port => {
+        if (selectedPorts.has(port.number)) {
+          const initialPos = draggedPortsInitialPos.get(port.number);
+          if (initialPos) {
+            // 计算新位置（带边界检查）
+            let newX = initialPos.x + deltaX;
+            let newY = initialPos.y + deltaY;
+
+            // 边界限制
+            newX = Math.max(0, Math.min(newX, width - port.size.width));
+            newY = Math.max(0, Math.min(newY, height - port.size.height));
+
+            return {
+              ...port,
+              position: { x: newX, y: newY },
+            };
+          }
+        }
+        return port;
+      });
+
+      setPorts(newPorts);
+    } else if (isDragging && dragStart) {
+      // 拖拽选框
+      setDragCurrent({ x, y });
+    }
   };
 
   // 鼠标释放事件
   const handleCanvasMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging || !dragStart || !dragCurrent) {
-      setIsDragging(false);
-      return;
-    }
+    if (isDraggingPorts && dragStart) {
+      // 完成端口拖拽 - 添加到历史记录
+      addToHistory(ports);
+      setIsDraggingPorts(false);
+      setDragStart(null);
+      setDraggedPortsInitialPos(new Map());
+    } else if (isDragging && dragStart && dragCurrent) {
+      // 完成框选
 
-    // 计算选择框范围
-    const x1 = Math.min(dragStart.x, dragCurrent.x);
-    const y1 = Math.min(dragStart.y, dragCurrent.y);
-    const x2 = Math.max(dragStart.x, dragCurrent.x);
-    const y2 = Math.max(dragStart.y, dragCurrent.y);
+      // 计算选择框范围
+      const x1 = Math.min(dragStart.x, dragCurrent.x);
+      const y1 = Math.min(dragStart.y, dragCurrent.y);
+      const x2 = Math.max(dragStart.x, dragCurrent.x);
+      const y2 = Math.max(dragStart.y, dragCurrent.y);
 
-    // 找出选择框内的所有端口
-    const portsInSelection = ports.filter((port) => {
-      const portCenterX = port.position.x + port.size.width / 2;
-      const portCenterY = port.position.y + port.size.height / 2;
-      return (
-        portCenterX >= x1 &&
-        portCenterX <= x2 &&
-        portCenterY >= y1 &&
-        portCenterY <= y2
-      );
-    });
+      // 找出选择框内的所有端口
+      const portsInSelection = ports.filter((port) => {
+        const portCenterX = port.position.x + port.size.width / 2;
+        const portCenterY = port.position.y + port.size.height / 2;
+        return (
+          portCenterX >= x1 &&
+          portCenterX <= x2 &&
+          portCenterY >= y1 &&
+          portCenterY <= y2
+        );
+      });
 
-    // 更新选中状态
-    if (portsInSelection.length > 0) {
-      const newSelected = new Set(selectedPorts);
-      if (e.ctrlKey || e.metaKey) {
-        // Ctrl/Cmd：添加到现有选择
-        portsInSelection.forEach((port) => newSelected.add(port.number));
-      } else {
-        // 替换选择
-        newSelected.clear();
-        portsInSelection.forEach((port) => newSelected.add(port.number));
+      // 更新选中状态
+      if (portsInSelection.length > 0) {
+        const newSelected = new Set(selectedPorts);
+        if (e.ctrlKey || e.metaKey) {
+          // Ctrl/Cmd：添加到现有选择
+          portsInSelection.forEach((port) => newSelected.add(port.number));
+        } else {
+          // 替换选择
+          newSelected.clear();
+          portsInSelection.forEach((port) => newSelected.add(port.number));
+        }
+        setSelectedPorts(newSelected);
       }
-      setSelectedPorts(newSelected);
-    }
 
-    // 重置拖拽状态
-    setIsDragging(false);
-    setDragStart(null);
-    setDragCurrent(null);
+      // 重置框选状态
+      setIsDragging(false);
+      setDragStart(null);
+      setDragCurrent(null);
+    } else {
+      // 其他情况，重置所有拖拽状态
+      setIsDragging(false);
+      setIsDraggingPorts(false);
+      setDragStart(null);
+      setDragCurrent(null);
+    }
   };
 
   // 添加端口

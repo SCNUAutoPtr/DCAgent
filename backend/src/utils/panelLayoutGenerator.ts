@@ -82,28 +82,28 @@ interface Panel {
  */
 function getLayoutConfig(panelType: PanelType, portCount: number): LayoutConfig {
   switch (panelType) {
-    case 'ETHERNET':
-      // 网口通常是 24 或 48 口，排列成 2 行
+    case 'NETWORK':
+      // 网络面板（RJ45/SFP/QSFP）通常是 24 或 48 口，排列成 2 行
       if (portCount <= 24) {
         return { portsPerRow: 24, rowSpacing: 10 };
       } else {
         return { portsPerRow: 24, rowSpacing: 8 };
       }
 
-    case 'FIBER':
-      // 光纤端口通常更密集
-      return { portsPerRow: Math.min(portCount, 48), rowSpacing: 8 };
-
     case 'POWER':
       // 电源插座通常单行或双行
       return { portsPerRow: Math.min(portCount, 8), rowSpacing: 12 };
 
-    case 'SERIAL':
+    case 'CONSOLE':
       // 串口通常较少
       return { portsPerRow: Math.min(portCount, 4), rowSpacing: 10 };
 
     case 'USB':
       return { portsPerRow: Math.min(portCount, 8), rowSpacing: 8 };
+
+    case 'MIXED':
+      // 混合面板使用通用布局
+      return { portsPerRow: Math.min(portCount, 16), rowSpacing: 10 };
 
     default:
       return { portsPerRow: Math.min(portCount, 16), rowSpacing: 10 };
@@ -126,11 +126,11 @@ export function generatePortLayout(ports: Port[], panel: Panel): Port[] {
   // 如果端口有指定类型，使用端口自己的类型；否则根据面板类型推断默认类型
   const getDefaultPortType = (panelType: PanelType): PortType => {
     switch (panelType) {
-      case 'ETHERNET': return PortType.RJ45;
-      case 'FIBER': return PortType.SFP;
+      case 'NETWORK': return PortType.RJ45;
       case 'POWER': return PortType.POWER_C13;
-      case 'SERIAL': return PortType.SERIAL;
+      case 'CONSOLE': return PortType.SERIAL;
       case 'USB': return PortType.USB_A;
+      case 'MIXED': return PortType.RJ45;
       default: return PortType.RJ45;
     }
   };
@@ -216,9 +216,9 @@ function generateUniformPortLayout(ports: any[], panel: Panel, portType: PortTyp
   const rows = Math.ceil(ports.length / config.portsPerRow);
 
   // 交换机类型使用交错排列：1 3 5 7... (上行) 和 2 4 6 8... (下行)
-  const isEthernetSwitch = panel.type === 'ETHERNET' && ports.length > 8;
+  const isNetworkSwitch = panel.type === 'NETWORK' && ports.length > 8;
 
-  if (isEthernetSwitch) {
+  if (isNetworkSwitch) {
     // 交错排列算法
     const portsPerColumn = Math.ceil(ports.length / 2);
 
