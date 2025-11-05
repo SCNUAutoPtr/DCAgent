@@ -63,4 +63,22 @@ export const cableService = {
     const response = await api.post('/cables/endpoints', { id: cableId });
     return response.data;
   },
+
+  // 根据shortId获取线缆信息
+  async getByShortId(shortId: number): Promise<Cable> {
+    const response = await api.post('/cables/by-shortid', { shortId });
+    return response.data;
+  },
+
+  // 根据shortId获取线缆端点信息
+  async getCableEndpointsByShortId(shortId: number): Promise<any> {
+    const response = await api.post('/cables/endpoints-by-shortid', { shortId });
+    return response.data;
+  },
+
+  // 搜索线缆
+  async search(search: string): Promise<Cable[]> {
+    const response = await api.get('/cables', { params: { search } });
+    return response.data;
+  },
 };

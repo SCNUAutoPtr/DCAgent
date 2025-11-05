@@ -28,8 +28,14 @@ class CableService {
     const { portAId, portBId, ...cableData } = data;
 
     // 检查端口是否存在
-    const portA = await prisma.port.findUnique({ where: { id: portAId } });
-    const portB = await prisma.port.findUnique({ where: { id: portBId } });
+    const portA = await prisma.port.findUnique({
+      where: { id: portAId },
+      include: { panel: true },
+    });
+    const portB = await prisma.port.findUnique({
+      where: { id: portBId },
+      include: { panel: true },
+    });
 
     if (!portA || !portB) {
       throw new Error('One or both ports not found');
@@ -43,6 +49,23 @@ class CableService {
     // 创建线缆记录
     const cable = await prisma.cable.create({
       data: cableData,
+    });
+
+    // 同步端口和面板信息到Neo4j
+    if (portA.panel) {
+      await cableGraphService.syncPanelNode(portA.panel.id, portA.panel);
+    }
+    await cableGraphService.syncPortNode(portAId, {
+      ...portA,
+      panelId: portA.panelId,
+    });
+
+    if (portB.panel) {
+      await cableGraphService.syncPanelNode(portB.panel.id, portB.panel);
+    }
+    await cableGraphService.syncPortNode(portBId, {
+      ...portB,
+      panelId: portB.panelId,
     });
 
     // 在图数据库中创建连接关系

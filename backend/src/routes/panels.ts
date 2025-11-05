@@ -49,6 +49,10 @@ const idSchema = z.object({
   id: z.string().uuid('Invalid ID'),
 });
 
+const shortIdSchema = z.object({
+  shortId: z.number().int().positive('Invalid shortId'),
+});
+
 // GET /api/v1/panels - 获取列表
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -92,6 +96,24 @@ router.post('/get', async (req: Request, res: Response) => {
     }
     console.error('Error fetching panel:', error);
     res.status(500).json({ error: 'Failed to fetch panel' });
+  }
+});
+
+// POST /api/v1/panels/by-shortid - 根据shortId获取详情
+router.post('/by-shortid', async (req: Request, res: Response) => {
+  try {
+    const { shortId } = shortIdSchema.parse(req.body);
+    const panel = await panelService.getPanelByShortId(shortId);
+    if (!panel) {
+      return res.status(404).json({ error: 'Panel not found' });
+    }
+    res.json(panel);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation error', details: error.errors });
+    }
+    console.error('Error fetching panel by shortId:', error);
+    res.status(500).json({ error: 'Failed to fetch panel by shortId' });
   }
 });
 

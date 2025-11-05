@@ -49,4 +49,10 @@ export const panelService = {
   async getByType(type: PanelType): Promise<Panel[]> {
     return this.getAll(undefined, type);
   },
+
+  // 根据shortId获取面板
+  async getByShortId(shortId: number): Promise<Panel> {
+    const response = await api.post('/panels/by-shortid', { shortId });
+    return response.data;
+  },
 };
