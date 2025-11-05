@@ -4,12 +4,13 @@ import {
   CloudUploadOutlined,
   DatabaseOutlined,
   ApartmentOutlined,
-  ApiOutlined,
   LinkOutlined,
 } from '@ant-design/icons';
-import { PanelTemplate, Device } from '@/types';
+import { PanelTemplate, Device, Cabinet } from '@/types';
 import { panelTemplateService } from '@/services/panelTemplateService';
 import { deviceService } from '@/services/deviceService';
+import { cabinetService } from '@/services/cabinetService';
+import BulkImportModal, { BulkImportColumn } from '@/components/BulkImportModal';
 
 const { Title, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -21,12 +22,16 @@ const { TabPane } = Tabs;
 export default function BulkDeploymentPage() {
   const [templates, setTemplates] = useState<PanelTemplate[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [cabinets, setCabinets] = useState<Cabinet[]>([]);
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
+  const [deviceImportVisible, setDeviceImportVisible] = useState(false);
+  const [cableImportVisible, setCableImportVisible] = useState(false);
   const [form] = Form.useForm();
 
   useEffect(() => {
     loadTemplates();
     loadDevices();
+    loadCabinets();
   }, []);
 
   const loadTemplates = async () => {
@@ -47,6 +52,15 @@ export default function BulkDeploymentPage() {
     }
   };
 
+  const loadCabinets = async () => {
+    try {
+      const data = await cabinetService.getAll();
+      setCabinets(data);
+    } catch (error: any) {
+      message.error('加载机柜失败: ' + error.message);
+    }
+  };
+
   const handleCreateFromTemplate = () => {
     form.resetFields();
     setTemplateModalVisible(true);
@@ -58,12 +72,219 @@ export default function BulkDeploymentPage() {
       const { templateId, deviceId } = values;
 
       await panelTemplateService.createPanelFromTemplate(templateId, deviceId);
-      message.success('从模板创建面板成功！');
+      message.success('从模板创建面板成功');
       setTemplateModalVisible(false);
       form.resetFields();
     } catch (error: any) {
       message.error('创建失败: ' + error.message);
     }
+  };
+
+  // 设备导入列配置
+  const deviceColumns: BulkImportColumn[] = [
+    {
+      title: '设备名称',
+      dataIndex: 'name',
+      key: 'name',
+      required: true,
+      validator: (value) => {
+        if (typeof value !== 'string' || value.trim().length === 0) {
+          return '设备名称不能为空';
+        }
+        return null;
+      },
+    },
+    {
+      title: '设备类型',
+      dataIndex: 'type',
+      key: 'type',
+      required: true,
+      validator: (value) => {
+        const validTypes = ['SERVER', 'SWITCH', 'ROUTER', 'FIREWALL', 'STORAGE', 'PDU', 'OTHER'];
+        if (!validTypes.includes(value)) {
+          return `设备类型必须是: ${validTypes.join(', ')}`;
+        }
+        return null;
+      },
+    },
+    {
+      title: '型号',
+      dataIndex: 'model',
+      key: 'model',
+      required: false,
+    },
+    {
+      title: '序列号',
+      dataIndex: 'serialNo',
+      key: 'serialNo',
+      required: false,
+    },
+    {
+      title: '机柜ID',
+      dataIndex: 'cabinetId',
+      key: 'cabinetId',
+      required: true,
+      validator: (value) => {
+        if (!cabinets.find(c => c.id === value)) {
+          return '机柜ID不存在';
+        }
+        return null;
+      },
+    },
+    {
+      title: 'U位位置',
+      dataIndex: 'uPosition',
+      key: 'uPosition',
+      required: false,
+      validator: (value) => {
+        if (value && (typeof value !== 'number' || value < 1 || value > 42)) {
+          return 'U位位置必须是1-42之间的数字';
+        }
+        return null;
+      },
+    },
+    {
+      title: 'U高度',
+      dataIndex: 'uHeight',
+      key: 'uHeight',
+      required: false,
+      validator: (value) => {
+        if (value && (typeof value !== 'number' || value < 1)) {
+          return 'U高度必须是正整数';
+        }
+        return null;
+      },
+    },
+  ];
+
+  // 设备导入模板数据
+  const deviceTemplateData = [
+    {
+      设备名称: 'SV-001',
+      设备类型: 'SERVER',
+      型号: 'Dell PowerEdge R740',
+      序列号: 'SN123456',
+      机柜ID: cabinets[0]?.id || '请填写有效的机柜ID',
+      U位位置: 10,
+      U高度: 2,
+    },
+    {
+      设备名称: 'SW-001',
+      设备类型: 'SWITCH',
+      型号: 'Cisco Catalyst 9300',
+      序列号: 'SN789012',
+      机柜ID: cabinets[0]?.id || '请填写有效的机柜ID',
+      U位位置: 40,
+      U高度: 1,
+    },
+  ];
+
+  // 线缆导入列配置
+  const cableColumns: BulkImportColumn[] = [
+    {
+      title: '标签',
+      dataIndex: 'label',
+      key: 'label',
+      required: false,
+    },
+    {
+      title: '线缆类型',
+      dataIndex: 'type',
+      key: 'type',
+      required: true,
+      validator: (value) => {
+        const validTypes = ['CAT5E', 'CAT6', 'CAT6A', 'FIBER_SM', 'FIBER_MM', 'DAC', 'AOC', 'QSFP', 'OTHER'];
+        if (!validTypes.includes(value)) {
+          return `线缆类型必须是: ${validTypes.join(', ')}`;
+        }
+        return null;
+      },
+    },
+    {
+      title: '长度(米)',
+      dataIndex: 'length',
+      key: 'length',
+      required: false,
+      validator: (value) => {
+        if (value && (typeof value !== 'number' || value <= 0)) {
+          return '长度必须是正数';
+        }
+        return null;
+      },
+    },
+    {
+      title: '颜色',
+      dataIndex: 'color',
+      key: 'color',
+      required: false,
+    },
+    {
+      title: '备注',
+      dataIndex: 'notes',
+      key: 'notes',
+      required: false,
+    },
+    {
+      title: '端口A ID',
+      dataIndex: 'portAId',
+      key: 'portAId',
+      required: true,
+    },
+    {
+      title: '端口B ID',
+      dataIndex: 'portBId',
+      key: 'portBId',
+      required: true,
+    },
+  ];
+
+  // 线缆导入模板数据
+  const cableTemplateData = [
+    {
+      标签: 'CABLE-001',
+      线缆类型: 'CAT6',
+      '长度(米)': 3,
+      颜色: '蓝色',
+      备注: '服务器到交换机',
+      '端口A ID': '请填写有效的端口ID',
+      '端口B ID': '请填写有效的端口ID',
+    },
+  ];
+
+  // 处理设备批量导入
+  const handleDeviceImport = async (data: any[]) => {
+    try {
+      const result = await deviceService.bulkCreate(data);
+
+      if (result.data.failed.length > 0) {
+        Modal.warning({
+          title: '部分导入失败',
+          content: (
+            <div>
+              <p>成功: {result.data.success.length} 条</p>
+              <p>失败: {result.data.failed.length} 条</p>
+              <ul>
+                {result.data.failed.map((f: any) => (
+                  <li key={f.index}>
+                    第 {f.index} 行: {f.error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ),
+        });
+      }
+
+      await loadDevices();
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error || error.message);
+    }
+  };
+
+  // 处理线缆批量导入（待实现后端API）
+  const handleCableImport = async (data: any[]) => {
+    message.info('线缆批量导入功能开发中');
+    console.log('Cable import data:', data);
   };
 
   return (
@@ -79,8 +300,8 @@ export default function BulkDeploymentPage() {
         </div>
 
         <Alert
-          message="功能开发中"
-          description="此功能用于批量上架新购买的服务器和网络设备，支持 Excel/CSV 导入和模板快速创建。"
+          message="批量上架助手"
+          description="支持通过 Excel/CSV 文件批量导入设备和线缆信息，快速完成数据中心设备上架工作。"
           type="info"
           showIcon
         />
@@ -102,15 +323,15 @@ export default function BulkDeploymentPage() {
               </Paragraph>
               <ul>
                 <li>设备名称、型号、序列号</li>
-                <li>设备类型（服务器、交换机、路由器等）</li>
+                <li>设备类型（SERVER, SWITCH, ROUTER, FIREWALL, STORAGE, PDU, OTHER）</li>
                 <li>所属机柜和U位分配</li>
-                <li>IP地址和管理信息</li>
+                <li>自动验证数据完整性和合法性</li>
               </ul>
-              <Button type="primary" disabled>
-                上传 Excel 文件
-              </Button>
-              <Button style={{ marginLeft: 8 }} disabled>
-                下载模板
+              <Button
+                type="primary"
+                onClick={() => setDeviceImportVisible(true)}
+              >
+                批量导入设备
               </Button>
             </Card>
           </TabPane>
@@ -144,31 +365,6 @@ export default function BulkDeploymentPage() {
           <TabPane
             tab={
               <span>
-                <ApiOutlined />
-                批量创建端口
-              </span>
-            }
-            key="ports"
-          >
-            <Card>
-              <Title level={4}>批量创建端口</Title>
-              <Paragraph>
-                根据面板类型自动批量生成端口：
-              </Paragraph>
-              <ul>
-                <li>自动生成端口编号（支持自定义命名规则）</li>
-                <li>批量设置端口属性（VLAN、速率等）</li>
-                <li>批量修改端口状态</li>
-              </ul>
-              <Button type="primary" disabled>
-                批量创建
-              </Button>
-            </Card>
-          </TabPane>
-
-          <TabPane
-            tab={
-              <span>
                 <LinkOutlined />
                 批量导入线缆
               </span>
@@ -182,15 +378,15 @@ export default function BulkDeploymentPage() {
               </Paragraph>
               <ul>
                 <li>线缆类型、长度、颜色</li>
-                <li>本端端口和对端端口</li>
+                <li>本端端口和对端端口ID</li>
                 <li>自动建立连接关系</li>
                 <li>自动更新端口状态</li>
               </ul>
-              <Button type="primary" disabled>
-                上传线缆清单
-              </Button>
-              <Button style={{ marginLeft: 8 }} disabled>
-                下载模板
+              <Button
+                type="primary"
+                onClick={() => setCableImportVisible(true)}
+              >
+                批量导入线缆
               </Button>
             </Card>
           </TabPane>
@@ -198,7 +394,7 @@ export default function BulkDeploymentPage() {
 
         <Alert
           message="提示"
-          description="批量上架功能正在开发中。当前您可以通过直接访问 /devices、/panels、/ports 页面进行单个资源的管理。"
+          description="批量导入前，请先创建好数据中心、机房和机柜等基础设施。导入时需要引用这些资源的ID。"
           type="warning"
           showIcon
         />
@@ -242,6 +438,26 @@ export default function BulkDeploymentPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* 设备批量导入 Modal */}
+      <BulkImportModal
+        visible={deviceImportVisible}
+        title="批量导入设备"
+        columns={deviceColumns}
+        templateData={deviceTemplateData}
+        onCancel={() => setDeviceImportVisible(false)}
+        onSubmit={handleDeviceImport}
+      />
+
+      {/* 线缆批量导入 Modal */}
+      <BulkImportModal
+        visible={cableImportVisible}
+        title="批量导入线缆"
+        columns={cableColumns}
+        templateData={cableTemplateData}
+        onCancel={() => setCableImportVisible(false)}
+        onSubmit={handleCableImport}
+      />
     </div>
   );
 }

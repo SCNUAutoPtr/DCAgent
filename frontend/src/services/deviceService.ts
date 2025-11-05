@@ -37,4 +37,10 @@ export const deviceService = {
     const response = await api.get('/devices', { params: { search: query } });
     return response.data;
   },
+
+  // 批量创建设备
+  async bulkCreate(devices: Partial<Device>[]): Promise<any> {
+    const response = await api.post('/devices/bulk-create', { devices });
+    return response.data;
+  },
 };

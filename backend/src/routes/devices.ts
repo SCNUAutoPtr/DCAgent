@@ -33,6 +33,10 @@ const shortIdSchema = z.object({
   shortId: z.number().int().positive('Invalid shortId'),
 });
 
+const bulkCreateDevicesSchema = z.object({
+  devices: z.array(createDeviceSchema),
+});
+
 // GET /api/v1/devices - 获取列表
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -134,6 +138,26 @@ router.post('/delete', async (req: Request, res: Response) => {
     }
     console.error('Error deleting device:', error);
     res.status(500).json({ error: 'Failed to delete device' });
+  }
+});
+
+// POST /api/v1/devices/bulk-create - 批量创建
+router.post('/bulk-create', async (req: Request, res: Response) => {
+  try {
+    const { devices } = bulkCreateDevicesSchema.parse(req.body);
+    const results = await deviceService.bulkCreateDevices(devices);
+
+    res.status(201).json({
+      success: true,
+      message: `成功创建 ${results.success.length} 个设备`,
+      data: results,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation error', details: error.errors });
+    }
+    console.error('Error bulk creating devices:', error);
+    res.status(500).json({ error: 'Failed to bulk create devices' });
   }
 });
 

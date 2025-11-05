@@ -135,6 +135,28 @@ class DeviceService {
       },
     });
   }
+
+  async bulkCreateDevices(devices: CreateDeviceDto[]) {
+    const results = {
+      success: [] as any[],
+      failed: [] as { index: number; data: CreateDeviceDto; error: string }[],
+    };
+
+    for (let i = 0; i < devices.length; i++) {
+      try {
+        const device = await this.createDevice(devices[i]);
+        results.success.push(device);
+      } catch (error: any) {
+        results.failed.push({
+          index: i + 1,
+          data: devices[i],
+          error: error.message,
+        });
+      }
+    }
+
+    return results;
+  }
 }
 
 export default new DeviceService();
