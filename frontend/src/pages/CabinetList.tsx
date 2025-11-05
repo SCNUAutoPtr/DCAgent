@@ -1210,14 +1210,28 @@ export default function CabinetList() {
                             } as any);
                             // 重新加载端口数据
                             const updatedPorts = await portService.getByPanel(panel.id);
-                            setPanelPorts((prev) => ({
-                              ...prev,
-                              [panel.id]: updatedPorts,
-                            }));
+                            setPanelPorts((prev) => {
+                              const newMap = new Map(prev);
+                              newMap.set(panel.id, updatedPorts);
+                              return newMap;
+                            });
                             message.success('端口位置已更新');
                           } catch (error) {
                             console.error('Failed to update port position:', error);
                             message.error('更新端口位置失败');
+                          }
+                        }}
+                        onPortsUpdated={async () => {
+                          try {
+                            // 重新加载端口数据
+                            const updatedPorts = await portService.getByPanel(panel.id);
+                            setPanelPorts((prev) => {
+                              const newMap = new Map(prev);
+                              newMap.set(panel.id, updatedPorts);
+                              return newMap;
+                            });
+                          } catch (error) {
+                            console.error('Failed to reload ports:', error);
                           }
                         }}
                         allowEdit={true}

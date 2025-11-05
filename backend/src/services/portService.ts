@@ -3,33 +3,35 @@ import { PortStatus } from '@prisma/client';
 
 export interface CreatePortDto {
   number: string;
-  label?: string;
+  label?: string | null;
   status?: PortStatus;
   panelId: string;
-  // 物理布局（相对于面板的坐标）
-  positionX?: number;
-  positionY?: number;
-  width?: number;
-  height?: number;
-}
-
-export interface UpdatePortDto {
-  number?: string;
-  label?: string;
-  status?: PortStatus;
-  // 物理布局 - 支持两种格式
+  portType?: string;
+  rotation?: number;
   position?: {
     x: number;
     y: number;
   };
-  positionX?: number;
-  positionY?: number;
   size?: {
     width: number;
     height: number;
   };
-  width?: number;
-  height?: number;
+}
+
+export interface UpdatePortDto {
+  number?: string;
+  label?: string | null;
+  status?: PortStatus;
+  portType?: string;
+  rotation?: number;
+  position?: {
+    x: number;
+    y: number;
+  };
+  size?: {
+    width: number;
+    height: number;
+  };
 }
 
 class PortService {
@@ -167,17 +169,9 @@ class PortService {
   }
 
   async updatePort(id: string, data: UpdatePortDto) {
-    // 处理 position 和 size 对象
-    const { position, size, ...restData } = data;
-    const portData = {
-      ...restData,
-      ...(position && { positionX: position.x, positionY: position.y }),
-      ...(size && { width: size.width, height: size.height }),
-    };
-
     return await prisma.port.update({
       where: { id },
-      data: portData,
+      data,
       include: {
         panel: {
           include: {

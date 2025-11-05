@@ -21,9 +21,13 @@ import {
   EditOutlined,
   SaveOutlined,
   InfoCircleOutlined,
+  LockOutlined,
+  UnlockOutlined,
 } from '@ant-design/icons';
-import { Panel, PanelType, PanelTemplate, Device, DeviceType } from '@/types';
+import { Panel, PanelType, PanelTemplate, Device, DeviceType, Port } from '@/types';
 import { panelTemplateService } from '@/services/panelTemplateService';
+import { portService } from '@/services/portService';
+import PanelCanvasEditor, { PortDefinition } from './PanelCanvasEditor';
 
 const { Option } = Select;
 
@@ -58,11 +62,15 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
   const [useTemplate, setUseTemplate] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<PanelTemplate | null>(null);
   const [previewSize, setPreviewSize] = useState({ width: 482.6, height: 44.45 });
+  const [isEditMode, setIsEditMode] = useState(false); // 是否处于可视化编辑模式
+  const [ports, setPorts] = useState<PortDefinition[]>([]); // 端口数据
+  const [, setLoadingPorts] = useState(false);
 
-  // 加载模板列表
+  // 加载模板列表和端口数据
   useEffect(() => {
     if (visible) {
       loadTemplates();
+      loadPorts();
       resetForm();
     }
   }, [visible, device, panel]);
@@ -74,6 +82,38 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
     } catch (error) {
       console.error('Failed to load templates:', error);
       message.error('加载面板模板失败');
+    }
+  };
+
+  // 加载面板端口数据
+  const loadPorts = async () => {
+    if (!panel?.id) {
+      setPorts([]);
+      return;
+    }
+
+    try {
+      setLoadingPorts(true);
+      const panelPorts = await portService.getAll(panel.id);
+
+      // 将 Port 转换为 PortDefinition 格式
+      const portDefinitions: PortDefinition[] = panelPorts.map((port: Port) => ({
+        id: port.id,
+        number: port.number,
+        portType: port.portType || 'RJ45',
+        position: port.position || { x: 20, y: 20 },
+        size: port.size || { width: 15, height: 12 },
+        label: port.label,
+        rotation: (port as any).rotation || 0, // 添加旋转角度
+      }));
+
+      setPorts(portDefinitions);
+    } catch (error) {
+      console.error('Failed to load ports:', error);
+      message.error('加载端口数据失败');
+      setPorts([]);
+    } finally {
+      setLoadingPorts(false);
     }
   };
 
@@ -179,6 +219,35 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
       };
 
       await onSave(panelData);
+
+      // 如果有面板ID且有端口数据，保存端口信息
+      if (panel?.id && ports.length > 0) {
+        console.log('Saving ports:', ports.length, 'ports');
+        try {
+          // 批量更新端口位置信息
+          await Promise.all(
+            ports.map((port) => {
+              if (port.id) {
+                return portService.update(port.id, {
+                  position: port.position,
+                  size: port.size,
+                  portType: port.portType,
+                  label: port.label,
+                  rotation: port.rotation || 0, // 保存旋转角度
+                } as any);
+              }
+              return Promise.resolve();
+            })
+          );
+          message.success('端口位置已保存');
+        } catch (error) {
+          console.error('Failed to save port positions:', error);
+          message.warning('端口位置保存失败');
+        }
+      } else {
+        console.log('Not saving ports - panel?.id:', panel?.id, 'ports.length:', ports.length);
+      }
+
       message.success(panel ? '面板更新成功' : '面板创建成功');
       onCancel();
     } catch (error: any) {
@@ -245,11 +314,20 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
       }
       open={visible}
       onCancel={onCancel}
-      width={800}
+      width={isEditMode ? 1200 : 800}
       footer={[
         <Button key="cancel" onClick={onCancel}>
           取消
         </Button>,
+        panel && (
+          <Button
+            key="edit"
+            icon={isEditMode ? <LockOutlined /> : <UnlockOutlined />}
+            onClick={() => setIsEditMode(!isEditMode)}
+          >
+            {isEditMode ? '锁定编辑' : '解锁编辑'}
+          </Button>
+        ),
         <Button
           key="save"
           type="primary"
@@ -261,7 +339,7 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
         </Button>,
       ]}
     >
-      <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+      <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
         {/* 设备信息 */}
         <Card size="small" style={{ marginBottom: 16 }}>
           <Descriptions column={2} size="small">
@@ -273,6 +351,28 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
             </Descriptions.Item>
           </Descriptions>
         </Card>
+
+        {/* 可视化编辑器 - 放在顶部 */}
+        {isEditMode && panel && (
+          <>
+            <Alert
+              message="可视化编辑模式"
+              description="您现在可以在画布上编辑端口位置。拖动端口可调整位置，点击端口可选中。"
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+            <PanelCanvasEditor
+              width={form.getFieldValue('width') || 482.6}
+              height={form.getFieldValue('height') || 44.45}
+              backgroundColor={form.getFieldValue('backgroundColor') || '#FFFFFF'}
+              initialPorts={ports}
+              onPortsChange={setPorts}
+              readOnly={false}
+            />
+            <Divider />
+          </>
+        )}
 
         <Form
           form={form}
@@ -419,7 +519,7 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
           )}
 
           {/* 尺寸预览 */}
-          {previewSize && (
+          {!isEditMode && previewSize && (
             <Card title="尺寸预览" size="small">
               <div style={{ textAlign: 'center', padding: '20px' }}>
                 <div

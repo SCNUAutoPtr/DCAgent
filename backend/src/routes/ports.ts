@@ -7,14 +7,19 @@ const router = Router();
 // Validation schemas
 const createPortSchema = z.object({
   number: z.string().min(1, 'Number is required'),
-  label: z.string().optional(),
+  label: z.string().nullable().optional(),
   status: z.enum(['AVAILABLE', 'OCCUPIED', 'RESERVED', 'FAULTY']).optional(),
   panelId: z.string().uuid('Invalid panel ID'),
-  // 物理布局（相对于面板的坐标）
-  positionX: z.number().optional(),
-  positionY: z.number().optional(),
-  width: z.number().optional(),
-  height: z.number().optional(),
+  portType: z.string().optional(),
+  rotation: z.number().optional(),
+  position: z.object({
+    x: z.number(),
+    y: z.number(),
+  }).optional(),
+  size: z.object({
+    width: z.number(),
+    height: z.number(),
+  }).optional(),
 });
 
 const createBulkPortsSchema = z.object({
@@ -26,21 +31,18 @@ const createBulkPortsSchema = z.object({
 const updatePortSchema = z.object({
   id: z.string().uuid('Invalid ID'),
   number: z.string().min(1).optional(),
-  label: z.string().optional(),
+  label: z.string().nullable().optional(),
   status: z.enum(['AVAILABLE', 'OCCUPIED', 'RESERVED', 'FAULTY']).optional(),
-  // 物理布局 - 支持两种格式
+  portType: z.string().optional(),
+  rotation: z.number().optional(),
   position: z.object({
     x: z.number(),
     y: z.number(),
   }).optional(),
-  positionX: z.number().optional(),
-  positionY: z.number().optional(),
   size: z.object({
     width: z.number(),
     height: z.number(),
   }).optional(),
-  width: z.number().optional(),
-  height: z.number().optional(),
 });
 
 const updatePortStatusSchema = z.object({

@@ -9,14 +9,14 @@ export interface CreatePanelDto {
   templateId?: string;
   isCustomized?: boolean;
   // 物理布局
-  positionX?: number;
-  positionY?: number;
+  position?: {
+    x: number;
+    y: number;
+  };
   size?: {
     width: number;
     height: number;
   };
-  width?: number;
-  height?: number;
   // 视觉样式
   backgroundColor?: string | null;
   image?: string | null;
@@ -30,14 +30,14 @@ export interface UpdatePanelDto {
   templateId?: string | null;
   isCustomized?: boolean;
   // 物理布局
-  positionX?: number;
-  positionY?: number;
+  position?: {
+    x: number;
+    y: number;
+  };
   size?: {
     width: number;
     height: number;
   };
-  width?: number;
-  height?: number;
   // 视觉样式
   backgroundColor?: string | null;
   image?: string | null;
@@ -46,16 +46,8 @@ export interface UpdatePanelDto {
 
 class PanelService {
   async createPanel(data: CreatePanelDto) {
-    // 处理 size 对象：如果提供了 size，则使用 size.width 和 size.height
-    const { size, ...restData } = data;
-    const panelData = {
-      ...restData,
-      width: size?.width ?? data.width,
-      height: size?.height ?? data.height,
-    };
-
     return await prisma.panel.create({
-      data: panelData,
+      data,
       include: {
         device: true,
         ports: true,
@@ -154,16 +146,9 @@ class PanelService {
   }
 
   async updatePanel(id: string, data: UpdatePanelDto) {
-    // 处理 size 对象：如果提供了 size，则使用 size.width 和 size.height
-    const { size, ...restData } = data;
-    const panelData = {
-      ...restData,
-      ...(size && { width: size.width, height: size.height }),
-    };
-
     return await prisma.panel.update({
       where: { id },
-      data: panelData,
+      data,
       include: {
         device: true,
         ports: true,

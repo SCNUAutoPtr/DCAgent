@@ -125,10 +125,8 @@ model Panel {
   template        PanelTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   isCustomized    Boolean        @default(false) // 是否已从模板自定义（解绑）
   // 物理布局信息（单位：mm）
-  positionX       Float?         // X坐标
-  positionY       Float?         // Y坐标
-  width           Float?         // 宽度
-  height          Float?         // 高度
+  position        Json?          // 位置坐标 {x, y}
+  size            Json?          // 尺寸 {width, height}
   // 视觉样式
   backgroundColor String?        // 背景颜色
   image           String?        // 图片URL
@@ -148,17 +146,17 @@ enum PortStatus {
 // 端口
 model Port {
   id        String          @id @default(uuid())
+  shortId   Int             @unique @default(autoincrement()) // 短ID用于二维码和手动输入
   number    String          // 端口编号
   label     String?         // 端口标签
   status    PortStatus      @default(AVAILABLE)
   panelId   String
   panel     Panel           @relation(fields: [panelId], references: [id], onDelete: Cascade)
   portType  String?         // 端口类型 (RJ45, SFP, SFP+, QSFP, 等)
+  rotation  Float?          @default(0) // 旋转角度 (0, 90, 180, 270)
   // 物理布局信息（相对于面板的坐标，单位：mm）
-  positionX Float?          // X坐标
-  positionY Float?          // Y坐标
-  width     Float?          // 宽度
-  height    Float?          // 高度
+  position  Json?           // 位置坐标 {x, y}
+  size      Json?           // 尺寸 {width, height}
   // 连接信息
   cableEndpoints CableEndpoint[] // 该端口连接的线缆端点
   createdAt DateTime        @default(now())
