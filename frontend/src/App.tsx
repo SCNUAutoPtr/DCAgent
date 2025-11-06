@@ -13,7 +13,7 @@ import CableTopology from './pages/CableTopology';
 import PortDetailView from './pages/PortDetailView';
 import BulkDeploymentPage from './pages/BulkDeploymentPage';
 import PanelTemplateManagementPage from './pages/PanelTemplateManagementPage';
-import MonitoringPage from './pages/MonitoringPage';
+// import MonitoringPage from './pages/MonitoringPage'; // SNMP 监控模块已隐藏
 
 const { Content } = Layout;
 
@@ -45,7 +45,8 @@ function App() {
               <Route path="/topology" element={<CableTopology />} />
               <Route path="/bulk-deployment" element={<BulkDeploymentPage />} />
               <Route path="/panel-templates" element={<PanelTemplateManagementPage />} />
-              <Route path="/monitoring" element={<MonitoringPage />} />
+              {/* SNMP 监控路由已隐藏 */}
+              {/* <Route path="/monitoring" element={<MonitoringPage />} /> */}
             </Routes>
           </Content>
         </Layout>

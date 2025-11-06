@@ -16,6 +16,7 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "test:snmp": "tsx src/test-snmp.ts",
     "test:lenovo": "tsx src/test-lenovo.ts",
+    "test:template": "tsx src/test-template.ts",
     "snmp:walk": "tsx src/snmp-walk.ts"
   },
   "keywords": [

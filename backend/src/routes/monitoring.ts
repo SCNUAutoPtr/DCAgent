@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { SNMPService } from '../services/snmpService';
+import { getTemplateByModel, detectDeviceModel } from '../config/deviceTemplates';
 
 const router = Router();
 
@@ -11,6 +12,7 @@ const monitoringDevices = new Map<string, {
   ip: string;
   community: string;
   vendor: 'lenovo' | 'dell' | 'hp' | 'unknown';
+  model?: string;  // 添加机型字段
   status: 'online' | 'offline' | 'warning';
   lastUpdate: string;
 }>();
@@ -92,24 +94,51 @@ router.post('/test-connection', async (req: Request, res: Response) => {
     const client = new SNMPService({ host: ip, community });
 
     try {
-      // 尝试获取系统信息来验证连接
-      const systemInfo = await client.getSystemInfo();
-
-      // 尝试检测厂商
+      // 尝试检测厂商并验证连接
       let vendor = 'unknown';
+      let model: string | null = null;
+      let message = 'Connected successfully';
+
       try {
+        // 先尝试联想 BMC
         const lenovoInfo = await client.getLenovoBMCInfo();
         if (lenovoInfo.systemModel) {
           vendor = 'lenovo';
+          // 检测具体机型
+          model = await detectDeviceModel(lenovoInfo.systemModel);
+
+          if (model) {
+            const template = getTemplateByModel(model);
+            if (template) {
+              message = `Connected to ${template.description}`;
+            } else {
+              message = `Connected to Lenovo ${model} (template not configured)`;
+            }
+          } else {
+            message = `Connected to Lenovo ${lenovoInfo.systemModel || 'Server'}`;
+          }
         }
-      } catch {
-        // Not Lenovo, try others...
+      } catch (lenovoError) {
+        // 不是联想，尝试标准 SNMP
+        try {
+          const systemInfo = await client.getSystemInfo();
+          message = `Connected successfully to ${systemInfo.description || 'device'}`;
+        } catch (systemError) {
+          // 标准 SNMP 也失败，尝试获取任意传感器来验证连接
+          const sensors = await client.walk('1.3.6.1.4.1');
+          if (sensors && sensors.length > 0) {
+            message = 'Connected successfully (vendor detection failed)';
+          } else {
+            throw new Error('No SNMP data available');
+          }
+        }
       }
 
       res.json({
         success: true,
         vendor,
-        message: `Connected successfully to ${systemInfo.sysDescr || 'device'}`,
+        model,
+        message,
       });
     } catch (error: any) {
       res.json({

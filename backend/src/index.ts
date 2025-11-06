@@ -13,7 +13,7 @@ import portsRouter from './routes/ports';
 import cablesRouter from './routes/cables';
 import searchRouter from './routes/search';
 import panelTemplateRouter from './routes/panelTemplateRoutes';
-import monitoringRouter from './routes/monitoring';
+// import monitoringRouter from './routes/monitoring'; // SNMP 监控模块已隐藏
 import { requestLogger, errorLogger } from './middleware/logger';
 
 dotenv.config();
@@ -57,7 +57,7 @@ app.get('/api/v1', (req: Request, res: Response) => {
       cables: '/api/v1/cables',
       search: '/api/v1/search',
       panelTemplates: '/api/v1/panel-templates',
-      monitoring: '/api/v1/monitoring'
+      // monitoring: '/api/v1/monitoring' // SNMP 监控模块已隐藏
     }
   });
 });
@@ -72,7 +72,7 @@ app.use('/api/v1/ports', portsRouter);
 app.use('/api/v1/cables', cablesRouter);
 app.use('/api/v1/search', searchRouter);
 app.use('/api/v1/panel-templates', panelTemplateRouter);
-app.use('/api/v1/monitoring', monitoringRouter);
+// app.use('/api/v1/monitoring', monitoringRouter); // SNMP 监控模块已隐藏
 
 // Swagger UI (需要先安装依赖: npm install swagger-ui-express yamljs @types/yamljs)
 // app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));

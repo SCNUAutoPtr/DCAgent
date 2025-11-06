@@ -370,20 +370,37 @@ export class SNMPService {
    */
   async getLenovoBMCInfo() {
     try {
-      const oids = [
+      // 先尝试获取基本信息（这些是必需的，用于判断是否为联想设备）
+      const basicOids = [
         COMMON_OIDS.lenovo.systemModel,
         COMMON_OIDS.lenovo.systemSerialNumber,
         COMMON_OIDS.lenovo.bmcVersion,
-        COMMON_OIDS.lenovo.overallStatus,
       ];
 
-      const results = await this.get(oids);
+      const basicResults = await this.get(basicOids);
+
+      // 如果基本信息都获取不到，说明不是联想设备
+      if (!basicResults[0]?.value && !basicResults[1]?.value) {
+        return null;
+      }
+
+      // 尝试获取健康状态（可选，有些设备可能不支持）
+      let healthStatus = 'N/A';
+      try {
+        const healthResult = await this.get([COMMON_OIDS.lenovo.overallStatus]);
+        if (healthResult[0]?.value !== undefined) {
+          healthStatus = this.formatLenovoHealthStatus(healthResult[0].value);
+        }
+      } catch (healthError) {
+        console.log('Health status not available for this device');
+      }
 
       return {
-        model: results[0]?.value || 'N/A',
-        serialNumber: results[1]?.value || 'N/A',
-        bmcVersion: results[2]?.value || 'N/A',
-        healthStatus: this.formatLenovoHealthStatus(results[3]?.value),
+        systemModel: basicResults[0]?.value || 'N/A',
+        model: basicResults[0]?.value || 'N/A',
+        serialNumber: basicResults[1]?.value || 'N/A',
+        bmcVersion: basicResults[2]?.value || 'N/A',
+        healthStatus,
       };
     } catch (error) {
       console.error('Error getting Lenovo BMC info:', error);

@@ -21,6 +21,7 @@ export default function AddDeviceModal({
   const [testResult, setTestResult] = useState<{
     success: boolean;
     vendor?: string;
+    model?: string;
     message?: string;
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -173,9 +174,15 @@ export default function AddDeviceModal({
               <Alert
                 message="连接成功"
                 description={
-                  testResult.vendor
-                    ? `检测到设备厂商: ${testResult.vendor}`
-                    : undefined
+                  <>
+                    {testResult.message && <div>{testResult.message}</div>}
+                    {testResult.vendor && (
+                      <div style={{ marginTop: 4 }}>
+                        厂商: {testResult.vendor}
+                        {testResult.model && ` | 机型: ${testResult.model}`}
+                      </div>
+                    )}
+                  </>
                 }
                 type="success"
                 icon={<CheckCircleOutlined />}

@@ -7,7 +7,7 @@ import {
   ApartmentOutlined,
   CloudUploadOutlined,
   FileTextOutlined,
-  MonitorOutlined,
+  // MonitorOutlined, // SNMP 监控模块已隐藏
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -74,11 +74,12 @@ export default function AppSidebar() {
         },
       ],
     },
-    {
-      key: '/monitoring',
-      icon: <MonitorOutlined />,
-      label: '设备监控',
-    },
+    // SNMP 设备监控菜单已隐藏
+    // {
+    //   key: '/monitoring',
+    //   icon: <MonitorOutlined />,
+    //   label: '设备监控',
+    // },
     {
       key: '/bulk-deployment',
       icon: <CloudUploadOutlined />,
