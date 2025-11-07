@@ -1,10 +1,11 @@
 import prisma from '../utils/prisma';
 import { PanelType } from '@prisma/client';
+import globalShortIdService from './globalShortIdService';
 
 export interface CreatePanelDto {
   name: string;
   type: PanelType;
-  shortId?: number; // 面板shortID
+  shortId?: number; // 面板shortID（将被全局服务覆盖）
   deviceId: string;
   // 模板相关
   templateId?: string;
@@ -48,8 +49,25 @@ export interface UpdatePanelDto {
 
 class PanelService {
   async createPanel(data: CreatePanelDto) {
-    return await prisma.panel.create({
-      data,
+    // 移除用户提供的 shortId（如果有）
+    const { shortId: _, ...createData } = data;
+
+    // 先创建实体
+    const panel = await prisma.panel.create({
+      data: createData,
+      include: {
+        device: true,
+        ports: true,
+      },
+    });
+
+    // 分配全局唯一的 shortId
+    const shortId = await globalShortIdService.allocate('Panel', panel.id);
+
+    // 更新实体的 shortId
+    return await prisma.panel.update({
+      where: { id: panel.id },
+      data: { shortId },
       include: {
         device: true,
         ports: true,
@@ -159,9 +177,23 @@ class PanelService {
   }
 
   async deletePanel(id: string) {
-    return await prisma.panel.delete({
+    // 先获取实体的 shortId
+    const panel = await prisma.panel.findUnique({
+      where: { id },
+      select: { shortId: true },
+    });
+
+    // 删除实体
+    const deleted = await prisma.panel.delete({
       where: { id },
     });
+
+    // 释放 shortId
+    if (panel?.shortId) {
+      await globalShortIdService.release(panel.shortId);
+    }
+
+    return deleted;
   }
 
   async searchPanels(query: string) {

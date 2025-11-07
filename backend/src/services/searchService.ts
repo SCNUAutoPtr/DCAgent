@@ -5,6 +5,8 @@ import deviceService from './deviceService';
 import cableService from './cableService';
 import panelService from './panelService';
 import portService from './portService';
+import globalShortIdService from './globalShortIdService';
+import prisma from '../utils/prisma';
 
 export interface SearchResult {
   type: 'DataCenter' | 'Room' | 'Cabinet' | 'Device' | 'Cable' | 'Panel' | 'Port';
@@ -148,102 +150,153 @@ class SearchService {
 
   /**
    * 根据 shortId 查找实体
-   * 依次在所有实体类型中查找，返回第一个匹配的结果
+   * 使用全局分配表快速定位实体类型和ID，然后获取完整数据
    */
   async findByShortId(shortId: number): Promise<SearchResult | null> {
     try {
-      // 尝试在数据中心中查找
-      const dataCenter = await dataCenterService.getDataCenterByShortId(shortId);
-      if (dataCenter) {
-        return {
-          type: 'DataCenter',
-          id: dataCenter.id,
-          shortId: dataCenter.shortId,
-          name: dataCenter.name,
-          description: dataCenter.location || undefined,
-          metadata: dataCenter,
-        };
+      // 1. 从全局分配表查找实体类型和ID
+      const allocation = await globalShortIdService.getEntityByShortId(shortId);
+
+      if (!allocation) {
+        return null;
       }
 
-      // 尝试在机房中查找
-      const room = await roomService.getRoomByShortId(shortId);
-      if (room) {
-        return {
-          type: 'Room',
-          id: room.id,
-          shortId: room.shortId,
-          name: room.name,
-          description: room.floor || undefined,
-          metadata: room,
-        };
-      }
+      const { entityType, entityId } = allocation;
 
-      // 尝试在机柜中查找
-      const cabinet = await cabinetService.getCabinetByShortId(shortId);
-      if (cabinet) {
-        return {
-          type: 'Cabinet',
-          id: cabinet.id,
-          shortId: cabinet.shortId,
-          name: cabinet.name,
-          description: cabinet.position || undefined,
-          metadata: cabinet,
-        };
-      }
+      // 2. 根据实体类型获取完整数据
+      switch (entityType) {
+        case 'DataCenter': {
+          const dataCenter = await prisma.dataCenter.findUnique({
+            where: { id: entityId },
+          });
+          if (!dataCenter) return null;
+          return {
+            type: 'DataCenter',
+            id: dataCenter.id,
+            shortId: dataCenter.shortId,
+            name: dataCenter.name,
+            description: dataCenter.location || undefined,
+            metadata: dataCenter,
+          };
+        }
 
-      // 尝试在设备中查找
-      const device = await deviceService.getDeviceByShortId(shortId);
-      if (device) {
-        return {
-          type: 'Device',
-          id: device.id,
-          shortId: device.shortId,
-          name: device.name,
-          description: `${device.type}${device.model ? ` - ${device.model}` : ''}`,
-          metadata: device,
-        };
-      }
+        case 'Room': {
+          const room = await prisma.room.findUnique({
+            where: { id: entityId },
+          });
+          if (!room) return null;
+          return {
+            type: 'Room',
+            id: room.id,
+            shortId: room.shortId,
+            name: room.name,
+            description: room.floor || undefined,
+            metadata: room,
+          };
+        }
 
-      // 尝试在线缆中查找
-      const cable = await cableService.getCableByShortId(shortId);
-      if (cable) {
-        return {
-          type: 'Cable',
-          id: cable.id,
-          shortId: cable.shortId,
-          label: cable.label || undefined,
-          description: `${cable.type}${cable.color ? ` - ${cable.color}` : ''}`,
-          metadata: cable,
-        };
-      }
+        case 'Cabinet': {
+          const cabinet = await prisma.cabinet.findUnique({
+            where: { id: entityId },
+          });
+          if (!cabinet) return null;
+          return {
+            type: 'Cabinet',
+            id: cabinet.id,
+            shortId: cabinet.shortId,
+            name: cabinet.name,
+            description: cabinet.position || undefined,
+            metadata: cabinet,
+          };
+        }
 
-      // 尝试在面板中查找
-      const panel = await panelService.getPanelByShortId(shortId);
-      if (panel) {
-        return {
-          type: 'Panel',
-          id: panel.id,
-          shortId: panel.shortId,
-          name: panel.name,
-          description: panel.type,
-          metadata: panel,
-        };
-      }
+        case 'Device': {
+          const device = await prisma.device.findUnique({
+            where: { id: entityId },
+          });
+          if (!device) return null;
+          return {
+            type: 'Device',
+            id: device.id,
+            shortId: device.shortId,
+            name: device.name,
+            description: `${device.type}${device.model ? ` - ${device.model}` : ''}`,
+            metadata: device,
+          };
+        }
 
-      // 尝试在端口中查找
-      const port = await portService.getPortByShortId(shortId);
-      if (port) {
-        return {
-          type: 'Port',
-          id: port.id,
-          shortId: port.shortId,
-          name: port.name,
-          description: `${port.type} - ${port.status}`,
-          metadata: port,
-        };
-      }
+        case 'Cable': {
+          const cable = await prisma.cable.findUnique({
+            where: { id: entityId },
+          });
+          if (!cable) return null;
+          return {
+            type: 'Cable',
+            id: cable.id,
+            shortId: cable.shortId,
+            label: cable.label || undefined,
+            description: `${cable.type}${cable.color ? ` - ${cable.color}` : ''}`,
+            metadata: cable,
+          };
+        }
 
-      return null;
+        case 'Panel': {
+          const panel = await prisma.panel.findUnique({
+            where: { id: entityId },
+          });
+          if (!panel) return null;
+          return {
+            type: 'Panel',
+            id: panel.id,
+            shortId: panel.shortId,
+            name: panel.name,
+            description: panel.type,
+            metadata: panel,
+          };
+        }
+
+        case 'Port': {
+          const port = await prisma.port.findUnique({
+            where: { id: entityId },
+          });
+          if (!port) return null;
+          return {
+            type: 'Port',
+            id: port.id,
+            shortId: port.shortId,
+            name: `Port ${port.number}`,
+            description: `${port.portType || 'Unknown'} - ${port.status}`,
+            metadata: port,
+          };
+        }
+
+        case 'CableEndpoint': {
+          const endpoint = await prisma.cableEndpoint.findUnique({
+            where: { id: entityId },
+            include: {
+              cable: true,
+            },
+          });
+          if (!endpoint) return null;
+          return {
+            type: 'Cable',
+            id: endpoint.cable.id,
+            shortId: endpoint.cable.shortId,
+            name: `Cable ${endpoint.cable.label || endpoint.cable.type}`,
+            description: `Endpoint ${endpoint.endType} - ${endpoint.cable.type}`,
+            metadata: {
+              ...endpoint.cable,
+              endpointId: endpoint.id,
+              endpointShortId: endpoint.shortId,
+              endType: endpoint.endType,
+            },
+          };
+        }
+
+        default:
+          console.warn(`Unknown entity type: ${entityType}`);
+          return null;
+      }
     } catch (error) {
       console.error('Error finding by shortId:', error);
       throw error;

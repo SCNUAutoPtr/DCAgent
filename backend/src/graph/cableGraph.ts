@@ -4,6 +4,13 @@ export interface CableConnection {
   cableId: string;
   portAId: string;
   portBId: string;
+  cableData?: {
+    label?: string;
+    type: string;
+    color?: string;
+    length?: number;
+    shortId?: number;
+  };
 }
 
 export interface ConnectionQueryResult {
@@ -12,6 +19,7 @@ export interface ConnectionQueryResult {
     label?: string;
     type: string;
     color?: string;
+    shortId?: number;
   };
   portA: {
     id: string;
@@ -32,16 +40,49 @@ class CableGraphService {
   async createConnection(connection: CableConnection): Promise<void> {
     const session = neo4jConnection.getSession();
     try {
-      await session.run(
-        `
-        MERGE (portA:Port {id: $portAId})
-        MERGE (portB:Port {id: $portBId})
-        MERGE (cable:Cable {id: $cableId})
-        MERGE (portA)-[:CONNECTED_BY]->(cable)
-        MERGE (cable)-[:CONNECTED_BY]->(portB)
-        `,
-        connection
-      );
+      // 如果有线缆数据，同步线缆属性
+      if (connection.cableData) {
+        await session.run(
+          `
+          MERGE (portA:Port {id: $portAId})
+          MERGE (portB:Port {id: $portBId})
+          MERGE (cable:Cable {id: $cableId})
+          SET cable.type = $type,
+              cable.label = $label,
+              cable.color = $color,
+              cable.length = $length,
+              cable.shortId = $shortId
+          MERGE (portA)-[:CONNECTED_BY]->(cable)
+          MERGE (cable)-[:CONNECTED_BY]->(portB)
+          `,
+          {
+            portAId: connection.portAId,
+            portBId: connection.portBId,
+            cableId: connection.cableId,
+            type: connection.cableData.type,
+            label: connection.cableData.label || null,
+            color: connection.cableData.color || null,
+            length: connection.cableData.length || null,
+            shortId: connection.cableData.shortId || null,
+          }
+        );
+      } else {
+        // 向后兼容：如果没有线缆数据，使用原来的方式
+        await session.run(
+          `
+          MERGE (portA:Port {id: $portAId})
+          MERGE (portB:Port {id: $portBId})
+          MERGE (cable:Cable {id: $cableId})
+          MERGE (portA)-[:CONNECTED_BY]->(cable)
+          MERGE (cable)-[:CONNECTED_BY]->(portB)
+          `,
+          {
+            portAId: connection.portAId,
+            portBId: connection.portBId,
+            cableId: connection.cableId,
+          }
+        );
+      }
     } finally {
       await session.close();
     }
@@ -225,6 +266,35 @@ class CableGraphService {
           name: panelData.name,
           type: panelData.type,
           deviceId: panelData.deviceId,
+        }
+      );
+    } finally {
+      await session.close();
+    }
+  }
+
+  /**
+   * 同步线缆节点信息
+   */
+  async syncCableNode(cableId: string, cableData: any): Promise<void> {
+    const session = neo4jConnection.getSession();
+    try {
+      await session.run(
+        `
+        MERGE (cable:Cable {id: $cableId})
+        SET cable.type = $type,
+            cable.label = $label,
+            cable.color = $color,
+            cable.length = $length,
+            cable.shortId = $shortId
+        `,
+        {
+          cableId,
+          type: cableData.type,
+          label: cableData.label || null,
+          color: cableData.color || null,
+          length: cableData.length || null,
+          shortId: cableData.shortId || null,
         }
       );
     } finally {

@@ -13,6 +13,8 @@ import {
   Modal,
   Descriptions,
   Input,
+  Form,
+  InputNumber,
 } from 'antd';
 import {
   ZoomInOutlined,
@@ -24,6 +26,7 @@ import {
   ScanOutlined,
   InfoCircleOutlined,
   LinkOutlined,
+  EditOutlined,
 } from '@ant-design/icons';
 import ReactFlow, {
   Node,
@@ -168,7 +171,14 @@ function DeviceNode({ data }: { data: any }) {
 
       {panel && (
         <div style={{ fontSize: '12px', color: '#666' }}>
-          <div>面板: {panel.name}</div>
+          <div>
+            面板: {panel.name}
+            {panel.shortId && (
+              <Tag color="blue" style={{ marginLeft: '4px', fontSize: '10px' }}>
+                {ShortIdFormatter.toDisplayFormat(panel.shortId)}
+              </Tag>
+            )}
+          </div>
           <div>端口: {ports?.length || 0} 个</div>
 
           {/* 端口列表 */}
@@ -242,6 +252,8 @@ function CableTopologyContent() {
   const [highlightedNodeIds, setHighlightedNodeIds] = useState<string[]>([]);
   const [scanInput, setScanInput] = useState('');
   const [clickTimer, setClickTimer] = useState<NodeJS.Timeout | null>(null);
+  const [cableDetailModalVisible, setCableDetailModalVisible] = useState(false);
+  const [selectedCableEdge, setSelectedCableEdge] = useState<any>(null);
 
   const { fitView, zoomIn, zoomOut } = useReactFlow();
 
@@ -486,6 +498,11 @@ function CableTopologyContent() {
 
       // 创建边
       if (portA?.panelId && portB?.panelId) {
+        // 生成边的标签：优先使用 label，否则使用 shortId（E-xxxxx格式），最后使用 type
+        const edgeLabel = cable.label ||
+                         (cable.shortId ? ShortIdFormatter.toDisplayFormat(cable.shortId) : null) ||
+                         `${cable.type}`;
+
         const edge = {
           id: cable.id || `edge-${portA.id}-${portB.id}`,
           source: portA.panelId,
@@ -496,8 +513,16 @@ function CableTopologyContent() {
             stroke: cableTypeColors[cable.type] || '#8c8c8c',
             strokeWidth: 2,
           },
-          label: cable.label || `${cable.type}`,
-          data: { cable, portA, portB },
+          label: edgeLabel,
+          data: {
+            cable,
+            portA,
+            portB,
+            panelA,
+            panelB,
+            deviceA,
+            deviceB,
+          },
         };
         console.log('Created edge:', edge);
         edgeList.push(edge);
@@ -601,32 +626,8 @@ function CableTopologyContent() {
 
   // 处理边点击
   const onEdgeClick = useCallback((_event: any, edge: Edge) => {
-    const { cable, portA, portB } = edge.data || {};
-    Modal.info({
-      title: '线缆详情',
-      width: 600,
-      content: (
-        <Descriptions column={1} bordered size="small">
-          <Descriptions.Item label="线缆标签">
-            {cable?.label || '未命名'}
-          </Descriptions.Item>
-          <Descriptions.Item label="线缆类型">
-            <Tag color={cableTypeColors[cable?.type]}>{cable?.type}</Tag>
-          </Descriptions.Item>
-          <Descriptions.Item label="长度">
-            {cable?.length ? `${cable.length}m` : '未知'}
-          </Descriptions.Item>
-          <Descriptions.Item label="颜色">{cable?.color || '-'}</Descriptions.Item>
-          <Descriptions.Item label="端口A">
-            {portA?.label || portA?.number || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="端口B">
-            {portB?.label || portB?.number || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="备注">{cable?.notes || '-'}</Descriptions.Item>
-        </Descriptions>
-      ),
-    });
+    setSelectedCableEdge(edge);
+    setCableDetailModalVisible(true);
   }, []);
 
   // 导出为图片
@@ -909,6 +910,19 @@ function CableTopologyContent() {
         onClose={() => setCreateCableModalVisible(false)}
         onSuccess={handleCreateCableSuccess}
         initialPanelAId={selectedPanelId}
+      />
+
+      {/* 线缆详情和编辑模态框 */}
+      <CableDetailModal
+        visible={cableDetailModalVisible}
+        edge={selectedCableEdge}
+        cabinets={cabinets}
+        rooms={rooms}
+        onClose={() => {
+          setCableDetailModalVisible(false);
+          setSelectedCableEdge(null);
+        }}
+        onSuccess={handleRefresh}
       />
 
       {/* 接口可视化模态框 */}
@@ -1620,6 +1634,264 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
         )}
       </Modal>
     </div>
+  );
+}
+
+// 线缆详情和编辑模态框组件
+function CableDetailModal({
+  visible,
+  edge,
+  cabinets,
+  rooms,
+  onClose,
+  onSuccess,
+}: {
+  visible: boolean;
+  edge: any;
+  cabinets: Cabinet[];
+  rooms: Room[];
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (visible && edge?.data?.cable) {
+      const { cable } = edge.data;
+      form.setFieldsValue({
+        label: cable.label || '',
+        type: cable.type || '',
+        length: cable.length || undefined,
+        color: cable.color || '',
+        notes: cable.notes || '',
+      });
+      setIsEditing(false);
+    }
+  }, [visible, edge, form]);
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      const values = await form.validateFields();
+      const { cable } = edge.data;
+
+      await cableService.update(cable.id, values);
+      message.success('线缆信息已更新');
+      setIsEditing(false);
+      onClose(); // 关闭弹窗
+      onSuccess(); // 刷新拓扑图
+    } catch (error) {
+      console.error('Failed to update cable:', error);
+      message.error('更新线缆信息失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!edge?.data) return null;
+
+  const { cable, portA, portB, panelA, panelB, deviceA, deviceB } = edge.data;
+
+  // 获取设备位置信息
+  const getDeviceLocationInfo = (device: Device | null) => {
+    if (!device?.cabinetId) return null;
+    const cabinet = cabinets.find(c => c.id === device.cabinetId);
+    if (!cabinet) return null;
+    const room = rooms.find(r => r.id === cabinet.roomId);
+    const roomName = room?.name || '未知机房';
+    const uPosition = device.uPosition ? `U${device.uPosition}` : '';
+    const uHeight = device.uHeight ? `(${device.uHeight}U)` : '';
+    return {
+      roomName,
+      cabinetName: cabinet.name,
+      position: uPosition ? `${uPosition}${uHeight}` : null,
+      fullLocation: `${roomName} - ${cabinet.name}${uPosition ? ` - ${uPosition}${uHeight}` : ''}`,
+    };
+  };
+
+  const locationA = getDeviceLocationInfo(deviceA);
+  const locationB = getDeviceLocationInfo(deviceB);
+
+  return (
+    <Modal
+      title={
+        <Space>
+          <LinkOutlined />
+          <span>线缆详情</span>
+          {!isEditing && (
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => setIsEditing(true)}
+            >
+              编辑
+            </Button>
+          )}
+        </Space>
+      }
+      open={visible}
+      onCancel={onClose}
+      width={800}
+      footer={
+        isEditing
+          ? [
+              <Button key="cancel" onClick={() => setIsEditing(false)}>
+                取消
+              </Button>,
+              <Button
+                key="save"
+                type="primary"
+                loading={loading}
+                onClick={handleSave}
+              >
+                保存
+              </Button>,
+            ]
+          : [
+              <Button key="close" onClick={onClose}>
+                关闭
+              </Button>,
+            ]
+      }
+    >
+      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        {/* 端口A信息 */}
+        <Card size="small" title="端口 A" type="inner">
+          <Descriptions column={1} size="small" bordered>
+            <Descriptions.Item label="端口">
+              <Tag color="blue">{portA?.label || portA?.number || '-'}</Tag>
+              {portA?.portType && (
+                <Text type="secondary" style={{ marginLeft: 8 }}>
+                  {portA.portType}
+                </Text>
+              )}
+            </Descriptions.Item>
+            {panelA && (
+              <Descriptions.Item label="面板">
+                <Space>
+                  <Text strong>{panelA.name}</Text>
+                  {panelA.shortId && (
+                    <Text code>{ShortIdFormatter.toDisplayFormat(panelA.shortId)}</Text>
+                  )}
+                  <Tag>{panelA.type}</Tag>
+                </Space>
+              </Descriptions.Item>
+            )}
+            {deviceA && (
+              <>
+                <Descriptions.Item label="设备">
+                  <Space>
+                    <Tag color={nodeTypeColors[deviceA.type]}>{deviceA.type}</Tag>
+                    <Text strong>{deviceA.name}</Text>
+                  </Space>
+                </Descriptions.Item>
+                {locationA && (
+                  <Descriptions.Item label="位置">
+                    <Text style={{ color: '#722ed1' }}>{locationA.fullLocation}</Text>
+                  </Descriptions.Item>
+                )}
+              </>
+            )}
+          </Descriptions>
+        </Card>
+
+        {/* 端口B信息 */}
+        <Card size="small" title="端口 B" type="inner">
+          <Descriptions column={1} size="small" bordered>
+            <Descriptions.Item label="端口">
+              <Tag color="green">{portB?.label || portB?.number || '-'}</Tag>
+              {portB?.portType && (
+                <Text type="secondary" style={{ marginLeft: 8 }}>
+                  {portB.portType}
+                </Text>
+              )}
+            </Descriptions.Item>
+            {panelB && (
+              <Descriptions.Item label="面板">
+                <Space>
+                  <Text strong>{panelB.name}</Text>
+                  {panelB.shortId && (
+                    <Text code>{ShortIdFormatter.toDisplayFormat(panelB.shortId)}</Text>
+                  )}
+                  <Tag>{panelB.type}</Tag>
+                </Space>
+              </Descriptions.Item>
+            )}
+            {deviceB && (
+              <>
+                <Descriptions.Item label="设备">
+                  <Space>
+                    <Tag color={nodeTypeColors[deviceB.type]}>{deviceB.type}</Tag>
+                    <Text strong>{deviceB.name}</Text>
+                  </Space>
+                </Descriptions.Item>
+                {locationB && (
+                  <Descriptions.Item label="位置">
+                    <Text style={{ color: '#722ed1' }}>{locationB.fullLocation}</Text>
+                  </Descriptions.Item>
+                )}
+              </>
+            )}
+          </Descriptions>
+        </Card>
+
+        {/* 线缆信息 */}
+        <Card size="small" title="线缆信息" type="inner">
+          {isEditing ? (
+            <Form form={form} layout="vertical">
+              <Form.Item name="label" label="线缆标签">
+                <Input placeholder="输入线缆标签" />
+              </Form.Item>
+              <Form.Item name="type" label="线缆类型">
+                <Select placeholder="选择线缆类型">
+                  <Option value="CAT5E">CAT5E</Option>
+                  <Option value="CAT6">CAT6</Option>
+                  <Option value="CAT6A">CAT6A</Option>
+                  <Option value="CAT7">CAT7</Option>
+                  <Option value="FIBER_SM">单模光纤</Option>
+                  <Option value="FIBER_MM">多模光纤</Option>
+                  <Option value="QSFP_TO_SFP">QSFP转SFP</Option>
+                  <Option value="QSFP_TO_QSFP">QSFP转QSFP</Option>
+                  <Option value="SFP_TO_SFP">SFP转SFP</Option>
+                  <Option value="POWER">电源线</Option>
+                  <Option value="OTHER">其他</Option>
+                </Select>
+              </Form.Item>
+              <Form.Item name="length" label="长度 (米)">
+                <InputNumber min={0} step={0.1} style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item name="color" label="颜色">
+                <Input placeholder="输入线缆颜色" />
+              </Form.Item>
+              <Form.Item name="notes" label="备注">
+                <Input.TextArea rows={3} placeholder="输入备注信息" />
+              </Form.Item>
+            </Form>
+          ) : (
+            <Descriptions column={1} size="small" bordered>
+              <Descriptions.Item label="线缆标签">
+                {cable?.label || '未命名'}
+              </Descriptions.Item>
+              {cable?.shortId && (
+                <Descriptions.Item label="ShortID">
+                  <Text code>{ShortIdFormatter.toDisplayFormat(cable.shortId)}</Text>
+                </Descriptions.Item>
+              )}
+              <Descriptions.Item label="线缆类型">
+                <Tag color={cableTypeColors[cable?.type]}>{cable?.type || '-'}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="长度">
+                {cable?.length ? `${cable.length}m` : '未知'}
+              </Descriptions.Item>
+              <Descriptions.Item label="颜色">{cable?.color || '-'}</Descriptions.Item>
+              <Descriptions.Item label="备注">{cable?.notes || '-'}</Descriptions.Item>
+            </Descriptions>
+          )}
+        </Card>
+      </Space>
+    </Modal>
   );
 }
 

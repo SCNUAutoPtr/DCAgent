@@ -1,5 +1,6 @@
 import prisma from '../utils/prisma';
 import { PortStatus } from '@prisma/client';
+import globalShortIdService from './globalShortIdService';
 
 export interface CreatePortDto {
   number: string;
@@ -36,7 +37,8 @@ export interface UpdatePortDto {
 
 class PortService {
   async createPort(data: CreatePortDto) {
-    return await prisma.port.create({
+    // 先创建实体
+    const port = await prisma.port.create({
       data: {
         ...data,
         status: data.status || PortStatus.AVAILABLE,
@@ -49,23 +51,39 @@ class PortService {
         },
       },
     });
+
+    // 分配全局唯一的 shortId
+    const shortId = await globalShortIdService.allocate('Port', port.id);
+
+    // 更新实体的 shortId
+    return await prisma.port.update({
+      where: { id: port.id },
+      data: { shortId },
+      include: {
+        panel: {
+          include: {
+            device: true,
+          },
+        },
+      },
+    });
   }
 
   async createBulkPorts(panelId: string, count: number, prefix: string = 'Port-') {
-    const ports = [];
+    // 批量创建时，需要逐个分配 shortId
+    const createdPorts = [];
+
     for (let i = 1; i <= count; i++) {
-      ports.push({
+      const port = await this.createPort({
         number: String(i),
         label: `${prefix}${i}`,
         panelId,
         status: PortStatus.AVAILABLE,
       });
+      createdPorts.push(port);
     }
 
-    return await prisma.port.createMany({
-      data: ports,
-      skipDuplicates: true,
-    });
+    return { count: createdPorts.length };
   }
 
   async getPortById(id: string) {
@@ -193,9 +211,23 @@ class PortService {
   }
 
   async deletePort(id: string) {
-    return await prisma.port.delete({
+    // 先获取实体的 shortId
+    const port = await prisma.port.findUnique({
+      where: { id },
+      select: { shortId: true },
+    });
+
+    // 删除实体
+    const deleted = await prisma.port.delete({
       where: { id },
     });
+
+    // 释放 shortId
+    if (port?.shortId) {
+      await globalShortIdService.release(port.shortId);
+    }
+
+    return deleted;
   }
 
   async searchPorts(query: string) {

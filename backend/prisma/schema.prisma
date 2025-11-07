@@ -208,10 +208,11 @@ model Cable {
 // 线缆端点（支持1对多连接）
 model CableEndpoint {
   id        String   @id @default(uuid())
+  shortId   Int?     @unique // 端点标签的shortID（用于扫码识别线缆）
   cableId   String
   cable     Cable    @relation(fields: [cableId], references: [id], onDelete: Cascade)
-  portId    String
-  port      Port     @relation(fields: [portId], references: [id], onDelete: Cascade)
+  portId    String?  // 端口ID（可选，入库时可能未连接端口）
+  port      Port?    @relation(fields: [portId], references: [id], onDelete: Cascade)
   endType   String   // "A" 表示主端（如QSFP端），"B1", "B2", "B3", "B4" 表示分支端（如4个SFP端）
   createdAt DateTime @default(now())
 
@@ -235,6 +236,7 @@ enum EntityType {
   PANEL
   PORT
   CABLE
+  CABLE_ENDPOINT
 }
 
 // 打印任务表
@@ -293,4 +295,27 @@ model CableShortIdPool {
   notes       String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+}
+
+// ============================================
+// 全局 ShortID 管理系统
+// ============================================
+
+// 全局 ShortID 序列表（单行表，用于生成全局唯一的 shortId）
+model GlobalShortIdSequence {
+  id           String   @id @default(uuid())
+  currentValue Int      @default(1) // 当前序列值
+  updatedAt    DateTime @updatedAt
+}
+
+// 全局 ShortID 分配记录表
+model GlobalShortIdAllocation {
+  id         String   @id @default(uuid())
+  shortId    Int      @unique // 全局唯一的 shortId
+  entityType String   // 实体类型：DataCenter, Room, Cabinet, Device, Port, Cable, Panel
+  entityId   String   // 实体的 UUID
+  createdAt  DateTime @default(now())
+
+  @@index([entityType])
+  @@index([entityId])
 }

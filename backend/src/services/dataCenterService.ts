@@ -1,4 +1,5 @@
 import { PrismaClient, DataCenter } from '@prisma/client';
+import globalShortIdService from './globalShortIdService';
 
 const prisma = new PrismaClient();
 
@@ -63,8 +64,21 @@ class DataCenterService {
   }
 
   async createDataCenter(data: CreateDataCenterInput): Promise<DataCenter> {
-    return prisma.dataCenter.create({
+    // 先创建实体
+    const dataCenter = await prisma.dataCenter.create({
       data,
+      include: {
+        rooms: true,
+      },
+    });
+
+    // 分配全局唯一的 shortId
+    const shortId = await globalShortIdService.allocate('DataCenter', dataCenter.id);
+
+    // 更新实体的 shortId
+    return prisma.dataCenter.update({
+      where: { id: dataCenter.id },
+      data: { shortId },
       include: {
         rooms: true,
       },
@@ -82,9 +96,23 @@ class DataCenterService {
   }
 
   async deleteDataCenter(id: string): Promise<DataCenter> {
-    return prisma.dataCenter.delete({
+    // 先获取实体的 shortId
+    const dataCenter = await prisma.dataCenter.findUnique({
+      where: { id },
+      select: { shortId: true },
+    });
+
+    // 删除实体
+    const deleted = await prisma.dataCenter.delete({
       where: { id },
     });
+
+    // 释放 shortId
+    if (dataCenter?.shortId) {
+      await globalShortIdService.release(dataCenter.shortId);
+    }
+
+    return deleted;
   }
 
   async searchDataCenters(query: string): Promise<DataCenter[]> {
