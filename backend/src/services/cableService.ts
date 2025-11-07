@@ -189,105 +189,42 @@ class CableService {
 
   /**
    * 查询端口的连接情况
+   * 返回连接的端口、线缆和端点信息（包括端点shortID）
    */
   async getPortConnection(portId: string) {
-    const connectedPortId = await cableGraphService.findConnectedPort(portId);
-
-    if (!connectedPortId) {
-      return null;
-    }
-
-    const connectedPort = await prisma.port.findUnique({
-      where: { id: connectedPortId },
+    // 查找连接到该端口的线缆端点
+    const endpoint = await prisma.cableEndpoint.findFirst({
+      where: { portId },
       include: {
-        panel: {
+        cable: {
           include: {
-            device: {
-              include: {
-                cabinet: {
-                  include: {
-                    room: {
-                      include: {
-                        dataCenter: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
+            endpoints: true,
           },
         },
       },
     });
 
-    return connectedPort;
-  }
-
-  /**
-   * 查询面板的所有连接
-   */
-  async getPanelConnections(panelId: string) {
-    return await cableGraphService.findPanelConnections(panelId);
-  }
-
-  /**
-   * 查询网状拓扑
-   */
-  async getNetworkTopology(panelId: string, maxDepth: number = 3) {
-    return await cableGraphService.findNetworkTopology(panelId, maxDepth);
-  }
-
-  /**
-   * 获取线缆连接的端点信息（用于扫码跳转）
-   * 返回线缆及其连接的两个端口的完整信息（包括所在面板、设备、机柜等层级）
-   */
-  async getCableEndpoints(cableId: string) {
-    // 获取线缆基本信息
-    const cable = await prisma.cable.findUnique({
-      where: { id: cableId },
-    });
-
-    if (!cable) {
+    if (!endpoint) {
       return null;
     }
 
-    // 从图数据库查询连接的两个端口ID
-    const portIds = await cableGraphService.getCablePortIds(cableId);
+    // 查找连接的另一个端点
+    const otherEndpoint = endpoint.cable.endpoints.find(
+      e => e.id !== endpoint.id
+    );
 
-    if (!portIds || portIds.length !== 2) {
+    if (!otherEndpoint || !otherEndpoint.portId) {
       return {
-        cable,
-        portA: null,
-        portB: null,
+        cable: endpoint.cable,
+        thisEndpoint: endpoint,
+        otherEndpoint: otherEndpoint || null,
+        connectedPort: null,
       };
     }
 
-    // 查询两个端口的完整信息
-    const portA = await prisma.port.findUnique({
-      where: { id: portIds[0] },
-      include: {
-        panel: {
-          include: {
-            device: {
-              include: {
-                cabinet: {
-                  include: {
-                    room: {
-                      include: {
-                        dataCenter: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const portB = await prisma.port.findUnique({
-      where: { id: portIds[1] },
+    // 查询另一端的端口完整信息
+    const connectedPort = await prisma.port.findUnique({
+      where: { id: otherEndpoint.portId },
       include: {
         panel: {
           include: {
@@ -310,9 +247,79 @@ class CableService {
     });
 
     return {
+      cable: endpoint.cable,
+      thisEndpoint: endpoint,
+      otherEndpoint,
+      connectedPort,
+    };
+  }
+
+  /**
+   * 查询面板的所有连接
+   */
+  async getPanelConnections(panelId: string) {
+    return await cableGraphService.findPanelConnections(panelId);
+  }
+
+  /**
+   * 查询网状拓扑
+   */
+  async getNetworkTopology(panelId: string, maxDepth: number = 3) {
+    return await cableGraphService.findNetworkTopology(panelId, maxDepth);
+  }
+
+  /**
+   * 获取线缆连接的端点信息（用于扫码跳转）
+   * 返回线缆及其端点的完整信息（包括端点shortID和连接的端口信息）
+   */
+  async getCableEndpoints(cableId: string) {
+    // 获取线缆及其端点
+    const cable = await prisma.cable.findUnique({
+      where: { id: cableId },
+      include: {
+        endpoints: {
+          include: {
+            port: {
+              include: {
+                panel: {
+                  include: {
+                    device: {
+                      include: {
+                        cabinet: {
+                          include: {
+                            room: {
+                              include: {
+                                dataCenter: true,
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!cable) {
+      return null;
+    }
+
+    // 查找A端和B端
+    const endpointA = cable.endpoints.find(e => e.endType === 'A');
+    const endpointB = cable.endpoints.find(e => e.endType === 'B');
+
+    return {
       cable,
-      portA,
-      portB,
+      endpointA: endpointA || null,
+      endpointB: endpointB || null,
+      // 兼容旧接口
+      portA: endpointA?.port || null,
+      portB: endpointB?.port || null,
     };
   }
 
