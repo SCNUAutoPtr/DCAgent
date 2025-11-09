@@ -76,6 +76,9 @@
   border-radius: 8px;
   padding: 20px 10px 20px 10px;
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+  /* 触摸滚动优化 */
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 /* 2D视图SVG容器 - 支持滚动 */
@@ -88,6 +91,10 @@
   max-height: calc(100vh - 450px);
   overflow-y: auto;
   overflow-x: hidden;
+  /* 触摸滚动优化 */
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 }
 
 /* 2D视图容器布局 */

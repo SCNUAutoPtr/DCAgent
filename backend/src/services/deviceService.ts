@@ -16,6 +16,7 @@ export interface UpdateDeviceDto {
   type?: DeviceType;
   model?: string;
   serialNo?: string;
+  cabinetId?: string;
   uPosition?: number;
   uHeight?: number;
 }

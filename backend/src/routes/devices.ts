@@ -19,8 +19,9 @@ const updateDeviceSchema = z.object({
   id: z.string().uuid('Invalid ID'),
   name: z.string().min(1).optional(),
   type: z.enum(['SERVER', 'SWITCH', 'ROUTER', 'FIREWALL', 'STORAGE', 'PDU', 'OTHER']).optional(),
-  model: z.string().optional(),
+  model: z.string().min(1).optional(),
   serialNo: z.string().optional(),
+  cabinetId: z.string().uuid('Invalid cabinetId').optional(),
   uPosition: z.number().int().positive().optional(),
   uHeight: z.number().int().positive().optional(),
 });

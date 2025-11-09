@@ -20,6 +20,8 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
   contentContainerRef,
 }) => {
   const [viewportRect, setViewportRect] = useState({ top: 0, height: 100 });
+  const [isDragging, setIsDragging] = useState(false);
+  const thumbnailContainerRef = useRef<HTMLDivElement>(null);
 
   // 监听主视图，根据实际渲染高度更新视口位置
   useEffect(() => {
@@ -83,20 +85,29 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
       const finalVisibleHeight = Math.min(actualVisibleContentHeight, remainingHeight);
       const finalVisibleUCount = finalVisibleHeight / U_HEIGHT_IN_VISUALIZER;
 
-      // 在缩略图中的每U高度
+      // 在缩略图中的每U高度和缩放计算
       const uHeight = 12;
-      const thumbnailTotalHeight = cabinet.height * uHeight; // SVG高度：42 * 12 = 504px
+      const thumbnailTotalHeight = cabinet.height * uHeight; // SVG原始高度：42 * 12 = 504px
       const thumbnailPaddingTop = 10; // 缩略图容器的paddingTop
 
-      // 计算视口在SVG中的位置（像素）
+      // 计算缩放比例（与renderCabinetView中的逻辑一致）
+      const availableHeight = containerHeight - thumbnailPaddingTop - 20;
+      const scale = thumbnailTotalHeight > availableHeight ? availableHeight / thumbnailTotalHeight : 1;
+      const scaledThumbnailHeight = thumbnailTotalHeight * scale; // 实际渲染高度
+
+      // 计算视口在SVG中的位置（基于原始尺寸）
       const viewportTopInSVG = scrolledUCount * uHeight; // 从SVG顶部开始的像素位置
       const viewportHeightInSVG = finalVisibleUCount * uHeight; // 视口高度（像素）
+
+      // 应用缩放到视口尺寸
+      const scaledViewportTop = viewportTopInSVG * scale;
+      const scaledViewportHeight = viewportHeightInSVG * scale;
 
       // 转换为相对于外层容器的百分比
       // 外层容器高度 = containerHeight = 600px
       // SVG在容器中的位置：从 paddingTop 开始
-      const viewportTopInContainer = thumbnailPaddingTop + viewportTopInSVG;
-      const viewportHeightInContainer = viewportHeightInSVG;
+      const viewportTopInContainer = thumbnailPaddingTop + scaledViewportTop;
+      const viewportHeightInContainer = scaledViewportHeight;
 
       // 转换为百分比（基于containerHeight）
       let topPercent = (viewportTopInContainer / containerHeight) * 100;
@@ -146,10 +157,15 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
         },
         '第5步_缩略图视口计算': {
           thumbnailTotalHeight: thumbnailTotalHeight + 'px',
+          availableHeight: availableHeight + 'px',
+          scale: scale.toFixed(3),
+          scaledThumbnailHeight: scaledThumbnailHeight.toFixed(2) + 'px',
           thumbnailPaddingTop: thumbnailPaddingTop + 'px',
           containerHeight: containerHeight + 'px',
           viewportTopInSVG: viewportTopInSVG.toFixed(2) + 'px',
           viewportHeightInSVG: viewportHeightInSVG.toFixed(2) + 'px',
+          scaledViewportTop: scaledViewportTop.toFixed(2) + 'px',
+          scaledViewportHeight: scaledViewportHeight.toFixed(2) + 'px',
           viewportTopInContainer: viewportTopInContainer.toFixed(2) + 'px',
         },
         '第6步_最终结果': {
@@ -194,16 +210,124 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
     }
   }, [mainViewRef, cabinet.height]);
 
+  // 处理拖动视口指示框来滚动主视图
+  const handleViewportDrag = (clientY: number) => {
+    if (!thumbnailContainerRef.current || !mainViewRef?.current) return;
+
+    const scrollContainer = mainViewRef.current.getScrollContainer();
+    if (!scrollContainer) return;
+
+    const containerRect = thumbnailContainerRef.current.getBoundingClientRect();
+    const thumbnailPaddingTop = 10;
+    const uHeight = 12;
+    const U_HEIGHT_IN_VISUALIZER = 40;
+
+    // 计算缩放比例（与updateViewport中一致）
+    const thumbnailTotalHeight = cabinet.height * uHeight;
+    const availableHeight = containerHeight - thumbnailPaddingTop - 20;
+    const scale = thumbnailTotalHeight > availableHeight ? availableHeight / thumbnailTotalHeight : 1;
+
+    // 计算鼠标在容器中的位置（相对于容器顶部）
+    const mouseYInContainer = clientY - containerRect.top;
+
+    // 计算鼠标在缩放后的SVG中的位置（去除padding）
+    const mouseYInScaledSVG = mouseYInContainer - thumbnailPaddingTop;
+
+    // 转换回原始SVG坐标（除以缩放比例）
+    const mouseYInSVG = mouseYInScaledSVG / scale;
+
+    // 转换为U位数（从顶部U42开始）
+    const targetScrolledUCount = mouseYInSVG / uHeight;
+
+    // 转换为主视图的scrollTop
+    const actualCabinetHeight = mainViewRef.current.getActualHeight();
+    const clientHeight = scrollContainer.clientHeight;
+    const CONTAINER_PADDING = 40;
+    const actualVisibleContentHeight = clientHeight - CONTAINER_PADDING;
+
+    const adjustedScrollTop = targetScrolledUCount * U_HEIGHT_IN_VISUALIZER;
+    const cabinetScrollRange = actualCabinetHeight - actualVisibleContentHeight;
+    const totalScrollRange = scrollContainer.scrollHeight - clientHeight;
+
+    // 使用比例换算回实际scrollTop
+    const scrollRatio = cabinetScrollRange > 0 ? adjustedScrollTop / cabinetScrollRange : 0;
+    const targetScrollTop = scrollRatio * totalScrollRange;
+
+    // 设置滚动位置
+    scrollContainer.scrollTop = Math.max(0, Math.min(targetScrollTop, totalScrollRange));
+  };
+
+  // 鼠标拖动事件处理
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    handleViewportDrag(e.clientY);
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (isDragging) {
+      handleViewportDrag(e.clientY);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // 触摸拖动事件处理
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    handleViewportDrag(e.touches[0].clientY);
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (isDragging && e.touches.length > 0) {
+      handleViewportDrag(e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  // 添加全局鼠标和触摸事件监听
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove);
+      document.addEventListener('touchend', handleTouchEnd);
+
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
+      };
+    }
+  }, [isDragging]);
+
   // 渲染简化的机柜视图
   const renderCabinetView = () => {
     const uHeight = 12; // 每个U位的高度（像素）
     const cabinetWidth = 200; // 机柜宽度
     const totalHeight = cabinet.height * uHeight;
+    const thumbnailPaddingTop = 10;
+
+    // 计算可用高度（容器高度 - padding - 一些余量）
+    const availableHeight = containerHeight - thumbnailPaddingTop - 20; // 留20px底部余量
+
+    // 如果机柜高度超过可用高度，计算缩放比例
+    const scale = totalHeight > availableHeight ? availableHeight / totalHeight : 1;
+    const scaledWidth = cabinetWidth * scale;
+    const scaledHeight = totalHeight * scale;
 
     return (
       <svg
-        width={cabinetWidth}
-        height={totalHeight}
+        width={scaledWidth}
+        height={scaledHeight}
+        viewBox={`0 0 ${cabinetWidth} ${totalHeight}`}
         style={{
           display: 'block',
           margin: '0 auto',
@@ -307,6 +431,7 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
 
   return (
     <div
+      ref={thumbnailContainerRef}
       style={{
         height: `${containerHeight}px`,
         overflow: 'hidden',
@@ -335,6 +460,8 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
       {/* 视口指示框 */}
       {mainViewRef && (
         <div
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
           style={{
             position: 'absolute',
             left: 0,
@@ -343,8 +470,10 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
             height: `${viewportRect.height}%`,
             border: '2px solid #1890ff',
             backgroundColor: 'rgba(24, 144, 255, 0.1)',
-            pointerEvents: 'none',
-            transition: 'top 0.1s ease-out, height 0.1s ease-out',
+            pointerEvents: 'auto',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            transition: isDragging ? 'none' : 'top 0.1s ease-out, height 0.1s ease-out',
+            userSelect: 'none',
           }}
         />
       )}
