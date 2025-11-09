@@ -416,6 +416,7 @@ export default function CabinetList() {
   const handleSaveDevice = async () => {
     try {
       const values = await deviceForm.validateFields();
+      // console.log('Saving device with values:', values);
       if (editingDevice) {
         await deviceService.update(editingDevice.id, values);
         message.success('设备更新成功');
@@ -429,6 +430,8 @@ export default function CabinetList() {
       await loadCabinets();
     } catch (error: any) {
       if (error.errorFields) return;
+      // console.error('Save device error:', error);
+      // console.error('Error details:', JSON.stringify(error.data?.details, null, 2));
       message.error(editingDevice ? '更新失败' : '创建失败');
       console.error(error);
     }

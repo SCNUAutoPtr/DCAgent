@@ -27,13 +27,13 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
   useEffect(() => {
     const updateViewport = () => {
       if (!mainViewRef?.current) {
-        console.log('[CabinetThumbnail] mainViewRef.current is null');
+        // console.log('[CabinetThumbnail] mainViewRef.current is null');
         return;
       }
 
       const scrollContainer = mainViewRef.current.getScrollContainer();
       if (!scrollContainer) {
-        console.log('[CabinetThumbnail] scrollContainer is null');
+        // console.log('[CabinetThumbnail] scrollContainer is null');
         return;
       }
 
@@ -46,7 +46,7 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
       const actualCabinetHeight = mainViewRef.current.getActualHeight();
 
       if (actualCabinetHeight === 0) {
-        console.log('[CabinetThumbnail] actualCabinetHeight is 0, setting default viewport');
+        // console.log('[CabinetThumbnail] actualCabinetHeight is 0, setting default viewport');
         setViewportRect({
           top: 0,
           height: 100,
@@ -124,59 +124,59 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
       }
 
       // 统一输出所有调试信息
-      console.log('[CabinetThumbnail] ========== 视口计算调试信息 ==========');
-      console.log({
-        '第1步_滚动容器': {
-          scrollTop,
-          scrollHeight,
-          clientHeight,
-          可滚动距离: scrollHeight - clientHeight,
-        },
-        '第2步_机柜高度': {
-          cabinetHeightInU: cabinet.height,
-          actualCabinetHeight,
-          每U高度: U_HEIGHT_IN_VISUALIZER,
-        },
-        '第3步_可见高度计算': {
-          CONTAINER_PADDING,
-          '计算公式': 'actualVisibleContentHeight = clientHeight - CONTAINER_PADDING',
-          clientHeight,
-          actualVisibleContentHeight: actualVisibleContentHeight,
-          finalVisibleHeight: finalVisibleHeight,
-          finalVisibleUCount: finalVisibleUCount.toFixed(2),
-        },
-        '第4步_滚动位置修正_比例换算': {
-          原始scrollTop: scrollTop,
-          totalScrollRange: totalScrollRange,
-          cabinetScrollRange: cabinetScrollRange,
-          scrollRatio: scrollRatio.toFixed(4),
-          adjustedScrollTop: adjustedScrollTop.toFixed(2),
-          scrolledUCount: scrolledUCount.toFixed(2),
-          remainingHeight: remainingHeight.toFixed(2),
-          finalVisibleHeight: finalVisibleHeight.toFixed(2),
-        },
-        '第5步_缩略图视口计算': {
-          thumbnailTotalHeight: thumbnailTotalHeight + 'px',
-          availableHeight: availableHeight + 'px',
-          scale: scale.toFixed(3),
-          scaledThumbnailHeight: scaledThumbnailHeight.toFixed(2) + 'px',
-          thumbnailPaddingTop: thumbnailPaddingTop + 'px',
-          containerHeight: containerHeight + 'px',
-          viewportTopInSVG: viewportTopInSVG.toFixed(2) + 'px',
-          viewportHeightInSVG: viewportHeightInSVG.toFixed(2) + 'px',
-          scaledViewportTop: scaledViewportTop.toFixed(2) + 'px',
-          scaledViewportHeight: scaledViewportHeight.toFixed(2) + 'px',
-          viewportTopInContainer: viewportTopInContainer.toFixed(2) + 'px',
-        },
-        '第6步_最终结果': {
-          topPercent: topPercent.toFixed(2) + '%',
-          heightPercent: heightPercent.toFixed(2) + '%',
-          缩略图视口U位范围: `U${(42 - scrolledUCount - finalVisibleUCount).toFixed(1)} - U${(42 - scrolledUCount).toFixed(1)}`,
-          预期主视图U位范围: `U${(42 - scrolledUCount - finalVisibleUCount).toFixed(1)} - U${(42 - scrolledUCount).toFixed(1)}`,
-          是否触底限制: topPercent + heightPercent > 100 ? '是' : '否',
-        },
-      });
-      console.log('================================================');
+      // console.log('[CabinetThumbnail] ========== 视口计算调试信息 ==========');
+      // console.log({
+      //   '第1步_滚动容器': {
+      //     scrollTop,
+      //     scrollHeight,
+      //     clientHeight,
+      //     可滚动距离: scrollHeight - clientHeight,
+      //   },
+      //   '第2步_机柜高度': {
+      //     cabinetHeightInU: cabinet.height,
+      //     actualCabinetHeight,
+      //     每U高度: U_HEIGHT_IN_VISUALIZER,
+      //   },
+      //   '第3步_可见高度计算': {
+      //     CONTAINER_PADDING,
+      //     '计算公式': 'actualVisibleContentHeight = clientHeight - CONTAINER_PADDING',
+      //     clientHeight,
+      //     actualVisibleContentHeight: actualVisibleContentHeight,
+      //     finalVisibleHeight: finalVisibleHeight,
+      //     finalVisibleUCount: finalVisibleUCount.toFixed(2),
+      //   },
+      //   '第4步_滚动位置修正_比例换算': {
+      //     原始scrollTop: scrollTop,
+      //     totalScrollRange: totalScrollRange,
+      //     cabinetScrollRange: cabinetScrollRange,
+      //     scrollRatio: scrollRatio.toFixed(4),
+      //     adjustedScrollTop: adjustedScrollTop.toFixed(2),
+      //     scrolledUCount: scrolledUCount.toFixed(2),
+      //     remainingHeight: remainingHeight.toFixed(2),
+      //     finalVisibleHeight: finalVisibleHeight.toFixed(2),
+      //   },
+      //   '第5步_缩略图视口计算': {
+      //     thumbnailTotalHeight: thumbnailTotalHeight + 'px',
+      //     availableHeight: availableHeight + 'px',
+      //     scale: scale.toFixed(3),
+      //     scaledThumbnailHeight: scaledThumbnailHeight.toFixed(2) + 'px',
+      //     thumbnailPaddingTop: thumbnailPaddingTop + 'px',
+      //     containerHeight: containerHeight + 'px',
+      //     viewportTopInSVG: viewportTopInSVG.toFixed(2) + 'px',
+      //     viewportHeightInSVG: viewportHeightInSVG.toFixed(2) + 'px',
+      //     scaledViewportTop: scaledViewportTop.toFixed(2) + 'px',
+      //     scaledViewportHeight: scaledViewportHeight.toFixed(2) + 'px',
+      //     viewportTopInContainer: viewportTopInContainer.toFixed(2) + 'px',
+      //   },
+      //   '第6步_最终结果': {
+      //     topPercent: topPercent.toFixed(2) + '%',
+      //     heightPercent: heightPercent.toFixed(2) + '%',
+      //     缩略图视口U位范围: `U${(42 - scrolledUCount - finalVisibleUCount).toFixed(1)} - U${(42 - scrolledUCount).toFixed(1)}`,
+      //     预期主视图U位范围: `U${(42 - scrolledUCount - finalVisibleUCount).toFixed(1)} - U${(42 - scrolledUCount).toFixed(1)}`,
+      //     是否触底限制: topPercent + heightPercent > 100 ? '是' : '否',
+      //   },
+      // });
+      // console.log('================================================');
 
       setViewportRect({
         top: topPercent,
