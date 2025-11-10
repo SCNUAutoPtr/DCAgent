@@ -45,14 +45,20 @@ class CableService {
   async createCable(data: CreateCableDto) {
     const { portAId, portBId, shortIdA, shortIdB, ...cableData } = data;
 
-    // 检查端口是否存在
+    // 检查端口是否存在，并加载光模块信息
     const portA = await prisma.port.findUnique({
       where: { id: portAId },
-      include: { panel: true },
+      include: {
+        panel: true,
+        opticalModule: true,
+      },
     });
     const portB = await prisma.port.findUnique({
       where: { id: portBId },
-      include: { panel: true },
+      include: {
+        panel: true,
+        opticalModule: true,
+      },
     });
 
     if (!portA || !portB) {
@@ -63,6 +69,10 @@ class CableService {
     if (portA.status === 'OCCUPIED' || portB.status === 'OCCUPIED') {
       throw new Error('One or both ports are already occupied');
     }
+
+    // 验证线缆类型和端口的兼容性
+    this.validateCableConnection(portA, cableData.type);
+    this.validateCableConnection(portB, cableData.type);
 
     // 创建线缆记录
     const cable = await prisma.cable.create({
@@ -213,14 +223,20 @@ class CableService {
       },
     });
 
-    // 更新端口状态
+    // 更新端口状态和物理状态
     await prisma.port.update({
       where: { id: portAId },
-      data: { status: 'OCCUPIED' },
+      data: {
+        status: 'OCCUPIED',
+        physicalStatus: 'CONNECTED',
+      },
     });
     await prisma.port.update({
       where: { id: portBId },
-      data: { status: 'OCCUPIED' },
+      data: {
+        status: 'OCCUPIED',
+        physicalStatus: 'CONNECTED',
+      },
     });
 
     // 返回完整的线缆信息（包含端点）
@@ -655,6 +671,65 @@ class CableService {
       message: '所有shortID均可用',
       available: results,
     };
+  }
+
+  /**
+   * 验证线缆连接的兼容性
+   * 根据线缆类型和端口类型判断是否需要光模块
+   */
+  private validateCableConnection(port: any, cableType: CableType): void {
+    // DAC 直连线缆：不需要光模块，可直接连接
+    if (this.isDACCable(cableType)) {
+      // DAC 线缆应该只连接到支持的端口类型
+      const supportedTypes = ['SFP', 'SFP_PLUS', 'QSFP', 'QSFP28', 'QSFP_DD'];
+      if (port.portType && !supportedTypes.includes(port.portType)) {
+        throw new Error(`端口类型 ${port.portType} 不支持 DAC 线缆`);
+      }
+      return;
+    }
+
+    // 光纤线缆：必须先安装光模块
+    if (this.isFiberCable(cableType)) {
+      if (!port.opticalModule) {
+        throw new Error(`端口 ${port.number} 未安装光模块，无法连接光纤线缆。请先安装光模块。`);
+      }
+
+      if (port.opticalModule.status === 'FAULTY') {
+        throw new Error(`端口 ${port.number} 的光模块状态为故障，无法连接线缆`);
+      }
+
+      if (port.opticalModule.status === 'SCRAPPED') {
+        throw new Error(`端口 ${port.number} 的光模块已报废，无法连接线缆`);
+      }
+    }
+
+    // RJ45 网线：连接到 RJ45 端口，不需要光模块
+    if (this.isEthernetCable(cableType)) {
+      if (port.portType && port.portType !== 'RJ45') {
+        throw new Error(`端口类型 ${port.portType} 不支持以太网线缆`);
+      }
+    }
+  }
+
+  /**
+   * 判断是否为 DAC 直连线缆
+   */
+  private isDACCable(cableType: CableType): boolean {
+    return ['SFP_TO_SFP', 'QSFP_TO_QSFP', 'QSFP_TO_SFP'].includes(cableType);
+  }
+
+  /**
+   * 判断是否为光纤线缆
+   */
+  private isFiberCable(cableType: CableType): boolean {
+    return ['FIBER_SM', 'FIBER_MM'].includes(cableType);
+  }
+
+  /**
+   * 判断是否为以太网线缆
+   */
+  private isEthernetCable(cableType: CableType): boolean {
+    return ['CAT5E', 'CAT6', 'CAT6A', 'CAT7'].includes(cableType);
   }
 }
 

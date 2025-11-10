@@ -9,6 +9,7 @@ import {
   FileTextOutlined,
   ScanOutlined,
   TagsOutlined,
+  ToolOutlined,
   // MonitorOutlined, // SNMP 监控模块已隐藏
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -69,6 +70,11 @@ export default function AppSidebar() {
         //   icon: <ApiOutlined />,
         //   label: '端口',
         // },
+        {
+          key: '/optical-modules',
+          icon: <ToolOutlined />,
+          label: '光模块管理',
+        },
         {
           key: '/topology',
           icon: <ApartmentOutlined />,

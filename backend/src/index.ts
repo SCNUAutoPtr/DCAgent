@@ -15,6 +15,7 @@ import cableShortIdPoolRouter from './routes/cableShortIdPool';
 import shortIdPoolRouter from './routes/shortIdPool';
 import searchRouter from './routes/search';
 import panelTemplateRouter from './routes/panelTemplateRoutes';
+import opticalModulesRouter from './routes/opticalModules';
 // import monitoringRouter from './routes/monitoring'; // SNMP 监控模块已隐藏
 import { requestLogger, errorLogger } from './middleware/logger';
 
@@ -57,6 +58,7 @@ app.get('/api/v1', (req: Request, res: Response) => {
       panels: '/api/v1/panels',
       ports: '/api/v1/ports',
       cables: '/api/v1/cables',
+      opticalModules: '/api/v1/optical-modules',
       cableShortIdPool: '/api/v1/cable-shortid-pool',
       shortIdPool: '/api/v1/shortid-pool',
       search: '/api/v1/search',
@@ -74,6 +76,7 @@ app.use('/api/v1/devices', devicesRouter);
 app.use('/api/v1/panels', panelsRouter);
 app.use('/api/v1/ports', portsRouter);
 app.use('/api/v1/cables', cablesRouter);
+app.use('/api/v1/optical-modules', opticalModulesRouter);
 app.use('/api/v1/cable-shortid-pool', cableShortIdPoolRouter);
 app.use('/api/v1/shortid-pool', shortIdPoolRouter);
 app.use('/api/v1/search', searchRouter);

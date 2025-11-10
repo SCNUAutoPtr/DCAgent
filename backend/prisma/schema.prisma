@@ -142,23 +142,32 @@ enum PortStatus {
   FAULTY
 }
 
+// 端口物理状态枚举（用于区分槽位、模块、线缆的状态）
+enum PhysicalStatus {
+  EMPTY         // 空槽位（未安装模块）
+  MODULE_ONLY   // 已安装模块但未连接线缆
+  CONNECTED     // 已连接线缆
+}
+
 // 端口（不需要 shortID，太小贴不了标签）
 model Port {
-  id        String          @id @default(uuid())
-  number    String          // 端口编号
-  label     String?         // 端口标签
-  status    PortStatus      @default(AVAILABLE)
-  panelId   String
-  panel     Panel           @relation(fields: [panelId], references: [id], onDelete: Cascade)
-  portType  String?         // 端口类型 (RJ45, SFP, SFP+, QSFP, 等)
-  rotation  Float?          @default(0) // 旋转角度 (0, 90, 180, 270)
+  id             String          @id @default(uuid())
+  number         String          // 端口编号
+  label          String?         // 端口标签
+  status         PortStatus      @default(AVAILABLE)
+  physicalStatus PhysicalStatus  @default(EMPTY) // 物理状态
+  panelId        String
+  panel          Panel           @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  portType       String?         // 端口类型 (RJ45, SFP, SFP+, QSFP, 等)
+  rotation       Float?          @default(0) // 旋转角度 (0, 90, 180, 270)
   // 物理布局信息（相对于面板的坐标，单位：mm）
-  position  Json?           // 位置坐标 {x, y}
-  size      Json?           // 尺寸 {width, height}
+  position       Json?           // 位置坐标 {x, y}
+  size           Json?           // 尺寸 {width, height}
   // 连接信息
   cableEndpoints CableEndpoint[] // 该端口连接的线缆端点
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  opticalModule  OpticalModule?  // 关联的光模块（如果有）
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@unique([panelId, number])
 }
@@ -314,4 +323,84 @@ model GlobalShortIdAllocation {
 
   @@index([entityType])
   @@index([entityId])
+}
+
+// ============================================
+// 光模块管理系统
+// ============================================
+
+// 光模块状态枚举
+enum ModuleStatus {
+  IN_STOCK      // 在库（未安装）
+  INSTALLED     // 已安装
+  RESERVED      // 预留
+  FAULTY        // 故障
+  SCRAPPED      // 已报废
+}
+
+// 光模块（Optical Transceiver Module）
+model OpticalModule {
+  id             String           @id @default(uuid())
+  serialNo       String           @unique // 序列号（必填，用于唯一识别）
+  model          String           // 型号
+  vendor         String           // 厂商
+  moduleType     String           // 模块类型：SFP, SFP_PLUS, QSFP, QSFP28, QSFP_DD
+
+  // 技术参数
+  wavelength     String?          // 波长（如 850nm, 1310nm, 1550nm）
+  distance       String?          // 传输距离（如 300m, 10km, 40km）
+  ddmSupport     Boolean          @default(false) // 是否支持DDM（数字诊断监控）
+
+  // 采购信息（可选）
+  supplier       String?          // 供应商
+  purchaseDate   DateTime?        // 采购日期
+  price          Float?           // 采购价格
+  warrantyExpiry DateTime?        // 保修到期日
+
+  // 状态和位置
+  status         ModuleStatus     @default(IN_STOCK) // 当前状态
+  currentPortId  String?          @unique // 当前安装的端口ID（null表示在库）
+  currentPort    Port?            @relation(fields: [currentPortId], references: [id], onDelete: SetNull)
+
+  // 历史记录
+  movements      ModuleMovement[] // 移动历史
+
+  // 备注
+  notes          String?          // 备注信息
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([status])
+  @@index([moduleType])
+  @@index([currentPortId])
+}
+
+// 光模块移动类型枚举
+enum MovementType {
+  PURCHASE      // 采购入库
+  INSTALL       // 安装到端口
+  UNINSTALL     // 从端口卸下
+  TRANSFER      // 转移到其他端口
+  REPAIR        // 送修
+  RETURN        // 维修返回
+  SCRAP         // 报废
+}
+
+// 光模块移动历史
+model ModuleMovement {
+  id           String       @id @default(uuid())
+  moduleId     String
+  module       OpticalModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  movementType MovementType // 移动类型
+  fromPortId   String?      // 源端口ID（可为空，如采购入库）
+  toPortId     String?      // 目标端口ID（可为空，如报废）
+
+  operator     String?      // 操作人
+  notes        String?      // 备注信息
+  createdAt    DateTime     @default(now())
+
+  @@index([moduleId])
+  @@index([createdAt])
 }

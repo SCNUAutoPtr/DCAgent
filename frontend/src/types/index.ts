@@ -133,11 +133,18 @@ export enum PortStatus {
   FAULTY = 'FAULTY',
 }
 
+export enum PhysicalStatus {
+  EMPTY = 'EMPTY',            // 空槽位（未安装模块）
+  MODULE_ONLY = 'MODULE_ONLY', // 已安装模块但未连接线缆
+  CONNECTED = 'CONNECTED',     // 已连接线缆
+}
+
 export interface Port {
   id: string;
   number: string;
   label?: string;
   status: PortStatus;
+  physicalStatus?: PhysicalStatus; // 物理状态
   panelId: string;
   portType?: string; // 端口类型 (RJ45, SFP, SFP+, 等)
   // 物理布局信息（相对于面板的坐标）
@@ -151,6 +158,7 @@ export interface Port {
   };
   // 连接信息
   cableEndpoints?: CableEndpoint[]; // 该端口连接的线缆端点
+  opticalModule?: OpticalModule;   // 关联的光模块
   // 扩展字段 - 待实现
   ipAddress?: string;
   vlan?: string;
@@ -201,3 +209,98 @@ export interface CableConnection {
   portA: Port;
   portB: Port;
 }
+
+// ============================================
+// 光模块管理系统类型定义
+// ============================================
+
+export enum ModuleStatus {
+  IN_STOCK = 'IN_STOCK',       // 在库（未安装）
+  INSTALLED = 'INSTALLED',     // 已安装
+  RESERVED = 'RESERVED',       // 预留
+  FAULTY = 'FAULTY',           // 故障
+  SCRAPPED = 'SCRAPPED',       // 已报废
+}
+
+export enum MovementType {
+  PURCHASE = 'PURCHASE',       // 采购入库
+  INSTALL = 'INSTALL',         // 安装到端口
+  UNINSTALL = 'UNINSTALL',     // 从端口卸下
+  TRANSFER = 'TRANSFER',       // 转移到其他端口
+  REPAIR = 'REPAIR',           // 送修
+  RETURN = 'RETURN',           // 维修返回
+  SCRAP = 'SCRAP',             // 报废
+}
+
+export enum ModuleType {
+  SFP = 'SFP',                 // 1G 光模块
+  SFP_PLUS = 'SFP_PLUS',       // 10G 光模块
+  QSFP = 'QSFP',               // 40G 光模块
+  QSFP28 = 'QSFP28',           // 100G 光模块
+  QSFP_DD = 'QSFP_DD',         // 400G 光模块
+}
+
+export interface OpticalModule {
+  id: string;
+  serialNo: string;              // 序列号
+  model: string;                 // 型号
+  vendor: string;                // 厂商
+  moduleType: ModuleType | string; // 模块类型
+
+  // 技术参数
+  wavelength?: string;           // 波长（如 850nm, 1310nm）
+  distance?: string;             // 传输距离（如 300m, 10km）
+  ddmSupport: boolean;           // 是否支持DDM
+
+  // 采购信息
+  supplier?: string;             // 供应商
+  purchaseDate?: string;         // 采购日期
+  price?: number;                // 采购价格
+  warrantyExpiry?: string;       // 保修到期日
+
+  // 状态和位置
+  status: ModuleStatus;          // 当前状态
+  currentPortId?: string;        // 当前安装的端口ID
+  currentPort?: Port;            // 当前安装的端口完整信息
+
+  // 备注
+  notes?: string;                // 备注信息
+
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ModuleMovement {
+  id: string;
+  moduleId: string;
+  module?: OpticalModule;
+
+  movementType: MovementType;    // 移动类型
+  fromPortId?: string;           // 源端口ID
+  fromPort?: Port;               // 源端口完整信息
+  toPortId?: string;             // 目标端口ID
+  toPort?: Port;                 // 目标端口完整信息
+
+  operator?: string;             // 操作人
+  notes?: string;                // 备注信息
+  createdAt: string;
+}
+
+export interface OpticalModuleStatistics {
+  total: number;
+  byStatus: {
+    inStock: number;
+    installed: number;
+    faulty: number;
+    scrapped: number;
+  };
+  byType: Array<{
+    moduleType: string;
+    count: number;
+  }>;
+  byVendor: Array<{
+    vendor: string;
+    count: number;
+  }>;
+}
+
