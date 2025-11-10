@@ -1,0 +1,19 @@
+{
+  "dashboard": "Dashboard",
+  "infrastructure": "Infrastructure",
+  "dataCenter": "Data Center",
+  "room": "Room",
+  "cabinet": "Cabinet",
+  "device": "Device",
+  "connectionManagement": "Connection Management",
+  "panel": "Panel",
+  "port": "Port",
+  "cable": "Cable",
+  "opticalModule": "Optical Module",
+  "opticalModuleList": "Optical Modules",
+  "cableTopology": "Cable Topology",
+  "cableManualInventory": "Cable Manual Inventory",
+  "shortIdPool": "Short ID Pool",
+  "bulkDeployment": "Bulk Deployment",
+  "panelTemplate": "Panel Template"
+}

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   Form,
@@ -57,6 +58,7 @@ interface CableRecord {
 }
 
 const CableManualInventory: React.FC = () => {
+  const { t } = useTranslation('cable');
   const [form] = Form.useForm();
   const [cableBaseInfo, setCableBaseInfo] = useState<CableBaseInfo | null>(null);
   const [baseInfoConfirmed, setBaseInfoConfirmed] = useState(false);
@@ -105,7 +107,7 @@ const CableManualInventory: React.FC = () => {
           entityId: result.id,
           isValid: false,
           status: 'INVALID',
-          errorMessage: `ShortID ${ShortIdFormatter.toDisplayFormat(shortId)} 已被占用（类型：${result.type}）`,
+          errorMessage: t('messages.portInvalid'),
         };
       }
 
@@ -118,7 +120,7 @@ const CableManualInventory: React.FC = () => {
           isValid: false,
           status: 'OCCUPIED',
           location: result.description,
-          errorMessage: `端口 ${result.name} 已被占用`,
+          errorMessage: t('messages.portOccupiedError'),
         };
       }
 
@@ -156,7 +158,7 @@ const CableManualInventory: React.FC = () => {
       // 如果不是 E- 格式，尝试直接解析数字
       shortId = parseInt(trimmedValue, 10);
       if (isNaN(shortId)) {
-        message.error('无效的 ShortID 格式');
+        message.error(t('messages.invalidShortId'));
         setCurrentInput('');
         return;
       }
@@ -176,19 +178,19 @@ const CableManualInventory: React.FC = () => {
     // 根据当前是 A 还是 B 来设置
     if (currentSide === 'A') {
       setPortA(portInfo);
-      message.success(`端口 A: ${portInfo.label} (${ShortIdFormatter.toDisplayFormat(shortId)})`);
+      message.success(t('messages.portSuccess', { side: 'A', label: portInfo.label, shortId: ShortIdFormatter.toDisplayFormat(shortId) }));
       setCurrentSide('B');
       setCurrentInput('');
     } else {
       // 检查是否与 A 端重复
       if (portA && portA.shortId === shortId) {
-        message.error('端口 B 不能与端口 A 相同');
+        message.error(t('messages.duplicatePort'));
         setCurrentInput('');
         return;
       }
 
       setPortB(portInfo);
-      message.success(`端口 B: ${portInfo.label} (${ShortIdFormatter.toDisplayFormat(shortId)})`);
+      message.success(t('messages.portSuccess', { side: 'B', label: portInfo.label, shortId: ShortIdFormatter.toDisplayFormat(shortId) }));
       setCurrentInput('');
 
       // 自动提交这一对线缆
@@ -199,7 +201,7 @@ const CableManualInventory: React.FC = () => {
   // 提交一对线缆
   const submitCablePair = async (portAInfo: PortInfo, portBInfo: PortInfo) => {
     if (!cableBaseInfo) {
-      message.error('线缆基本信息未设置');
+      message.error(t('messages.baseInfoNotSet'));
       return;
     }
 
@@ -236,10 +238,10 @@ const CableManualInventory: React.FC = () => {
         )
       );
 
-      message.success('线缆入库成功');
+      message.success(t('messages.inventorySuccess'));
     } catch (error: any) {
       console.error('Error submitting cable:', error);
-      const errorMsg = error.response?.data?.error || '入库失败';
+      const errorMsg = error.response?.data?.error || t('messages.inventoryFailed');
 
       // 更新记录状态为失败
       setCableRecords(prev =>
@@ -273,7 +275,7 @@ const CableManualInventory: React.FC = () => {
       notes: values.notes,
     });
     setBaseInfoConfirmed(true);
-    message.success('线缆基本信息已设置，开始扫码录入');
+    message.success(t('messages.baseInfoConfirmed'));
   };
 
   // 修改基本信息
@@ -288,7 +290,7 @@ const CableManualInventory: React.FC = () => {
   // 删除记录
   const handleDeleteRecord = (key: string) => {
     setCableRecords(prev => prev.filter(record => record.key !== key));
-    message.success('已删除记录');
+    message.success(t('messages.deleteSuccess'));
   };
 
   // 重试失败的记录
@@ -320,9 +322,9 @@ const CableManualInventory: React.FC = () => {
         )
       );
 
-      message.success('重试成功');
+      message.success(t('messages.retrySuccess'));
     } catch (error: any) {
-      const errorMsg = error.response?.data?.error || '重试失败';
+      const errorMsg = error.response?.data?.error || t('messages.retryFailed');
       setCableRecords(prev =>
         prev.map(r =>
           r.key === record.key
@@ -338,20 +340,20 @@ const CableManualInventory: React.FC = () => {
   const renderStatusTag = (status: CableRecord['status']) => {
     switch (status) {
       case 'pending':
-        return <Tag color="default">待提交</Tag>;
+        return <Tag color="default">{t('portStatus.pending')}</Tag>;
       case 'submitting':
-        return <Tag color="processing" icon={<Spin size="small" />}>提交中</Tag>;
+        return <Tag color="processing" icon={<Spin size="small" />}>{t('portStatus.submitting')}</Tag>;
       case 'success':
-        return <Tag color="success" icon={<CheckCircleOutlined />}>成功</Tag>;
+        return <Tag color="success" icon={<CheckCircleOutlined />}>{t('portStatus.success')}</Tag>;
       case 'failed':
-        return <Tag color="error" icon={<WarningOutlined />}>失败</Tag>;
+        return <Tag color="error" icon={<WarningOutlined />}>{t('portStatus.failed')}</Tag>;
     }
   };
 
   // 表格列定义
   const columns = [
     {
-      title: '端口 A',
+      title: t('manualInventory.portA'),
       key: 'portA',
       render: (_: any, record: CableRecord) => (
         <div>
@@ -365,7 +367,7 @@ const CableManualInventory: React.FC = () => {
       ),
     },
     {
-      title: '端口 B',
+      title: t('manualInventory.portB'),
       key: 'portB',
       render: (_: any, record: CableRecord) => (
         <div>
@@ -379,13 +381,13 @@ const CableManualInventory: React.FC = () => {
       ),
     },
     {
-      title: '状态',
+      title: t('manualInventory.status'),
       key: 'status',
       width: 120,
       render: (_: any, record: CableRecord) => renderStatusTag(record.status),
     },
     {
-      title: '操作',
+      title: t('manualInventory.action'),
       key: 'action',
       width: 150,
       render: (_: any, record: CableRecord) => (
@@ -396,7 +398,7 @@ const CableManualInventory: React.FC = () => {
               size="small"
               onClick={() => handleRetryRecord(record)}
             >
-              重试
+              {t('buttons.retry')}
             </Button>
           )}
           <Button
@@ -406,7 +408,7 @@ const CableManualInventory: React.FC = () => {
             icon={<DeleteOutlined />}
             onClick={() => handleDeleteRecord(record.key)}
           >
-            删除
+            {t('buttons.removeRecord')}
           </Button>
         </Space>
       ),
@@ -416,9 +418,9 @@ const CableManualInventory: React.FC = () => {
   return (
     <div style={{ padding: '24px' }}>
       <Card>
-        <Title level={2}>线缆批量入库</Title>
+        <Title level={2}>{t('manualInventory.title')}</Title>
         <Text type="secondary">
-          适用于批量录入相同规格的线缆，使用 A-B-A'-B' 顺序快速扫码
+          {t('manualInventory.description')}
         </Text>
 
         <Divider />
@@ -427,8 +429,8 @@ const CableManualInventory: React.FC = () => {
         {!baseInfoConfirmed ? (
           <div>
             <Alert
-              message="第一步：设置线缆基本信息"
-              description="这批线缆的基本信息（类型、颜色等）将应用到所有录入的线缆"
+              message={t('manualInventory.step1')}
+              description={t('manualInventory.step1Desc')}
               type="info"
               showIcon
               style={{ marginBottom: 24 }}
@@ -443,45 +445,45 @@ const CableManualInventory: React.FC = () => {
               }}
             >
               <Form.Item
-                label="线缆类型"
+                label={t('labels.cableType')}
                 name="type"
-                rules={[{ required: true, message: '请选择线缆类型' }]}
+                rules={[{ required: true, message: t('validation.typeRequired') }]}
               >
-                <Select placeholder="请选择线缆类型" size="large">
-                  <Option value="CAT5E">CAT5E 网线</Option>
-                  <Option value="CAT6">CAT6 网线</Option>
-                  <Option value="CAT6A">CAT6A 网线</Option>
-                  <Option value="CAT7">CAT7 网线</Option>
-                  <Option value="FIBER_SM">单模光纤</Option>
-                  <Option value="FIBER_MM">多模光纤</Option>
-                  <Option value="QSFP_TO_SFP">QSFP转SFP</Option>
-                  <Option value="QSFP_TO_QSFP">QSFP直连</Option>
-                  <Option value="SFP_TO_SFP">SFP直连</Option>
-                  <Option value="POWER">电源线</Option>
-                  <Option value="OTHER">其他</Option>
+                <Select placeholder={t('placeholders.type')} size="large">
+                  <Option value="CAT5E">{t('cableTypes.CAT5E')}</Option>
+                  <Option value="CAT6">{t('cableTypes.CAT6')}</Option>
+                  <Option value="CAT6A">{t('cableTypes.CAT6A')}</Option>
+                  <Option value="CAT7">{t('cableTypes.CAT7')}</Option>
+                  <Option value="FIBER_SM">{t('cableTypes.FIBER_SM')}</Option>
+                  <Option value="FIBER_MM">{t('cableTypes.FIBER_MM')}</Option>
+                  <Option value="QSFP_TO_SFP">{t('cableTypes.QSFP_TO_SFP')}</Option>
+                  <Option value="QSFP_TO_QSFP">{t('cableTypes.QSFP_TO_QSFP')}</Option>
+                  <Option value="SFP_TO_SFP">{t('cableTypes.SFP_TO_SFP')}</Option>
+                  <Option value="POWER">{t('cableTypes.POWER')}</Option>
+                  <Option value="OTHER">{t('cableTypes.OTHER')}</Option>
                 </Select>
               </Form.Item>
 
-              <Form.Item label="线缆长度（米）" name="length">
+              <Form.Item label={t('labels.cableLength')} name="length">
                 <InputNumber
                   min={0.1}
                   step={0.5}
-                  placeholder="可选"
+                  placeholder={t('placeholders.length')}
                   style={{ width: '100%' }}
                   size="large"
                 />
               </Form.Item>
 
-              <Form.Item label="线缆颜色" name="color">
-                <Input placeholder="可选，如：蓝色" size="large" />
+              <Form.Item label={t('labels.cableColor')} name="color">
+                <Input placeholder={t('placeholders.color')} size="large" />
               </Form.Item>
 
-              <Form.Item label="批注备注" name="notes">
-                <Input.TextArea rows={2} placeholder="可选，该批次线缆的统一备注" />
+              <Form.Item label={t('labels.cableNotes')} name="notes">
+                <Input.TextArea rows={2} placeholder={t('placeholders.notes')} />
               </Form.Item>
 
               <Button type="primary" htmlType="submit" size="large" icon={<SaveOutlined />}>
-                确认并开始扫码
+                {t('buttons.startScan')}
               </Button>
             </Form>
           </div>
@@ -491,36 +493,36 @@ const CableManualInventory: React.FC = () => {
             <Card size="small" style={{ marginBottom: 24, backgroundColor: '#f0f5ff' }}>
               <Space split={<Divider type="vertical" />}>
                 <div>
-                  <Text type="secondary">线缆类型：</Text>
+                  <Text type="secondary">{t('manualInventory.cableType')}:</Text>
                   <Tag color="blue">{cableBaseInfo?.type}</Tag>
                 </div>
                 {cableBaseInfo?.length && (
                   <div>
-                    <Text type="secondary">长度：</Text>
+                    <Text type="secondary">{t('manualInventory.cableLength')}:</Text>
                     <Text strong>{cableBaseInfo.length}m</Text>
                   </div>
                 )}
                 {cableBaseInfo?.color && (
                   <div>
-                    <Text type="secondary">颜色：</Text>
+                    <Text type="secondary">{t('manualInventory.cableColor')}:</Text>
                     <Text strong>{cableBaseInfo.color}</Text>
                   </div>
                 )}
                 <Button type="link" onClick={handleEditBaseInfo}>
-                  修改
+                  {t('buttons.editBaseInfo')}
                 </Button>
               </Space>
             </Card>
 
             {/* 步骤2：扫码录入 */}
             <Alert
-              message={`第二步：扫码录入（${currentSide === 'A' ? '扫描端口 A' : '扫描端口 B'}）`}
+              message={t('manualInventory.step2')}
               description={
                 currentSide === 'A'
-                  ? '请扫描第一根线缆的 A 端端口二维码'
+                  ? t('manualInventory.step2Desc')
                   : portB
-                  ? '正在提交...'
-                  : '请扫描第一根线缆的 B 端端口二维码，扫描后将自动提交'
+                  ? t('messages.baseInfoConfirmed')
+                  : t('manualInventory.step2Desc')
               }
               type={currentSide === 'A' ? 'info' : 'success'}
               showIcon
@@ -528,11 +530,11 @@ const CableManualInventory: React.FC = () => {
             />
 
             <Card size="small" style={{ marginBottom: 24 }}>
-              <Form.Item label={`当前扫描：端口 ${currentSide}`} style={{ marginBottom: 0 }}>
+              <Form.Item label={`${t('labels.currentPort')}: ${currentSide}`} style={{ marginBottom: 0 }}>
                 <Input
                   ref={inputRef}
                   prefix={<ScanOutlined />}
-                  placeholder="扫描端口二维码（支持 E-00001 或 00001 格式）"
+                  placeholder={t('placeholders.portId')}
                   value={currentInput}
                   onChange={(e) => setCurrentInput(e.target.value)}
                   onPressEnter={(e) => handleScanInput((e.target as HTMLInputElement).value)}
@@ -546,7 +548,7 @@ const CableManualInventory: React.FC = () => {
               <Space style={{ marginTop: 16 }} size="large">
                 {portA && (
                   <div>
-                    <Tag color="blue">端口 A</Tag>
+                    <Tag color="blue">{t('manualInventory.portA')}</Tag>
                     <Text strong>{portA.label}</Text>
                     <Text code style={{ marginLeft: 8 }}>
                       {ShortIdFormatter.toDisplayFormat(portA.shortId)}
@@ -560,14 +562,14 @@ const CableManualInventory: React.FC = () => {
                           setCurrentInput('');
                         }}
                       >
-                        重新扫描
+                        {t('buttons.editBaseInfo')}
                       </Button>
                     )}
                   </div>
                 )}
                 {portB && (
                   <div>
-                    <Tag color="green">端口 B</Tag>
+                    <Tag color="green">{t('manualInventory.portB')}</Tag>
                     <Text strong>{portB.label}</Text>
                     <Text code style={{ marginLeft: 8 }}>
                       {ShortIdFormatter.toDisplayFormat(portB.shortId)}
@@ -581,7 +583,7 @@ const CableManualInventory: React.FC = () => {
             {cableRecords.length > 0 && (
               <div>
                 <Title level={4}>
-                  已录入线缆记录 ({cableRecords.filter(r => r.status === 'success').length}/
+                  {t('manualInventory.baseInfo')} ({cableRecords.filter(r => r.status === 'success').length}/
                   {cableRecords.length})
                 </Title>
                 <Table

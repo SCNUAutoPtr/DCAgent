@@ -13,100 +13,102 @@ import {
   // MonitorOutlined, // SNMP 监控模块已隐藏
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const { Sider } = Layout;
 
 export default function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation('menu');
 
   const menuItems = [
     {
       key: '/',
       icon: <DashboardOutlined />,
-      label: '仪表板',
+      label: t('dashboard'),
     },
     {
       key: 'infrastructure',
       icon: <DatabaseOutlined />,
-      label: '基础设施',
+      label: t('infrastructure'),
       children: [
         {
           key: '/datacenters',
           icon: <DatabaseOutlined />,
-          label: '数据中心',
+          label: t('dataCenter'),
         },
         {
           key: '/rooms',
           icon: <HomeOutlined />,
-          label: '机房',
+          label: t('room'),
         },
         {
           key: '/cabinets',
           icon: <InboxOutlined />,
-          label: '机柜',
+          label: t('cabinet'),
         },
         // 设备菜单已隐藏 - 通过机柜可视化管理
         // {
         //   key: '/devices',
         //   icon: <CloudServerOutlined />,
-        //   label: '设备',
+        //   label: t('device'),
         // },
       ],
     },
     {
       key: 'connectivity',
       icon: <ApartmentOutlined />,
-      label: '连接管理',
+      label: t('connectionManagement'),
       children: [
         // 面板和端口菜单已隐藏 - 通过设备可视化管理
         // {
         //   key: '/panels',
         //   icon: <ApartmentOutlined />,
-        //   label: '面板',
+        //   label: t('panel'),
         // },
         // {
         //   key: '/ports',
         //   icon: <ApiOutlined />,
-        //   label: '端口',
+        //   label: t('port'),
         // },
         {
           key: '/optical-modules',
           icon: <ToolOutlined />,
-          label: '光模块管理',
+          label: t('opticalModule'),
         },
         {
           key: '/topology',
           icon: <ApartmentOutlined />,
-          label: '线缆拓扑',
+          label: t('cableTopology'),
         },
         {
           key: '/cable-manual-inventory',
           icon: <ScanOutlined />,
-          label: '线缆手动入库',
+          label: t('cableManualInventory'),
         },
       ],
     },
     {
       key: '/shortid-pool',
       icon: <TagsOutlined />,
-      label: 'shortID池管理',
+      label: t('shortIdPool'),
     },
     // SNMP 设备监控菜单已隐藏
     // {
     //   key: '/monitoring',
     //   icon: <MonitorOutlined />,
-    //   label: '设备监控',
+    //   label: t('monitoring'),
     // },
     {
       key: '/bulk-deployment',
       icon: <CloudUploadOutlined />,
-      label: '批量上架',
+      label: t('bulkDeployment'),
     },
     {
       key: '/panel-templates',
       icon: <FileTextOutlined />,
-      label: '面板模板',
+      label: t('panelTemplate'),
     },
   ];
 

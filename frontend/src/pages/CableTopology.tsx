@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Typography,
   Card,
@@ -232,6 +233,7 @@ const nodeTypes = {
 
 // 拓扑图主组件
 function CableTopologyContent() {
+  const { t } = useTranslation('cable');
   const location = useLocation();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -358,7 +360,7 @@ function CableTopologyContent() {
       console.log('Loaded devices:', uniqueDevices.length);
     } catch (error) {
       console.error('Failed to load panels and devices:', error);
-      message.error('加载面板和设备列表失败');
+      message.error(t('messages.loadFailed'));
     }
   };
 
@@ -369,7 +371,7 @@ function CableTopologyContent() {
       console.log('Loaded cabinets:', cabinetsData.length);
     } catch (error) {
       console.error('Failed to load cabinets:', error);
-      message.error('加载机柜列表失败');
+      message.error(t('messages.loadFailed'));
     }
   };
 
@@ -380,14 +382,14 @@ function CableTopologyContent() {
       console.log('Loaded rooms:', roomsData.length);
     } catch (error) {
       console.error('Failed to load rooms:', error);
-      message.error('加载机房列表失败');
+      message.error(t('messages.loadFailed'));
     }
   };
 
   // 加载拓扑数据
   const loadTopology = async (panelId: string, _maxDepth: number) => {
     if (!panelId) {
-      message.warning('请选择一个面板');
+      message.warning(t('messages.selectPanel'));
       return;
     }
 
@@ -402,11 +404,11 @@ function CableTopologyContent() {
       // 构建节点和边
       await buildGraphFromConnections(connections, panelId);
 
-      message.success(`拓扑图加载成功，找到 ${connections?.length || 0} 个连接`);
+      message.success(t('messages.topologyLoadSuccess', { count: connections?.length || 0 }));
       setTimeout(() => fitView({ padding: 0.2, duration: 800 }), 100);
     } catch (error) {
       console.error('Failed to load topology:', error);
-      message.error('加载拓扑图失败');
+      message.error(t('messages.topologyLoadFailed'));
     } finally {
       setLoading(false);
     }
@@ -703,7 +705,7 @@ function CableTopologyContent() {
 
       const panel = await panelService.getByShortId(shortId);
       if (panel) {
-        message.success(`已加载面板：${panel.name}`);
+        message.success(t('messages.panelLoadSuccess', { name: panel.name }));
 
         // 自动选择对应的设备和面板
         if (panel.deviceId) {
@@ -720,19 +722,19 @@ function CableTopologyContent() {
       }
     } catch (error) {
       console.error('Failed to load panel by shortId:', error);
-      message.error('未找到该ID对应的面板或格式无效（请使用 E-00001 或 1 格式）');
+      message.error(t('messages.panelNotFound'));
     }
   };
 
   return (
     <div>
-      <Title level={2}>线缆拓扑图</Title>
+      <Title level={2}>{t('topology.title')}</Title>
 
       <Card style={{ marginBottom: '16px' }}>
         <Space wrap>
           <Input
             prefix={<ScanOutlined />}
-            placeholder="扫描面板二维码或输入ID快速定位"
+            placeholder={t('topology.scanPlaceholder')}
             value={scanInput}
             onChange={(e) => setScanInput(e.target.value)}
             onPressEnter={(e) => handleScanInput((e.target as HTMLInputElement).value)}
@@ -743,11 +745,11 @@ function CableTopologyContent() {
 
           <Divider type="vertical" style={{ height: 32 }} />
 
-          <Text strong>选择设备:</Text>
+          <Text strong>{t('topology.selectDevice')}:</Text>
           <Select
             showSearch
             style={{ width: 280 }}
-            placeholder="先选择一个设备"
+            placeholder={t('labels.selectDevice')}
             value={selectedDeviceId}
             onChange={(value) => {
               setSelectedDeviceId(value);
@@ -768,11 +770,11 @@ function CableTopologyContent() {
             ))}
           </Select>
 
-          <Text strong>选择面板:</Text>
+          <Text strong>{t('topology.selectPanel')}:</Text>
           <Select
             showSearch
             style={{ width: 280 }}
-            placeholder={selectedDeviceId ? '选择该设备下的面板' : '请先选择设备'}
+            placeholder={selectedDeviceId ? t('labels.selectPanel') : t('labels.selectDevice')}
             value={selectedPanelId}
             onChange={(value) => {
               setSelectedPanelId(value);
@@ -794,7 +796,7 @@ function CableTopologyContent() {
             ))}
           </Select>
 
-          <Text strong>深度:</Text>
+          <Text strong>{t('topology.depth')}:</Text>
           <Select
             style={{ width: 100 }}
             value={depth}
@@ -805,44 +807,44 @@ function CableTopologyContent() {
               }
             }}
           >
-            <Option value={1}>1层</Option>
-            <Option value={2}>2层</Option>
-            <Option value={3}>3层</Option>
-            <Option value={5}>5层</Option>
+            <Option value={1}>1 {t('tabs.topology')}</Option>
+            <Option value={2}>2 {t('tabs.topology')}</Option>
+            <Option value={3}>3 {t('tabs.topology')}</Option>
+            <Option value={5}>5 {t('tabs.topology')}</Option>
           </Select>
 
           <Divider type="vertical" />
 
-          <Tooltip title="创建连接">
+          <Tooltip title={t('buttons.createConnection')}>
             <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={handleOpenCreateCableModal}
             >
-              创建连接
+              {t('buttons.createConnection')}
             </Button>
           </Tooltip>
 
-          <Tooltip title="刷新">
+          <Tooltip title={t('buttons.refresh')}>
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
           </Tooltip>
 
-          <Tooltip title="适应视图">
+          <Tooltip title={t('buttons.fitView')}>
             <Button
               icon={<FullscreenOutlined />}
               onClick={() => fitView({ padding: 0.2, duration: 800 })}
             />
           </Tooltip>
 
-          <Tooltip title="放大">
+          <Tooltip title={t('buttons.zoomIn')}>
             <Button icon={<ZoomInOutlined />} onClick={() => zoomIn({ duration: 200 })} />
           </Tooltip>
 
-          <Tooltip title="缩小">
+          <Tooltip title={t('buttons.zoomOut')}>
             <Button icon={<ZoomOutOutlined />} onClick={() => zoomOut({ duration: 200 })} />
           </Tooltip>
 
-          <Tooltip title="导出图片">
+          <Tooltip title={t('topology.exportImage')}>
             <Button icon={<DownloadOutlined />} onClick={handleExportImage} />
           </Tooltip>
         </Space>
@@ -860,7 +862,7 @@ function CableTopologyContent() {
                 zIndex: 1000,
               }}
             >
-              <Spin size="large" tip="加载拓扑图中..." />
+              <Spin size="large" tip={t('topology.loading')} />
             </div>
           ) : null}
 
@@ -891,7 +893,7 @@ function CableTopologyContent() {
             />
             <Panel position="top-right">
               <Card size="small" style={{ width: 200 }}>
-                <Text strong>图例</Text>
+                <Text strong>{t('topology.legend')}</Text>
                 <div style={{ marginTop: 8 }}>
                   {Object.entries(nodeTypeColors).map(([type, color]) => (
                     <div key={type} style={{ marginBottom: 4 }}>
@@ -907,7 +909,7 @@ function CableTopologyContent() {
 
       {/* 节点详情弹窗 */}
       <Modal
-        title="设备详情"
+        title={t('cableDetail.title')}
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
         footer={null}
@@ -915,27 +917,27 @@ function CableTopologyContent() {
       >
         {selectedNode && (
           <Descriptions column={2} bordered size="small">
-            <Descriptions.Item label="设备名称" span={2}>
-              {selectedNode.data?.device?.name || '未命名'}
+            <Descriptions.Item label={t('labels.deviceType')} span={2}>
+              {selectedNode.data?.device?.name || '-'}
             </Descriptions.Item>
-            <Descriptions.Item label="设备类型">
+            <Descriptions.Item label={t('descriptions.deviceType')}>
               <Tag color={nodeTypeColors[selectedNode.data?.device?.type || 'OTHER']}>
                 {selectedNode.data?.device?.type || 'UNKNOWN'}
               </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="序列号">
+            <Descriptions.Item label={t('descriptions.serialNo')}>
               {selectedNode.data?.device?.serialNumber || '-'}
             </Descriptions.Item>
-            <Descriptions.Item label="面板名称" span={2}>
+            <Descriptions.Item label={t('cableDetail.panel')} span={2}>
               {selectedNode.data?.panel?.name || '-'}
             </Descriptions.Item>
-            <Descriptions.Item label="面板类型">
+            <Descriptions.Item label={t('descriptions.portStatus')}>
               {selectedNode.data?.panel?.type || '-'}
             </Descriptions.Item>
-            <Descriptions.Item label="端口数量">
+            <Descriptions.Item label={t('portVisualization.totalPorts')}>
               {selectedNode.data?.ports?.length || 0}
             </Descriptions.Item>
-            <Descriptions.Item label="已连接端口" span={2}>
+            <Descriptions.Item label={t('portVisualization.connectedPorts')} span={2}>
               {selectedNode.data?.ports
                 ?.map((p: any) => p.label || p.number)
                 .join(', ') || '-'}
@@ -999,6 +1001,7 @@ function PortVisualization({ device, panel, ports, edges }: {
   ports: any[];
   edges: Edge[]
 }) {
+  const { t } = useTranslation('cable');
   const [allPorts, setAllPorts] = useState<Port[]>([]);
   const [loadingPorts, setLoadingPorts] = useState(false);
   const [allDevices, setAllDevices] = useState<Device[]>([]);
@@ -1069,12 +1072,12 @@ function PortVisualization({ device, panel, ports, edges }: {
         console.log('Loaded devices:', devicesList.length, 'cabinets:', cabinetsList.length, 'rooms:', roomsList.length, 'panel mappings:', panelDeviceMap.size);
       } catch (error) {
         console.error('Failed to load data:', error);
-        message.error('加载设备或机柜信息失败');
+        message.error(t('messages.loadFailed'));
       }
     };
 
     loadAllData();
-  }, []);
+  }, [t]);
 
   // 加载面板的所有端口
   useEffect(() => {
@@ -1087,7 +1090,7 @@ function PortVisualization({ device, panel, ports, edges }: {
         setAllPorts(panelPorts);
       } catch (error) {
         console.error('Failed to load all ports:', error);
-        message.error('加载端口信息失败');
+        message.error(t('messages.loadFailed'));
         setAllPorts([]);
       } finally {
         setLoadingPorts(false);
@@ -1095,7 +1098,7 @@ function PortVisualization({ device, panel, ports, edges }: {
     };
 
     loadAllPorts();
-  }, [panel?.id]);
+  }, [panel?.id, t]);
 
   // 转换端口数据格式，包含所有端口
   const portDefinitions: PortDefinition[] = allPorts.map((port: Port) => {
@@ -1237,19 +1240,19 @@ function PortVisualization({ device, panel, ports, edges }: {
   return (
     <div style={{ padding: '20px' }}>
       <div style={{ marginBottom: '16px' }}>
-        <h3>{device.name} - {panel.name} 接口图</h3>
+        <h3>{device.name} - {panel.name} {t('portVisualization.interfaceChart')}</h3>
         <p>
-          设备类型: {device.type} |
-          总端口: {allPorts.length} |
-          已连接: {connectedPortsCount} |
-          未连接: {allPorts.length - connectedPortsCount} |
-          面板尺寸: {panelWidth} × {panelHeight} mm
+          {t('portVisualization.deviceType')}: {device.type} |
+          {t('portVisualization.totalPorts')}: {allPorts.length} |
+          {t('portVisualization.connectedPorts')}: {connectedPortsCount} |
+          {t('portVisualization.unconnectedPorts')}: {allPorts.length - connectedPortsCount} |
+          {t('portVisualization.panelSize')}: {panelWidth} × {panelHeight} mm
         </p>
       </div>
 
       {loadingPorts ? (
         <div style={{ textAlign: 'center', padding: '50px' }}>
-          <Spin size="large" tip="加载端口信息..." />
+          <Spin size="large" tip={t('topology.loading')} />
         </div>
       ) : (
         <>
@@ -1265,22 +1268,22 @@ function PortVisualization({ device, panel, ports, edges }: {
           />
 
           <div style={{ marginTop: '16px', fontSize: '12px', color: '#666' }}>
-            <div>端口状态说明:</div>
+            <div>{t('portVisualization.statusLegend')}</div>
             <div style={{ display: 'flex', gap: '16px', marginTop: '8px', flexWrap: 'wrap' }}>
-              <span>● 深色端口: 已连接</span>
-              <span>● 浅色端口: 未连接</span>
-              <span>● 端口标签: 显示对端连接信息</span>
-              <span>● 不同颜色: 不同端口类型</span>
-              <span>● 实际比例: 真实面板尺寸</span>
+              <span>{t('portVisualization.connectedPort')}</span>
+              <span>{t('portVisualization.unconnectedPort')}</span>
+              <span>{t('portVisualization.portLabel')}</span>
+              <span>{t('portVisualization.portColor')}</span>
+              <span>{t('portVisualization.actualRatio')}</span>
             </div>
             <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#e6f7ff', borderRadius: '4px' }}>
               <div style={{ color: '#1890ff', marginBottom: '4px' }}>
                 <InfoCircleOutlined style={{ marginRight: '4px' }} />
-                交互功能
+                {t('portVisualization.interactiveFeatures')}
               </div>
-              <div>• 点击已连接端口可查看详细连接信息</div>
-              <div>• 虚线框表示可点击的连接端口</div>
-              <div>• 连接端口会闪烁显示</div>
+              <div>• {t('portVisualization.clickConnectedPort')}</div>
+              <div>• {t('portVisualization.dashedBox')}</div>
+              <div>• {t('portVisualization.blinkingEffect')}</div>
             </div>
           </div>
         </>
@@ -1299,6 +1302,7 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
   roomsMap: Map<string, Room>;
   device: Device;
 }) {
+  const { t } = useTranslation('cable');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [zoom] = useState(1.5);
   const [time, setTime] = useState(0);
@@ -1512,7 +1516,7 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
 
       {/* 对端设备信息模态框 */}
       <Modal
-        title="端口连接详情"
+        title={t('portVisualization.title')}
         open={detailModalVisible}
         onCancel={() => {
           setDetailModalVisible(false);
@@ -1520,7 +1524,7 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
         }}
         footer={[
           <Button key="close" onClick={() => setDetailModalVisible(false)}>
-            关闭
+            {t('buttons.cancel')}
           </Button>,
           clickedPortInfo?.targetPort && (
             <Button
@@ -1529,10 +1533,10 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
               icon={<LinkOutlined />}
               onClick={() => {
                 // 这里可以添加导航到对端设备的逻辑
-                message.info('导航功能正在开发中...');
+                message.info(t('messages.exportFunctionDeveloping'));
               }}
             >
-              查看对端设备
+              {t('buttons.createConnection')}
             </Button>
           )
         ]}
@@ -1541,14 +1545,14 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
         {clickedPortInfo && (
           <div>
             <Descriptions column={1} bordered size="small">
-              <Descriptions.Item label="当前端口">
+              <Descriptions.Item label={t('labels.currentPort')}>
                 <Tag color="blue">{clickedPortInfo.portNumber}</Tag>
                 <span style={{ marginLeft: '8px' }}>
                   {clickedPortInfo.port?.portType?.replace('_CONNECTED', '')}
                 </span>
               </Descriptions.Item>
               {clickedPortInfo.targetPort && (
-                <Descriptions.Item label="对端端口">
+                <Descriptions.Item label={t('labels.oppositePort')}>
                   <Tag color="green">
                     {clickedPortInfo.targetPort?.label || clickedPortInfo.targetPort?.number}
                   </Tag>
@@ -1560,7 +1564,7 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
 
               {clickedPortInfo.targetDevice && (
                 <>
-                  <Descriptions.Item label="对端设备">
+                  <Descriptions.Item label={t('labels.oppositeDevice')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <Tag color="purple">{clickedPortInfo.targetDevice.type}</Tag>
                       <span style={{ fontWeight: 600 }}>{clickedPortInfo.targetDevice.name}</span>
@@ -1568,13 +1572,13 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
                   </Descriptions.Item>
 
                   {clickedPortInfo.targetDevice.model && (
-                    <Descriptions.Item label="设备型号">
+                    <Descriptions.Item label={t('labels.model')}>
                       {clickedPortInfo.targetDevice.model}
                     </Descriptions.Item>
                   )}
 
                   {clickedPortInfo.targetDevice.cabinetId && (
-                    <Descriptions.Item label="设备位置">
+                    <Descriptions.Item label={t('labels.deviceLocation')}>
                       <div style={{ color: '#722ed1', fontWeight: 500 }}>
                         {(() => {
                           const cabinetId = clickedPortInfo.targetDevice.cabinetId;
@@ -1592,7 +1596,7 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
                   )}
 
                   {clickedPortInfo.targetPanel && (
-                    <Descriptions.Item label="对端面板">
+                    <Descriptions.Item label={t('cableDetail.panel')}>
                       <Tag color="cyan">{clickedPortInfo.targetPanel.name}</Tag>
                       <span style={{ marginLeft: '8px', color: '#666' }}>
                         {clickedPortInfo.targetPanel.type}
@@ -1601,20 +1605,20 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
                   )}
                 </>
               )}
-              <Descriptions.Item label="线缆类型">
+              <Descriptions.Item label={t('fields.type')}>
                 {clickedPortInfo.cable ? (
-                  <Tag color="orange">{clickedPortInfo.cable.type || '标准线缆'}</Tag>
+                  <Tag color="orange">{clickedPortInfo.cable.type || '-'}</Tag>
                 ) : (
-                  <span style={{ color: '#999' }}>未知线缆类型</span>
+                  <span style={{ color: '#999' }}>-</span>
                 )}
               </Descriptions.Item>
               {clickedPortInfo.cable?.length && (
-                <Descriptions.Item label="线缆长度">
+                <Descriptions.Item label={t('fields.length')}>
                   {clickedPortInfo.cable.length}m
                 </Descriptions.Item>
               )}
               {clickedPortInfo.cable?.color && (
-                <Descriptions.Item label="线缆颜色">
+                <Descriptions.Item label={t('fields.color')}>
                   <Tag color={clickedPortInfo.cable.color === 'blue' ? 'blue' :
                             clickedPortInfo.cable.color === 'red' ? 'red' : 'default'}>
                     {clickedPortInfo.cable.color}
@@ -1627,28 +1631,28 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
               <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#e6f7ff', borderRadius: '6px' }}>
                 <div style={{ fontSize: '12px', color: '#1890ff', marginBottom: '8px' }}>
                   <InfoCircleOutlined style={{ marginRight: '4px' }} />
-                  设备连接路径
+                  {t('labels.connectionPath')}
                 </div>
                 <div style={{ fontSize: '12px', color: '#666' }}>
-                  <div>• 本设备: {device.name}</div>
-                  <div>• 本端口: {clickedPortInfo.portNumber}</div>
-                  <div>• 对端设备: {clickedPortInfo.targetDevice.name}</div>
+                  <div>• {t('labels.currentPort')}: {device.name}</div>
+                  <div>• {t('labels.currentPort')}: {clickedPortInfo.portNumber}</div>
+                  <div>• {t('labels.oppositeDevice')}: {clickedPortInfo.targetDevice.name}</div>
                   {clickedPortInfo.targetPort && (
-                    <div>• 对端端口: {clickedPortInfo.targetPort.label || clickedPortInfo.targetPort.number}</div>
+                    <div>• {t('labels.oppositePort')}: {clickedPortInfo.targetPort.label || clickedPortInfo.targetPort.number}</div>
                   )}
                   {clickedPortInfo.targetDevice.cabinetId && (
-                    <div>• 对端位置: {(() => {
+                    <div>• {t('labels.oppositeLocation')}: {(() => {
                       const cabinet = cabinetsMap.get(clickedPortInfo.targetDevice.cabinetId);
                       const room = cabinet?.roomId ? roomsMap.get(cabinet.roomId) : null;
-                      const roomName = room?.name || '未知机房';
-                      const cabinetName = cabinet?.name || `机柜${clickedPortInfo.targetDevice.cabinetId}`;
+                      const roomName = room?.name || '-';
+                      const cabinetName = cabinet?.name || clickedPortInfo.targetDevice.cabinetId;
                       return `${roomName} - ${cabinetName}`;
                     })()}
                       {clickedPortInfo.targetDevice.uPosition && ` - U${clickedPortInfo.targetDevice.uPosition}`}
                     </div>
                   )}
                   {clickedPortInfo.cable && (
-                    <div>• 连接线缆: {clickedPortInfo.cable.type || '标准线缆'}</div>
+                    <div>• {t('labels.connectedCable')}: {clickedPortInfo.cable.type || '-'}</div>
                   )}
                 </div>
               </div>
@@ -1657,15 +1661,15 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
             {clickedPortInfo.cable && (
               <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#fff2e8', borderRadius: '6px' }}>
                 <div style={{ fontSize: '12px', color: '#fa8c16', marginBottom: '8px' }}>
-                  线缆详情
+                  {t('cableDetail.cableInfo')}
                 </div>
                 <div style={{ fontSize: '12px', color: '#666' }}>
-                  <div>• 线缆标识: {clickedPortInfo.cable.id}</div>
+                  <div>• {t('labels.cableIdentification')}: {clickedPortInfo.cable.id}</div>
                   {clickedPortInfo.cable.description && (
-                    <div>• 描述: {clickedPortInfo.cable.description}</div>
+                    <div>• {t('labels.cableDescription')}: {clickedPortInfo.cable.description}</div>
                   )}
                   {clickedPortInfo.cable.installDate && (
-                    <div>• 安装日期: {new Date(clickedPortInfo.cable.installDate).toLocaleDateString()}</div>
+                    <div>• {t('labels.installationDate')}: {new Date(clickedPortInfo.cable.installDate).toLocaleDateString()}</div>
                   )}
                 </div>
               </div>
@@ -1693,6 +1697,7 @@ function CableDetailModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const { t } = useTranslation('cable');
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -1718,13 +1723,13 @@ function CableDetailModal({
       const { cable } = edge.data;
 
       await cableService.update(cable.id, values);
-      message.success('线缆信息已更新');
+      message.success(t('messages.updateSuccess'));
       setIsEditing(false);
       onClose(); // 关闭弹窗
       onSuccess(); // 刷新拓扑图
     } catch (error) {
       console.error('Failed to update cable:', error);
-      message.error('更新线缆信息失败');
+      message.error(t('messages.updateFailed'));
     } finally {
       setLoading(false);
     }
@@ -1759,14 +1764,14 @@ function CableDetailModal({
       title={
         <Space>
           <LinkOutlined />
-          <span>线缆详情</span>
+          <span>{t('cableDetail.title')}</span>
           {!isEditing && (
             <Button
               size="small"
               icon={<EditOutlined />}
               onClick={() => setIsEditing(true)}
             >
-              编辑
+              {t('buttons.edit')}
             </Button>
           )}
         </Space>
@@ -1778,7 +1783,7 @@ function CableDetailModal({
         isEditing
           ? [
               <Button key="cancel" onClick={() => setIsEditing(false)}>
-                取消
+                {t('buttons.cancel')}
               </Button>,
               <Button
                 key="save"
@@ -1786,21 +1791,21 @@ function CableDetailModal({
                 loading={loading}
                 onClick={handleSave}
               >
-                保存
+                {t('buttons.save')}
               </Button>,
             ]
           : [
               <Button key="close" onClick={onClose}>
-                关闭
+                {t('buttons.cancel')}
               </Button>,
             ]
       }
     >
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         {/* 端口A信息 */}
-        <Card size="small" title="端口 A" type="inner">
+        <Card size="small" title={t('manualInventory.portA')} type="inner">
           <Descriptions column={1} size="small" bordered>
-            <Descriptions.Item label="端口">
+            <Descriptions.Item label={t('fields.endpoints')}>
               <Tag color="blue">{portA?.label || portA?.number || '-'}</Tag>
               {portA?.portType && (
                 <Text type="secondary" style={{ marginLeft: 8 }}>
@@ -1809,7 +1814,7 @@ function CableDetailModal({
               )}
             </Descriptions.Item>
             {panelA && (
-              <Descriptions.Item label="面板">
+              <Descriptions.Item label={t('fields.panel')}>
                 <Space>
                   <Text strong>{panelA.name}</Text>
                   {panelA.shortId && (
@@ -1821,14 +1826,14 @@ function CableDetailModal({
             )}
             {deviceA && (
               <>
-                <Descriptions.Item label="设备">
+                <Descriptions.Item label={t('fields.device')}>
                   <Space>
                     <Tag color={nodeTypeColors[deviceA.type]}>{deviceA.type}</Tag>
                     <Text strong>{deviceA.name}</Text>
                   </Space>
                 </Descriptions.Item>
                 {locationA && (
-                  <Descriptions.Item label="位置">
+                  <Descriptions.Item label={t('fields.location')}>
                     <Text style={{ color: '#722ed1' }}>{locationA.fullLocation}</Text>
                   </Descriptions.Item>
                 )}
@@ -1838,9 +1843,9 @@ function CableDetailModal({
         </Card>
 
         {/* 端口B信息 */}
-        <Card size="small" title="端口 B" type="inner">
+        <Card size="small" title={t('manualInventory.portB')} type="inner">
           <Descriptions column={1} size="small" bordered>
-            <Descriptions.Item label="端口">
+            <Descriptions.Item label={t('fields.endpoints')}>
               <Tag color="green">{portB?.label || portB?.number || '-'}</Tag>
               {portB?.portType && (
                 <Text type="secondary" style={{ marginLeft: 8 }}>
@@ -1849,7 +1854,7 @@ function CableDetailModal({
               )}
             </Descriptions.Item>
             {panelB && (
-              <Descriptions.Item label="面板">
+              <Descriptions.Item label={t('fields.panel')}>
                 <Space>
                   <Text strong>{panelB.name}</Text>
                   {panelB.shortId && (
@@ -1861,14 +1866,14 @@ function CableDetailModal({
             )}
             {deviceB && (
               <>
-                <Descriptions.Item label="设备">
+                <Descriptions.Item label={t('fields.device')}>
                   <Space>
                     <Tag color={nodeTypeColors[deviceB.type]}>{deviceB.type}</Tag>
                     <Text strong>{deviceB.name}</Text>
                   </Space>
                 </Descriptions.Item>
                 {locationB && (
-                  <Descriptions.Item label="位置">
+                  <Descriptions.Item label={t('fields.location')}>
                     <Text style={{ color: '#722ed1' }}>{locationB.fullLocation}</Text>
                   </Descriptions.Item>
                 )}
@@ -1878,50 +1883,50 @@ function CableDetailModal({
         </Card>
 
         {/* 线缆信息 */}
-        <Card size="small" title="线缆信息" type="inner">
+        <Card size="small" title={t('cableDetail.cableInfo')} type="inner">
           {isEditing ? (
             <Form form={form} layout="vertical">
-              <Form.Item name="label" label="线缆标签">
-                <Input placeholder="输入线缆标签" />
+              <Form.Item name="label" label={t('fields.label')}>
+                <Input placeholder={t('placeholders.label')} />
               </Form.Item>
-              <Form.Item name="type" label="线缆类型">
-                <Select placeholder="选择线缆类型">
-                  <Option value="CAT5E">CAT5E</Option>
-                  <Option value="CAT6">CAT6</Option>
-                  <Option value="CAT6A">CAT6A</Option>
-                  <Option value="CAT7">CAT7</Option>
-                  <Option value="FIBER_SM">单模光纤</Option>
-                  <Option value="FIBER_MM">多模光纤</Option>
-                  <Option value="QSFP_TO_SFP">QSFP转SFP</Option>
-                  <Option value="QSFP_TO_QSFP">QSFP转QSFP</Option>
-                  <Option value="SFP_TO_SFP">SFP转SFP</Option>
-                  <Option value="POWER">电源线</Option>
-                  <Option value="OTHER">其他</Option>
+              <Form.Item name="type" label={t('fields.type')}>
+                <Select placeholder={t('placeholders.type')}>
+                  <Option value="CAT5E">{t('cableTypes.CAT5E')}</Option>
+                  <Option value="CAT6">{t('cableTypes.CAT6')}</Option>
+                  <Option value="CAT6A">{t('cableTypes.CAT6A')}</Option>
+                  <Option value="CAT7">{t('cableTypes.CAT7')}</Option>
+                  <Option value="FIBER_SM">{t('cableTypes.FIBER_SM')}</Option>
+                  <Option value="FIBER_MM">{t('cableTypes.FIBER_MM')}</Option>
+                  <Option value="QSFP_TO_SFP">{t('cableTypes.QSFP_TO_SFP')}</Option>
+                  <Option value="QSFP_TO_QSFP">{t('cableTypes.QSFP_TO_QSFP')}</Option>
+                  <Option value="SFP_TO_SFP">{t('cableTypes.SFP_TO_SFP')}</Option>
+                  <Option value="POWER">{t('cableTypes.POWER')}</Option>
+                  <Option value="OTHER">{t('cableTypes.OTHER')}</Option>
                 </Select>
               </Form.Item>
-              <Form.Item name="length" label="长度 (米)">
+              <Form.Item name="length" label={t('fields.length')}>
                 <InputNumber min={0} step={0.1} style={{ width: '100%' }} />
               </Form.Item>
-              <Form.Item name="color" label="颜色">
-                <Input placeholder="输入线缆颜色" />
+              <Form.Item name="color" label={t('fields.color')}>
+                <Input placeholder={t('placeholders.color')} />
               </Form.Item>
-              <Form.Item name="notes" label="备注">
-                <Input.TextArea rows={3} placeholder="输入备注信息" />
+              <Form.Item name="notes" label={t('fields.notes')}>
+                <Input.TextArea rows={3} placeholder={t('placeholders.notes')} />
               </Form.Item>
             </Form>
           ) : (
             <Descriptions column={1} size="small" bordered>
-              <Descriptions.Item label="线缆标签">
-                {cable?.label || '未命名'}
+              <Descriptions.Item label={t('cableDetail.cableLabel')}>
+                {cable?.label || '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="线缆类型">
+              <Descriptions.Item label={t('cableDetail.cableType')}>
                 <Tag color={cableTypeColors[cable?.type]}>{cable?.type || '-'}</Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="长度">
-                {cable?.length ? `${cable.length}m` : '未知'}
+              <Descriptions.Item label={t('cableDetail.cableLength')}>
+                {cable?.length ? `${cable.length}m` : '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="颜色">{cable?.color || '-'}</Descriptions.Item>
-              <Descriptions.Item label="备注">{cable?.notes || '-'}</Descriptions.Item>
+              <Descriptions.Item label={t('cableDetail.cableColor')}>{cable?.color || '-'}</Descriptions.Item>
+              <Descriptions.Item label={t('cableDetail.cableNotes')}>{cable?.notes || '-'}</Descriptions.Item>
             </Descriptions>
           )}
         </Card>

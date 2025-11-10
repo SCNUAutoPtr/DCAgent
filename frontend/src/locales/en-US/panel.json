@@ -1,0 +1,68 @@
+{
+  "title": "Panel Management",
+  "description": "Manage various panels on devices (network ports, fiber, power, etc.)",
+  "createTitle": "Create Panel",
+  "editTitle": "Edit Panel",
+  "fields": {
+    "id": "ID",
+    "shortId": "shortID",
+    "name": "Panel Name",
+    "type": "Type",
+    "device": "Device",
+    "template": "Template",
+    "isCustomized": "Customized",
+    "portCount": "Port Count",
+    "createdAt": "Created At",
+    "actions": "Actions"
+  },
+  "panelTypes": {
+    "ETHERNET": "Ethernet",
+    "FIBER": "Fiber",
+    "POWER": "Power",
+    "SERIAL": "Serial",
+    "USB": "USB",
+    "OTHER": "Other"
+  },
+  "placeholders": {
+    "name": "e.g.: eth0",
+    "type": "Select panel type",
+    "device": "Select device",
+    "template": "Select template",
+    "search": "Search panel name"
+  },
+  "messages": {
+    "deleteConfirm": "Are you sure to delete this panel?",
+    "deleteWarning": "All ports under it will be deleted",
+    "createSuccess": "Panel created successfully",
+    "updateSuccess": "Panel updated successfully",
+    "deleteSuccess": "Panel deleted successfully",
+    "loadFailed": "Failed to load panel list",
+    "updateFailed": "Update failed",
+    "createFailed": "Create failed",
+    "deleteFailed": "Delete failed"
+  },
+  "validation": {
+    "nameRequired": "Please enter panel name",
+    "typeRequired": "Please select panel type",
+    "deviceRequired": "Please select device"
+  },
+  "table": {
+    "total": "Total {total} items"
+  },
+  "labels": {
+    "customized": "Customized",
+    "fromTemplate": "From Template"
+  },
+  "buttons": {
+    "create": "Create Panel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "filters": {
+    "selectDevice": "Select device",
+    "selectType": "Select type"
+  }
+}

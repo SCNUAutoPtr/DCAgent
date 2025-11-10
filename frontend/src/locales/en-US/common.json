@@ -1,0 +1,45 @@
+{
+  "appName": "Data Center Asset Management System",
+  "actions": {
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "search": "Search",
+    "reset": "Reset",
+    "submit": "Submit",
+    "back": "Back",
+    "view": "View",
+    "export": "Export",
+    "import": "Import",
+    "refresh": "Refresh",
+    "visualize": "Visualize"
+  },
+  "status": {
+    "success": "Success",
+    "failed": "Failed",
+    "loading": "Loading",
+    "noData": "No Data"
+  },
+  "validation": {
+    "required": "This field is required",
+    "pleaseEnter": "Please enter",
+    "pleaseSelect": "Please select"
+  },
+  "messages": {
+    "deleteConfirm": "Are you sure to delete?",
+    "deleteSuccess": "Deleted successfully",
+    "deleteFailed": "Delete failed",
+    "createSuccess": "Created successfully",
+    "createFailed": "Create failed",
+    "updateSuccess": "Updated successfully",
+    "updateFailed": "Update failed",
+    "loadFailed": "Load failed, please try again later",
+    "operationSuccess": "Operation succeeded",
+    "operationFailed": "Operation failed"
+  },
+  "searchPlaceholder": "Search or scan QR code...",
+  "searchFailed": "Search failed, please try again later"
+}

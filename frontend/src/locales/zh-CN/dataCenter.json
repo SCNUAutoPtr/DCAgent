@@ -1,0 +1,35 @@
+{
+  "title": "数据中心列表",
+  "description": "管理所有数据中心，每个数据中心可以包含多个机房",
+  "createTitle": "新建数据中心",
+  "editTitle": "编辑数据中心",
+  "fields": {
+    "id": "ID",
+    "name": "数据中心名称",
+    "location": "位置",
+    "createdAt": "创建时间",
+    "actions": "操作"
+  },
+  "placeholders": {
+    "name": "例如：北京数据中心",
+    "location": "例如：北京市朝阳区",
+    "search": "搜索数据中心名称或位置"
+  },
+  "messages": {
+    "deleteConfirm": "确定要删除这个数据中心吗？",
+    "deleteWarning": "删除后将同时删除其下所有机房、机柜和设备",
+    "createSuccess": "数据中心创建成功",
+    "updateSuccess": "数据中心更新成功",
+    "deleteSuccess": "数据中心删除成功",
+    "loadFailed": "加载数据中心列表失败",
+    "updateFailed": "更新失败",
+    "createFailed": "创建失败",
+    "deleteFailed": "删除失败"
+  },
+  "validation": {
+    "nameRequired": "请输入数据中心名称"
+  },
+  "table": {
+    "total": "共 {total} 条"
+  }
+}

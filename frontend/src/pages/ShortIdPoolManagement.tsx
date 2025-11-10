@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   Tabs,
@@ -44,6 +45,7 @@ const { TabPane } = Tabs;
 const { Option } = Select;
 
 const ShortIdPoolManagement: React.FC = () => {
+  const { t } = useTranslation('management');
   const [activeTab, setActiveTab] = useState('pool');
   const [loading, setLoading] = useState(false);
 
@@ -100,7 +102,7 @@ const ShortIdPoolManagement: React.FC = () => {
       setPoolTotal(result.total);
     } catch (error) {
       console.error('Error loading pool records:', error);
-      message.error('加载池记录失败');
+      message.error(t('shortIdPool.messages.loadPoolRecordsFailed'));
     } finally {
       setLoading(false);
     }
@@ -118,7 +120,7 @@ const ShortIdPoolManagement: React.FC = () => {
       setPrintTasksTotal(result.total);
     } catch (error) {
       console.error('Error loading print tasks:', error);
-      message.error('加载打印任务失败');
+      message.error(t('shortIdPool.messages.loadPrintTasksFailed'));
     } finally {
       setLoading(false);
     }
@@ -150,7 +152,7 @@ const ShortIdPoolManagement: React.FC = () => {
       loadStats();
     } catch (error: any) {
       console.error('Error creating print task:', error);
-      message.error(error.response?.data?.error || '创建打印任务失败');
+      message.error(error.response?.data?.error || t('shortIdPool.messages.createPrintTaskFailed'));
     }
   };
 
@@ -168,7 +170,7 @@ const ShortIdPoolManagement: React.FC = () => {
       loadStats();
     } catch (error: any) {
       console.error('Error generating shortIds:', error);
-      message.error(error.response?.data?.error || '生成shortID失败');
+      message.error(error.response?.data?.error || t('shortIdPool.messages.generateShortIdFailed'));
     }
   };
 
@@ -184,10 +186,10 @@ const ShortIdPoolManagement: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      message.success('导出成功');
+      message.success(t('shortIdPool.messages.exportSuccess'));
     } catch (error) {
       console.error('Error exporting print task:', error);
-      message.error('导出失败');
+      message.error(t('shortIdPool.messages.exportFailed'));
     }
   };
 
@@ -195,11 +197,11 @@ const ShortIdPoolManagement: React.FC = () => {
   const handleCompletePrintTask = async (taskId: string) => {
     try {
       await shortIdPoolService.completePrintTask(taskId);
-      message.success('打印任务已标记为完成');
+      message.success(t('shortIdPool.messages.completePrintTaskSuccess'));
       loadPrintTasks();
     } catch (error) {
       console.error('Error completing print task:', error);
-      message.error('操作失败');
+      message.error(t('shortIdPool.messages.completePrintTaskFailed'));
     }
   };
 
@@ -213,7 +215,7 @@ const ShortIdPoolManagement: React.FC = () => {
         selectedRecord.shortId,
         values.reason
       );
-      message.success('shortID已报废');
+      message.success(t('shortIdPool.messages.scrapShortIdSuccess'));
       setCancelModalVisible(false);
       cancelForm.resetFields();
       setSelectedRecord(null);
@@ -221,19 +223,19 @@ const ShortIdPoolManagement: React.FC = () => {
       loadStats();
     } catch (error: any) {
       console.error('Error cancelling shortId:', error);
-      message.error(error.response?.data?.error || '操作失败');
+      message.error(error.response?.data?.error || t('shortIdPool.messages.scrapShortIdFailed'));
     }
   };
 
   // Entity type name mapping
   const entityTypeNameMap: Record<EntityType, string> = {
-    DATA_CENTER: '数据中心',
-    ROOM: '机房',
-    CABINET: '机柜',
-    DEVICE: '设备',
-    PANEL: '面板',
-    PORT: '端口',
-    CABLE: '线缆',
+    DATA_CENTER: t('shortIdPool.entityTypes.DATA_CENTER'),
+    ROOM: t('shortIdPool.entityTypes.ROOM'),
+    CABINET: t('shortIdPool.entityTypes.CABINET'),
+    DEVICE: t('shortIdPool.entityTypes.DEVICE'),
+    PANEL: t('shortIdPool.entityTypes.PANEL'),
+    PORT: t('shortIdPool.entityTypes.PORT'),
+    CABLE: t('shortIdPool.entityTypes.CABLE'),
   };
 
   // Status tag color mapping
@@ -246,16 +248,16 @@ const ShortIdPoolManagement: React.FC = () => {
 
   // Status name mapping
   const statusNameMap: Record<ShortIdPoolStatus, string> = {
-    GENERATED: '已生成',
-    PRINTED: '已打印',
-    BOUND: '已绑定',
-    CANCELLED: '已报废',
+    GENERATED: t('shortIdPool.statuses.GENERATED'),
+    PRINTED: t('shortIdPool.statuses.PRINTED'),
+    BOUND: t('shortIdPool.statuses.BOUND'),
+    CANCELLED: t('shortIdPool.statuses.CANCELLED'),
   };
 
   // Pool records columns
   const poolColumns = [
     {
-      title: 'shortID',
+      title: t('shortIdPool.fields.shortId'),
       dataIndex: 'shortId',
       key: 'shortId',
       width: 120,
@@ -263,14 +265,14 @@ const ShortIdPoolManagement: React.FC = () => {
       render: (id: number) => <Text code>{ShortIdFormatter.toDisplayFormat(id)}</Text>,
     },
     {
-      title: '实体类型',
+      title: t('shortIdPool.fields.entityType'),
       dataIndex: 'entityType',
       key: 'entityType',
       width: 120,
       render: (type: EntityType) => type ? entityTypeNameMap[type] : '-',
     },
     {
-      title: '状态',
+      title: t('shortIdPool.fields.status'),
       dataIndex: 'status',
       key: 'status',
       width: 100,
@@ -279,48 +281,48 @@ const ShortIdPoolManagement: React.FC = () => {
       ),
     },
     {
-      title: '批次号',
+      title: t('shortIdPool.fields.batchNo'),
       dataIndex: 'batchNo',
       key: 'batchNo',
       width: 180,
     },
     {
-      title: '打印任务',
+      title: t('shortIdPool.fields.printTask'),
       dataIndex: 'printTask',
       key: 'printTask',
       width: 180,
       render: (task: any) => task?.name || '-',
     },
     {
-      title: '打印时间',
+      title: t('shortIdPool.fields.printedAt'),
       dataIndex: 'printedAt',
       key: 'printedAt',
       width: 180,
       render: (date: string) => (date ? new Date(date).toLocaleString() : '-'),
     },
     {
-      title: '绑定实体ID',
+      title: t('shortIdPool.fields.entityId'),
       dataIndex: 'entityId',
       key: 'entityId',
       width: 280,
       render: (id: string) => (id ? <Text code>{id}</Text> : '-'),
     },
     {
-      title: '绑定时间',
+      title: t('shortIdPool.fields.boundAt'),
       dataIndex: 'boundAt',
       key: 'boundAt',
       width: 180,
       render: (date: string) => (date ? new Date(date).toLocaleString() : '-'),
     },
     {
-      title: '备注',
+      title: t('shortIdPool.fields.notes'),
       dataIndex: 'notes',
       key: 'notes',
       width: 200,
       ellipsis: true,
     },
     {
-      title: '操作',
+      title: t('shortIdPool.actions.scrap'),
       key: 'action',
       width: 120,
       fixed: 'right' as const,
@@ -336,7 +338,7 @@ const ShortIdPoolManagement: React.FC = () => {
                 setCancelModalVisible(true);
               }}
             >
-              报废
+              {t('shortIdPool.actions.scrap')}
             </Button>
           )}
         </Space>
@@ -347,26 +349,26 @@ const ShortIdPoolManagement: React.FC = () => {
   // Print tasks columns
   const printTasksColumns = [
     {
-      title: '任务名称',
+      title: t('shortIdPool.fields.taskName'),
       dataIndex: 'name',
       key: 'name',
       width: 200,
     },
     {
-      title: '实体类型',
+      title: t('shortIdPool.fields.entityType'),
       dataIndex: 'entityType',
       key: 'entityType',
       width: 120,
       render: (type: EntityType) => type ? entityTypeNameMap[type] : '-',
     },
     {
-      title: '数量',
+      title: t('shortIdPool.fields.count'),
       dataIndex: 'count',
       key: 'count',
       width: 80,
     },
     {
-      title: '状态',
+      title: t('shortIdPool.fields.status'),
       dataIndex: 'status',
       key: 'status',
       width: 100,
@@ -377,39 +379,45 @@ const ShortIdPoolManagement: React.FC = () => {
           COMPLETED: 'success',
           FAILED: 'error',
         };
-        return <Tag color={colorMap[status] || 'default'}>{status}</Tag>;
+        const statusLabels: Record<string, string> = {
+          PENDING: t('shortIdPool.statuses.PENDING'),
+          PRINTING: t('shortIdPool.statuses.PRINTING'),
+          COMPLETED: t('shortIdPool.statuses.COMPLETED'),
+          FAILED: t('shortIdPool.statuses.FAILED'),
+        };
+        return <Tag color={colorMap[status] || 'default'}>{statusLabels[status] || status}</Tag>;
       },
     },
     {
-      title: '创建人',
+      title: t('shortIdPool.fields.createdBy'),
       dataIndex: 'createdBy',
       key: 'createdBy',
       width: 100,
       render: (name: string) => name || '-',
     },
     {
-      title: '创建时间',
+      title: t('shortIdPool.fields.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
       render: (date: string) => new Date(date).toLocaleString(),
     },
     {
-      title: '完成时间',
+      title: t('shortIdPool.fields.completedAt'),
       dataIndex: 'completedAt',
       key: 'completedAt',
       width: 180,
       render: (date: string) => (date ? new Date(date).toLocaleString() : '-'),
     },
     {
-      title: '备注',
+      title: t('shortIdPool.fields.notes'),
       dataIndex: 'notes',
       key: 'notes',
       width: 200,
       ellipsis: true,
     },
     {
-      title: '操作',
+      title: t('shortIdPool.actions.scrap'),
       key: 'action',
       width: 200,
       fixed: 'right' as const,
@@ -420,15 +428,15 @@ const ShortIdPoolManagement: React.FC = () => {
             icon={<DownloadOutlined />}
             onClick={() => handleExportPrintTask(record.id, record.name)}
           >
-            导出CSV
+            {t('shortIdPool.actions.exportCSV')}
           </Button>
           {record.status === 'PENDING' && (
             <Popconfirm
-              title="确认标记为完成？"
+              title={t('shortIdPool.modals.confirmScrap')}
               onConfirm={() => handleCompletePrintTask(record.id)}
             >
               <Button type="link" icon={<CheckCircleOutlined />}>
-                完成
+                {t('shortIdPool.actions.complete')}
               </Button>
             </Popconfirm>
           )}
@@ -439,9 +447,9 @@ const ShortIdPoolManagement: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      <Title level={2}>shortID池管理</Title>
+      <Title level={2}>{t('shortIdPool.title')}</Title>
       <Text type="secondary">
-        统一管理所有实体类型的shortID，支持批量生成、打印任务、导出CSV
+        {t('shortIdPool.description')}
       </Text>
 
       {/* 统计卡片 */}
@@ -450,7 +458,7 @@ const ShortIdPoolManagement: React.FC = () => {
           <Col span={4}>
             <Card>
               <Statistic
-                title="总计"
+                title={t('shortIdPool.stats.total')}
                 value={stats.total}
                 prefix={<DatabaseOutlined />}
               />
@@ -459,7 +467,7 @@ const ShortIdPoolManagement: React.FC = () => {
           <Col span={4}>
             <Card>
               <Statistic
-                title="已生成"
+                title={t('shortIdPool.stats.generated')}
                 value={stats.generated}
                 valueStyle={{ color: '#8c8c8c' }}
               />
@@ -468,7 +476,7 @@ const ShortIdPoolManagement: React.FC = () => {
           <Col span={4}>
             <Card>
               <Statistic
-                title="已打印"
+                title={t('shortIdPool.stats.printed')}
                 value={stats.printed}
                 valueStyle={{ color: '#1890ff' }}
               />
@@ -477,7 +485,7 @@ const ShortIdPoolManagement: React.FC = () => {
           <Col span={4}>
             <Card>
               <Statistic
-                title="已绑定"
+                title={t('shortIdPool.stats.bound')}
                 value={stats.bound}
                 valueStyle={{ color: '#52c41a' }}
               />
@@ -486,7 +494,7 @@ const ShortIdPoolManagement: React.FC = () => {
           <Col span={4}>
             <Card>
               <Statistic
-                title="已报废"
+                title={t('shortIdPool.stats.cancelled')}
                 value={stats.cancelled}
                 valueStyle={{ color: '#ff4d4f' }}
               />
@@ -498,24 +506,24 @@ const ShortIdPoolManagement: React.FC = () => {
       <Card>
         <Tabs activeKey={activeTab} onChange={setActiveTab}>
           {/* shortID池管理 */}
-          <TabPane tab="shortID池" key="pool">
+          <TabPane tab={t('shortIdPool.tabs.pool')} key="pool">
             <Space style={{ marginBottom: 16 }}>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={() => setGenerateModalVisible(true)}
               >
-                直接生成
+                {t('shortIdPool.actions.directGenerate')}
               </Button>
               <Button
                 type="primary"
                 icon={<PrinterOutlined />}
                 onClick={() => setCreateTaskModalVisible(true)}
               >
-                创建打印任务
+                {t('shortIdPool.actions.createPrintTask')}
               </Button>
               <Select
-                placeholder="实体类型"
+                placeholder={t('shortIdPool.filters.entityType')}
                 allowClear
                 style={{ width: 150 }}
                 onChange={(value) =>
@@ -529,7 +537,7 @@ const ShortIdPoolManagement: React.FC = () => {
                 ))}
               </Select>
               <Select
-                placeholder="状态"
+                placeholder={t('shortIdPool.filters.status')}
                 allowClear
                 style={{ width: 120 }}
                 onChange={(value) =>
@@ -543,7 +551,7 @@ const ShortIdPoolManagement: React.FC = () => {
                 ))}
               </Select>
               <Input
-                placeholder="搜索shortID"
+                placeholder={t('shortIdPool.actions.search')}
                 prefix={<SearchOutlined />}
                 allowClear
                 style={{ width: 200 }}
@@ -552,7 +560,7 @@ const ShortIdPoolManagement: React.FC = () => {
                 }
               />
               <Button icon={<ReloadOutlined />} onClick={loadPoolRecords}>
-                刷新
+                {t('shortIdPool.actions.refresh')}
               </Button>
             </Space>
 
@@ -567,7 +575,7 @@ const ShortIdPoolManagement: React.FC = () => {
                 pageSize: poolPageSize,
                 total: poolTotal,
                 showSizeChanger: true,
-                showTotal: (total) => `共 ${total} 条`,
+                showTotal: (total) => t('shortIdPool.pagination.total', { total }),
                 onChange: (page, pageSize) => {
                   setPoolPage(page);
                   setPoolPageSize(pageSize);
@@ -577,17 +585,17 @@ const ShortIdPoolManagement: React.FC = () => {
           </TabPane>
 
           {/* 打印任务管理 */}
-          <TabPane tab="打印任务" key="tasks">
+          <TabPane tab={t('shortIdPool.tabs.tasks')} key="tasks">
             <Space style={{ marginBottom: 16 }}>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={() => setCreateTaskModalVisible(true)}
               >
-                创建打印任务
+                {t('shortIdPool.actions.createPrintTask')}
               </Button>
               <Button icon={<ReloadOutlined />} onClick={loadPrintTasks}>
-                刷新
+                {t('shortIdPool.actions.refresh')}
               </Button>
             </Space>
 
@@ -602,7 +610,7 @@ const ShortIdPoolManagement: React.FC = () => {
                 pageSize: printTasksPageSize,
                 total: printTasksTotal,
                 showSizeChanger: true,
-                showTotal: (total) => `共 ${total} 条`,
+                showTotal: (total) => t('shortIdPool.pagination.total', { total }),
                 onChange: (page, pageSize) => {
                   setPrintTasksPage(page);
                   setPrintTasksPageSize(pageSize);
@@ -615,7 +623,7 @@ const ShortIdPoolManagement: React.FC = () => {
 
       {/* 创建打印任务模态框 */}
       <Modal
-        title="创建打印任务"
+        title={t('shortIdPool.modals.createPrintTask')}
         open={createTaskModalVisible}
         onCancel={() => {
           setCreateTaskModalVisible(false);
@@ -626,39 +634,39 @@ const ShortIdPoolManagement: React.FC = () => {
       >
         <Form form={form} layout="vertical" onFinish={handleCreatePrintTask}>
           <Form.Item
-            label="任务名称"
+            label={t('shortIdPool.formLabels.taskName')}
             name="name"
-            rules={[{ required: true, message: '请输入任务名称' }]}
+            rules={[{ required: true, message: t('shortIdPool.validation.taskNameRequired') }]}
           >
-            <Input placeholder="如：2025年第一批标签" />
+            <Input placeholder={t('shortIdPool.formPlaceholders.taskName')} />
           </Form.Item>
 
           <Form.Item
-            label="生成数量"
+            label={t('shortIdPool.formLabels.generateCount')}
             name="count"
-            rules={[{ required: true, message: '请输入生成数量' }]}
+            rules={[{ required: true, message: t('shortIdPool.validation.generateCountRequired') }]}
           >
             <InputNumber
               min={1}
               max={10000}
-              placeholder="1-10000"
+              placeholder={t('shortIdPool.formPlaceholders.generateCount')}
               style={{ width: '100%' }}
             />
           </Form.Item>
 
-          <Form.Item label="创建人" name="createdBy">
-            <Input placeholder="可选" />
+          <Form.Item label={t('shortIdPool.formLabels.createdBy')} name="createdBy">
+            <Input placeholder={t('shortIdPool.formPlaceholders.createdBy')} />
           </Form.Item>
 
-          <Form.Item label="备注" name="notes">
-            <Input.TextArea rows={3} placeholder="可选" />
+          <Form.Item label={t('shortIdPool.fields.notes')} name="notes">
+            <Input.TextArea rows={3} placeholder={t('shortIdPool.formPlaceholders.createdBy')} />
           </Form.Item>
         </Form>
       </Modal>
 
       {/* 直接生成模态框 */}
       <Modal
-        title="直接生成shortID"
+        title={t('shortIdPool.modals.directGenerate')}
         open={generateModalVisible}
         onCancel={() => {
           setGenerateModalVisible(false);
@@ -669,27 +677,27 @@ const ShortIdPoolManagement: React.FC = () => {
       >
         <Form form={form} layout="vertical" onFinish={handleGenerate}>
           <Form.Item
-            label="生成数量"
+            label={t('shortIdPool.formLabels.generateCount')}
             name="count"
-            rules={[{ required: true, message: '请输入生成数量' }]}
+            rules={[{ required: true, message: t('shortIdPool.validation.generateCountRequired') }]}
           >
             <InputNumber
               min={1}
               max={10000}
-              placeholder="1-10000"
+              placeholder={t('shortIdPool.formPlaceholders.generateCount')}
               style={{ width: '100%' }}
             />
           </Form.Item>
 
-          <Form.Item label="批次号" name="batchNo">
-            <Input placeholder="可选，如：2025年第一批" />
+          <Form.Item label={t('shortIdPool.formLabels.batchNo')} name="batchNo">
+            <Input placeholder={t('shortIdPool.formPlaceholders.batchNo')} />
           </Form.Item>
         </Form>
       </Modal>
 
       {/* 报废shortID模态框 */}
       <Modal
-        title="报废shortID"
+        title={t('shortIdPool.modals.scrapShortId')}
         open={cancelModalVisible}
         onCancel={() => {
           setCancelModalVisible(false);
@@ -698,32 +706,32 @@ const ShortIdPoolManagement: React.FC = () => {
         }}
         onOk={handleCancelShortId}
         okButtonProps={{ danger: true }}
-        okText="确认报废"
+        okText={t('shortIdPool.modals.confirmScrap')}
       >
         {selectedRecord && (
           <Descriptions column={1} bordered size="small">
-            <Descriptions.Item label="shortID">
+            <Descriptions.Item label={t('shortIdPool.fields.shortId')}>
               <Text code>{ShortIdFormatter.toDisplayFormat(selectedRecord.shortId)}</Text>
             </Descriptions.Item>
-            <Descriptions.Item label="实体类型">
-              {selectedRecord.entityType ? entityTypeNameMap[selectedRecord.entityType] : '未绑定'}
+            <Descriptions.Item label={t('shortIdPool.fields.entityType')}>
+              {selectedRecord.entityType ? entityTypeNameMap[selectedRecord.entityType] : t('shortIdPool.fields.status')}
             </Descriptions.Item>
-            <Descriptions.Item label="状态">
+            <Descriptions.Item label={t('shortIdPool.fields.status')}>
               <Tag color={statusColorMap[selectedRecord.status]}>
                 {statusNameMap[selectedRecord.status]}
               </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="批次号">{selectedRecord.batchNo || '-'}</Descriptions.Item>
+            <Descriptions.Item label={t('shortIdPool.fields.batchNo')}>{selectedRecord.batchNo || '-'}</Descriptions.Item>
           </Descriptions>
         )}
 
         <Form form={cancelForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
-            label="报废原因"
+            label={t('shortIdPool.formLabels.reason')}
             name="reason"
-            rules={[{ required: true, message: '请输入报废原因' }]}
+            rules={[{ required: true, message: t('shortIdPool.validation.reasonRequired') }]}
           >
-            <Input.TextArea rows={3} placeholder="如：标签损坏、丢失等" />
+            <Input.TextArea rows={3} placeholder={t('shortIdPool.formPlaceholders.reason')} />
           </Form.Item>
         </Form>
       </Modal>

@@ -19,6 +19,7 @@ import {
   DeleteOutlined,
   HomeOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { Room, DataCenter } from '@/types';
 import { roomService } from '@/services/roomService';
 import { dataCenterService } from '@/services/dataCenterService';
@@ -28,6 +29,7 @@ const { Search } = Input;
 const { Option } = Select;
 
 export default function RoomList() {
+  const { t } = useTranslation(['room', 'common']);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [dataCenters, setDataCenters] = useState<DataCenter[]>([]);
   const [loading, setLoading] = useState(false);
@@ -60,7 +62,7 @@ export default function RoomList() {
       }
       setRooms(data);
     } catch (error) {
-      message.error('加载机房列表失败');
+      message.error(t('room:messages.loadFailed'));
       console.error(error);
     } finally {
       setLoading(false);
@@ -97,10 +99,10 @@ export default function RoomList() {
       const values = await form.validateFields();
       if (editingRoom) {
         await roomService.update(editingRoom.id, values);
-        message.success('机房更新成功');
+        message.success(t('room:messages.updateSuccess'));
       } else {
         await roomService.create(values);
-        message.success('机房创建成功');
+        message.success(t('room:messages.createSuccess'));
       }
       handleCloseModal();
       loadRooms(undefined, selectedDataCenter);
@@ -108,7 +110,7 @@ export default function RoomList() {
       if (error.errorFields) {
         return;
       }
-      message.error(editingRoom ? '更新失败' : '创建失败');
+      message.error(editingRoom ? t('room:messages.updateFailed') : t('room:messages.createFailed'));
       console.error(error);
     }
   };
@@ -117,10 +119,10 @@ export default function RoomList() {
   const handleDelete = async (id: string) => {
     try {
       await roomService.delete(id);
-      message.success('机房删除成功');
+      message.success(t('room:messages.deleteSuccess'));
       loadRooms(undefined, selectedDataCenter);
     } catch (error) {
-      message.error('删除失败');
+      message.error(t('room:messages.deleteFailed'));
       console.error(error);
     }
   };
@@ -138,24 +140,24 @@ export default function RoomList() {
 
   const columns = [
     {
-      title: 'ID',
+      title: t('room:fields.id'),
       dataIndex: 'shortId',
       key: 'shortId',
       width: 80,
     },
     {
-      title: '机房名称',
+      title: t('room:fields.name'),
       dataIndex: 'name',
       key: 'name',
     },
     {
-      title: '楼层',
+      title: t('room:fields.floor'),
       dataIndex: 'floor',
       key: 'floor',
       render: (text: string) => text || '-',
     },
     {
-      title: '所属数据中心',
+      title: t('room:fields.dataCenter'),
       dataIndex: 'dataCenterId',
       key: 'dataCenterId',
       render: (dataCenterId: string) => {
@@ -164,13 +166,13 @@ export default function RoomList() {
       },
     },
     {
-      title: '创建时间',
+      title: t('room:fields.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (text: string) => new Date(text).toLocaleString('zh-CN'),
     },
     {
-      title: '操作',
+      title: t('room:fields.actions'),
       key: 'actions',
       width: 150,
       render: (_: any, record: Room) => (
@@ -181,17 +183,17 @@ export default function RoomList() {
             icon={<EditOutlined />}
             onClick={() => handleOpenModal(record)}
           >
-            编辑
+            {t('common:actions.edit')}
           </Button>
           <Popconfirm
-            title="确定要删除这个机房吗？"
-            description="删除后将同时删除其下所有机柜和设备"
+            title={t('room:messages.deleteConfirm')}
+            description={t('room:messages.deleteWarning')}
             onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
           >
             <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
+              {t('common:actions.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -202,20 +204,20 @@ export default function RoomList() {
   return (
     <div>
       <Title level={2}>
-        <HomeOutlined /> 机房管理
+        <HomeOutlined /> {t('room:title')}
       </Title>
       <p style={{ color: '#8c8c8c', marginBottom: 24 }}>
-        管理数据中心内的所有机房
+        {t('room:description')}
       </p>
 
       <Card>
         <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
-              新建机房
+              {t('common:actions.create')} {t('room:createTitle')}
             </Button>
             <Select
-              placeholder="选择数据中心"
+              placeholder={t('room:placeholders.dataCenter')}
               allowClear
               style={{ width: 200 }}
               onChange={handleDataCenterFilter}
@@ -229,7 +231,7 @@ export default function RoomList() {
             </Select>
           </Space>
           <Search
-            placeholder="搜索机房名称"
+            placeholder={t('room:placeholders.search')}
             allowClear
             onSearch={handleSearch}
             style={{ width: 300 }}
@@ -244,36 +246,36 @@ export default function RoomList() {
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: (total) => t('room:table.total', { total }),
           }}
         />
       </Card>
 
       <Modal
-        title={editingRoom ? '编辑机房' : '新建机房'}
+        title={editingRoom ? t('room:editTitle') : t('room:createTitle')}
         open={modalVisible}
         onOk={handleSave}
         onCancel={handleCloseModal}
-        okText="保存"
-        cancelText="取消"
+        okText={t('common:actions.save')}
+        cancelText={t('common:actions.cancel')}
       >
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="机房名称"
-            rules={[{ required: true, message: '请输入机房名称' }]}
+            label={t('room:fields.name')}
+            rules={[{ required: true, message: t('room:validation.nameRequired') }]}
           >
-            <Input placeholder="例如：A区机房" />
+            <Input placeholder={t('room:placeholders.name')} />
           </Form.Item>
-          <Form.Item name="floor" label="楼层">
-            <Input placeholder="例如：3F" />
+          <Form.Item name="floor" label={t('room:fields.floor')}>
+            <Input placeholder={t('room:placeholders.floor')} />
           </Form.Item>
           <Form.Item
             name="dataCenterId"
-            label="所属数据中心"
-            rules={[{ required: true, message: '请选择数据中心' }]}
+            label={t('room:fields.dataCenter')}
+            rules={[{ required: true, message: t('room:validation.dataCenterRequired') }]}
           >
-            <Select placeholder="选择数据中心">
+            <Select placeholder={t('room:placeholders.dataCenter')}>
               {dataCenters.map((dc) => (
                 <Option key={dc.id} value={dc.id}>
                   {dc.name}

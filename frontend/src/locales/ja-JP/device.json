@@ -1,0 +1,69 @@
+{
+  "title": "デバイス管理",
+  "description": "ラック内のすべてのデバイスを管理します。サーバー、スイッチ、ルーターなど",
+  "createTitle": "新しいデバイスを作成",
+  "editTitle": "デバイスを編集",
+  "fields": {
+    "id": "ID",
+    "name": "デバイス名",
+    "type": "タイプ",
+    "model": "モデル",
+    "serialNo": "シリアル番号",
+    "uPosition": "U位置",
+    "uHeight": "占有U数",
+    "cabinet": "配置場所",
+    "createdAt": "作成日時",
+    "actions": "操作"
+  },
+  "deviceTypes": {
+    "SERVER": "サーバー",
+    "SWITCH": "スイッチ",
+    "ROUTER": "ルーター",
+    "FIREWALL": "ファイアウォール",
+    "STORAGE": "ストレージ",
+    "PDU": "PDU",
+    "OTHER": "その他"
+  },
+  "placeholders": {
+    "name": "例: WEB-Server-01",
+    "type": "デバイスタイプを選択",
+    "model": "例: Dell PowerEdge R740",
+    "serialNo": "例: SN123456789",
+    "uPosition": "1",
+    "uHeight": "1",
+    "cabinet": "ラックを選択",
+    "search": "デバイス名またはモデルで検索"
+  },
+  "messages": {
+    "deleteConfirm": "このデバイスを削除してもよろしいですか?",
+    "deleteWarning": "削除すると、このデバイス配下のすべてのパネルとポートも削除されます",
+    "createSuccess": "デバイスが正常に作成されました",
+    "updateSuccess": "デバイスが正常に更新されました",
+    "deleteSuccess": "デバイスが正常に削除されました",
+    "loadFailed": "デバイスリストの読み込みに失敗しました",
+    "updateFailed": "更新に失敗しました",
+    "createFailed": "作成に失敗しました",
+    "deleteFailed": "削除に失敗しました"
+  },
+  "validation": {
+    "nameRequired": "デバイス名を入力してください",
+    "typeRequired": "デバイスタイプを選択してください",
+    "cabinetRequired": "ラックを選択してください",
+    "uHeightRequired": "占有U数は必須項目です"
+  },
+  "table": {
+    "total": "全 {total} 件"
+  },
+  "buttons": {
+    "create": "新しいデバイスを作成",
+    "edit": "編集",
+    "delete": "削除",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "confirm": "確定"
+  },
+  "filters": {
+    "selectCabinet": "ラックを選択",
+    "selectType": "タイプを選択"
+  }
+}

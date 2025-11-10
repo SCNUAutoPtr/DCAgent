@@ -1,0 +1,147 @@
+{
+  "title": "光模块管理",
+  "description": "管理光模块的生命周期，包括采购、安装、转移、维修和报废",
+  "createTitle": "采购入库",
+  "editTitle": "编辑光模块",
+  "detailTitle": "光模块详情",
+  "fields": {
+    "id": "ID",
+    "serialNo": "序列号",
+    "model": "型号",
+    "vendor": "厂商",
+    "moduleType": "模块类型",
+    "wavelength": "波长",
+    "distance": "传输距离",
+    "ddmSupport": "DDM支持",
+    "status": "状态",
+    "currentPort": "当前位置",
+    "purchaseInfo": "采购信息",
+    "supplier": "供应商",
+    "price": "采购价格",
+    "purchaseDate": "采购日期",
+    "warranty": "保修到期日",
+    "warrantyExpiry": "保修到期日",
+    "notes": "备注",
+    "operator": "操作人",
+    "createdAt": "创建时间",
+    "actions": "操作"
+  },
+  "moduleStatus": {
+    "IN_STOCK": "在库",
+    "INSTALLED": "已安装",
+    "RESERVED": "预留",
+    "FAULTY": "故障",
+    "SCRAPPED": "已报废"
+  },
+  "moduleTypes": {
+    "SFP": "SFP (1G)",
+    "SFP_PLUS": "SFP+ (10G)",
+    "QSFP": "QSFP (40G)",
+    "QSFP28": "QSFP28 (100G)",
+    "QSFP_DD": "QSFP-DD (400G)"
+  },
+  "movementTypes": {
+    "PURCHASE": "采购入库",
+    "INSTALL": "安装",
+    "UNINSTALL": "卸下",
+    "TRANSFER": "转移",
+    "REPAIR": "送修",
+    "RETURN": "返回",
+    "SCRAP": "报废"
+  },
+  "placeholders": {
+    "serialNo": "输入光模块序列号",
+    "model": "例如 SFP-10G-LR",
+    "vendor": "选择厂商",
+    "moduleType": "选择模块类型",
+    "wavelength": "例如 850nm, 1310nm",
+    "distance": "例如 300m, 10km",
+    "supplier": "采购供应商",
+    "price": "单位：元",
+    "notes": "其他备注信息",
+    "portId": "端口UUID",
+    "targetPortId": "目标端口UUID",
+    "operator": "可选",
+    "scrappingReason": "请详细说明报废原因",
+    "search": "搜索序列号、型号、厂商"
+  },
+  "messages": {
+    "deleteConfirm": "确定删除该光模块吗？",
+    "scrappingConfirm": "确定报废该光模块吗？",
+    "scrappingWarning": "报废后无法恢复",
+    "createSuccess": "光模块创建成功",
+    "updateSuccess": "光模块更新成功",
+    "deleteSuccess": "删除成功",
+    "installSuccess": "安装成功",
+    "uninstallSuccess": "卸下成功",
+    "transferSuccess": "转移成功",
+    "scrapSuccess": "报废成功",
+    "loadFailed": "加载光模块列表失败",
+    "loadDetailFailed": "加载光模块信息失败",
+    "loadHistoryFailed": "加载移动历史失败",
+    "updateFailed": "更新失败",
+    "createFailed": "创建失败",
+    "deleteFailed": "删除失败",
+    "installFailed": "安装失败",
+    "uninstallFailed": "卸下失败",
+    "transferFailed": "转移失败",
+    "scrapFailed": "报废失败"
+  },
+  "validation": {
+    "serialNoRequired": "请输入序列号",
+    "modelRequired": "请输入型号",
+    "vendorRequired": "请选择厂商",
+    "moduleTypeRequired": "请选择模块类型",
+    "portIdRequired": "请输入端口ID",
+    "targetPortIdRequired": "请输入目标端口ID",
+    "notesRequired": "请说明报废原因"
+  },
+  "tabs": {
+    "basicInfo": "基本信息",
+    "currentLocation": "当前位置",
+    "purchaseInfo": "采购信息",
+    "movementHistory": "移动历史"
+  },
+  "buttons": {
+    "create": "采购入库",
+    "edit": "编辑",
+    "delete": "删除",
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确定",
+    "install": "安装到端口",
+    "uninstall": "卸下",
+    "transfer": "转移",
+    "scrap": "报废",
+    "viewHistory": "查看历史",
+    "viewDetail": "详情",
+    "back": "返回列表",
+    "editInfo": "编辑信息"
+  },
+  "filters": {
+    "search": "搜索序列号、型号、厂商",
+    "status": "状态",
+    "moduleType": "模块类型",
+    "applyFilter": "应用筛选",
+    "reset": "重置"
+  },
+  "statistics": {
+    "total": "总数",
+    "inStock": "在库",
+    "installed": "已安装",
+    "reserved": "预留",
+    "faulty": "故障",
+    "scrapped": "已报废"
+  },
+  "alerts": {
+    "installInfo": "请输入目标端口的ID。安装后光模块状态将变为'已安装'。",
+    "uninstallWarning": "卸下前请确保端口未连接线缆。卸下后光模块将回到库存。",
+    "transferWarning": "转移前请确保当前端口未连接线缆。",
+    "scrappingWarning": "报废操作不可逆，请确认该光模块确实需要报废。"
+  },
+  "noData": {
+    "noHistory": "暂无移动历史",
+    "noLocation": "库存",
+    "moduleNotFound": "光模块不存在"
+  }
+}

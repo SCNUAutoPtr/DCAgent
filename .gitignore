@@ -38,6 +38,14 @@ CLAUDE.md
 *.sqlite
 *.sqlite3
 
+# Database backups (should not be committed to Git)
+db-backups/
+*.sql
+*.dump
+*_backup_*.sql
+*_backup_*.dump
+*_backup_*.txt
+
 # Prisma
 prisma/migrations/
 

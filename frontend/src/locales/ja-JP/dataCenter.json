@@ -1,0 +1,35 @@
+{
+  "title": "データセンター一覧",
+  "description": "すべてのデータセンターを管理します。各データセンターは複数の機械室を含むことができます",
+  "createTitle": "新しいデータセンターを作成",
+  "editTitle": "データセンターを編集",
+  "fields": {
+    "id": "ID",
+    "name": "データセンター名",
+    "location": "所在地",
+    "createdAt": "作成日時",
+    "actions": "操作"
+  },
+  "placeholders": {
+    "name": "例：東京データセンター",
+    "location": "例：東京都渋谷区",
+    "search": "データセンター名または所在地で検索"
+  },
+  "messages": {
+    "deleteConfirm": "このデータセンターを削除してもよろしいですか？",
+    "deleteWarning": "削除後、配下のすべての機械室、ラック、デバイスも一緒に削除されます",
+    "createSuccess": "データセンターの作成に成功しました",
+    "updateSuccess": "データセンターの更新に成功しました",
+    "deleteSuccess": "データセンターの削除に成功しました",
+    "loadFailed": "データセンター一覧の読み込みに失敗しました",
+    "updateFailed": "更新に失敗しました",
+    "createFailed": "作成に失敗しました",
+    "deleteFailed": "削除に失敗しました"
+  },
+  "validation": {
+    "nameRequired": "データセンター名を入力してください"
+  },
+  "table": {
+    "total": "合計 {total} 件"
+  }
+}

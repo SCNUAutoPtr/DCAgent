@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   Table,
@@ -30,18 +31,19 @@ const { Title } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
-// 设备类型中文映射
-const deviceTypeMap: Record<DeviceType, { label: string; color: string }> = {
-  SERVER: { label: '服务器', color: 'blue' },
-  SWITCH: { label: '交换机', color: 'green' },
-  ROUTER: { label: '路由器', color: 'orange' },
-  FIREWALL: { label: '防火墙', color: 'red' },
-  STORAGE: { label: '存储', color: 'purple' },
-  PDU: { label: 'PDU', color: 'cyan' },
-  OTHER: { label: '其他', color: 'default' },
+// 设备类型颜色映射
+const deviceTypeColorMap: Record<DeviceType, string> = {
+  SERVER: 'blue',
+  SWITCH: 'green',
+  ROUTER: 'orange',
+  FIREWALL: 'red',
+  STORAGE: 'purple',
+  PDU: 'cyan',
+  OTHER: 'default',
 };
 
 export default function DeviceList() {
+  const { t } = useTranslation('device');
   const [devices, setDevices] = useState<Device[]>([]);
   const [cabinets, setCabinets] = useState<Cabinet[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -83,7 +85,7 @@ export default function DeviceList() {
       }
       setDevices(data);
     } catch (error) {
-      message.error('加载设备列表失败');
+      message.error(t('messages.loadFailed'));
       console.error(error);
     } finally {
       setLoading(false);
@@ -130,10 +132,10 @@ export default function DeviceList() {
       const values = await form.validateFields();
       if (editingDevice) {
         await deviceService.update(editingDevice.id, values);
-        message.success('设备更新成功');
+        message.success(t('messages.updateSuccess'));
       } else {
         await deviceService.create(values);
-        message.success('设备创建成功');
+        message.success(t('messages.createSuccess'));
       }
       handleCloseModal();
       loadDevices(undefined, selectedCabinet);
@@ -141,7 +143,7 @@ export default function DeviceList() {
       if (error.errorFields) {
         return;
       }
-      message.error(editingDevice ? '更新失败' : '创建失败');
+      message.error(editingDevice ? t('messages.updateFailed') : t('messages.createFailed'));
       console.error(error);
     }
   };
@@ -150,10 +152,10 @@ export default function DeviceList() {
   const handleDelete = async (id: string) => {
     try {
       await deviceService.delete(id);
-      message.success('设备删除成功');
+      message.success(t('messages.deleteSuccess'));
       loadDevices(undefined, selectedCabinet);
     } catch (error) {
-      message.error('删除失败');
+      message.error(t('messages.deleteFailed'));
       console.error(error);
     }
   };
@@ -182,45 +184,46 @@ export default function DeviceList() {
 
   const columns = [
     {
-      title: 'ID',
+      title: t('fields.id'),
       dataIndex: 'shortId',
       key: 'shortId',
       width: 80,
     },
     {
-      title: '设备名称',
+      title: t('fields.name'),
       dataIndex: 'name',
       key: 'name',
     },
     {
-      title: '类型',
+      title: t('fields.type'),
       dataIndex: 'type',
       key: 'type',
       render: (type: DeviceType) => {
-        const config = deviceTypeMap[type];
-        return <Tag color={config.color}>{config.label}</Tag>;
+        const label = t(`deviceTypes.${type}`);
+        const color = deviceTypeColorMap[type];
+        return <Tag color={color}>{label}</Tag>;
       },
     },
     {
-      title: '型号',
+      title: t('fields.model'),
       dataIndex: 'model',
       key: 'model',
       render: (text: string) => text || '-',
     },
     {
-      title: '序列号',
+      title: t('fields.serialNo'),
       dataIndex: 'serialNo',
       key: 'serialNo',
       render: (text: string) => text || '-',
     },
     {
-      title: 'U位',
+      title: t('fields.uPosition'),
       key: 'uPosition',
       render: (_: any, record: Device) =>
-        record.uPosition ? `${record.uPosition}U (高${record.uHeight}U)` : '-',
+        record.uPosition ? `${record.uPosition}U (${t('fields.uHeight')}${record.uHeight}U)` : '-',
     },
     {
-      title: '所在位置',
+      title: t('fields.cabinet'),
       dataIndex: 'cabinetId',
       key: 'cabinetId',
       render: (cabinetId: string) => {
@@ -236,13 +239,13 @@ export default function DeviceList() {
       },
     },
     {
-      title: '创建时间',
+      title: t('fields.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (text: string) => new Date(text).toLocaleString('zh-CN'),
+      render: (text: string) => new Date(text).toLocaleString(),
     },
     {
-      title: '操作',
+      title: t('fields.actions'),
       key: 'actions',
       width: 150,
       fixed: 'right' as const,
@@ -254,17 +257,17 @@ export default function DeviceList() {
             icon={<EditOutlined />}
             onClick={() => handleOpenModal(record)}
           >
-            编辑
+            {t('buttons.edit')}
           </Button>
           <Popconfirm
-            title="确定要删除这个设备吗？"
-            description="删除后将同时删除其下所有面板和端口"
+            title={t('messages.deleteConfirm')}
+            description={t('messages.deleteWarning')}
             onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('buttons.confirm')}
+            cancelText={t('buttons.cancel')}
           >
             <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
+              {t('buttons.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -275,20 +278,20 @@ export default function DeviceList() {
   return (
     <div>
       <Title level={2}>
-        <CloudServerOutlined /> 设备管理
+        <CloudServerOutlined /> {t('title')}
       </Title>
       <p style={{ color: '#8c8c8c', marginBottom: 24 }}>
-        管理机柜内的所有设备，包括服务器、交换机、路由器等
+        {t('description')}
       </p>
 
       <Card>
         <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
-              新建设备
+              {t('buttons.create')}
             </Button>
             <Select
-              placeholder="选择机柜"
+              placeholder={t('filters.selectCabinet')}
               allowClear
               style={{ width: 200 }}
               onChange={handleCabinetFilter}
@@ -308,7 +311,7 @@ export default function DeviceList() {
               })}
             </Select>
             <Select
-              placeholder="选择类型"
+              placeholder={t('filters.selectType')}
               allowClear
               style={{ width: 120 }}
               onChange={handleTypeFilter}
@@ -317,15 +320,15 @@ export default function DeviceList() {
                 loadDevices();
               }}
             >
-              {Object.entries(deviceTypeMap).map(([key, value]) => (
+              {Object.entries(t('deviceTypes', { returnObjects: true })).map(([key, label]) => (
                 <Option key={key} value={key}>
-                  {value.label}
+                  {label}
                 </Option>
               ))}
             </Select>
           </Space>
           <Search
-            placeholder="搜索设备名称或型号"
+            placeholder={t('placeholders.search')}
             allowClear
             onSearch={handleSearch}
             style={{ width: 300 }}
@@ -341,53 +344,53 @@ export default function DeviceList() {
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: (total) => t('table.total', { total }),
           }}
         />
       </Card>
 
       <Modal
-        title={editingDevice ? '编辑设备' : '新建设备'}
+        title={editingDevice ? t('editTitle') : t('createTitle')}
         open={modalVisible}
         onOk={handleSave}
         onCancel={handleCloseModal}
-        okText="保存"
-        cancelText="取消"
+        okText={t('buttons.save')}
+        cancelText={t('buttons.cancel')}
         width={600}
       >
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="设备名称"
-            rules={[{ required: true, message: '请输入设备名称' }]}
+            label={t('fields.name')}
+            rules={[{ required: true, message: t('validation.nameRequired') }]}
           >
-            <Input placeholder="例如：WEB-Server-01" />
+            <Input placeholder={t('placeholders.name')} />
           </Form.Item>
           <Form.Item
             name="type"
-            label="设备类型"
-            rules={[{ required: true, message: '请选择设备类型' }]}
+            label={t('fields.type')}
+            rules={[{ required: true, message: t('validation.typeRequired') }]}
           >
-            <Select placeholder="选择设备类型">
-              {Object.entries(deviceTypeMap).map(([key, value]) => (
+            <Select placeholder={t('placeholders.type')}>
+              {Object.entries(t('deviceTypes', { returnObjects: true })).map(([key, label]) => (
                 <Option key={key} value={key}>
-                  {value.label}
+                  {label}
                 </Option>
               ))}
             </Select>
           </Form.Item>
-          <Form.Item name="model" label="型号">
-            <Input placeholder="例如：Dell PowerEdge R740" />
+          <Form.Item name="model" label={t('fields.model')}>
+            <Input placeholder={t('placeholders.model')} />
           </Form.Item>
-          <Form.Item name="serialNo" label="序列号">
-            <Input placeholder="例如：SN123456789" />
+          <Form.Item name="serialNo" label={t('fields.serialNo')}>
+            <Input placeholder={t('placeholders.serialNo')} />
           </Form.Item>
           <Form.Item
             name="cabinetId"
-            label="所属机柜"
-            rules={[{ required: true, message: '请选择机柜' }]}
+            label={t('fields.cabinet')}
+            rules={[{ required: true, message: t('validation.cabinetRequired') }]}
           >
-            <Select placeholder="选择机柜" showSearch optionFilterProp="children">
+            <Select placeholder={t('placeholders.cabinet')} showSearch optionFilterProp="children">
               {cabinets.map((cabinet) => {
                 const room = rooms.find((r) => r.id === cabinet.roomId);
                 const dc = dataCenters.find((d) => d.id === room?.dataCenterId);
@@ -400,10 +403,10 @@ export default function DeviceList() {
             </Select>
           </Form.Item>
           <Space style={{ width: '100%' }}>
-            <Form.Item name="uPosition" label="起始U位" style={{ marginBottom: 0 }}>
+            <Form.Item name="uPosition" label={t('placeholders.uPosition')} style={{ marginBottom: 0 }}>
               <InputNumber min={1} max={52} placeholder="1" style={{ width: 120 }} />
             </Form.Item>
-            <Form.Item name="uHeight" label="占用U数" initialValue={1} style={{ marginBottom: 0 }}>
+            <Form.Item name="uHeight" label={t('fields.uHeight')} initialValue={1} style={{ marginBottom: 0 }}>
               <InputNumber min={1} max={10} placeholder="1" style={{ width: 120 }} />
             </Form.Item>
           </Space>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Typography, Card, Alert, Tabs, Space, Button, Modal, Form, Select, message } from 'antd';
 import {
   CloudUploadOutlined,
@@ -20,6 +21,7 @@ const { TabPane } = Tabs;
  * 用于批量初始化新购买的服务器和设备
  */
 export default function BulkDeploymentPage() {
+  const { t } = useTranslation('management');
   const [templates, setTemplates] = useState<PanelTemplate[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [cabinets, setCabinets] = useState<Cabinet[]>([]);
@@ -39,7 +41,7 @@ export default function BulkDeploymentPage() {
       const data = await panelTemplateService.getAll();
       setTemplates(data);
     } catch (error: any) {
-      message.error('加载模板失败: ' + error.message);
+      message.error(t('bulkDeployment.messages.loadTemplatesFailed') + ': ' + error.message);
     }
   };
 
@@ -48,7 +50,7 @@ export default function BulkDeploymentPage() {
       const data = await deviceService.getAll();
       setDevices(data);
     } catch (error: any) {
-      message.error('加载设备失败: ' + error.message);
+      message.error(t('bulkDeployment.messages.loadDevicesFailed') + ': ' + error.message);
     }
   };
 
@@ -57,7 +59,7 @@ export default function BulkDeploymentPage() {
       const data = await cabinetService.getAll();
       setCabinets(data);
     } catch (error: any) {
-      message.error('加载机柜失败: ' + error.message);
+      message.error(t('bulkDeployment.messages.loadCabinetsFailed') + ': ' + error.message);
     }
   };
 
@@ -72,85 +74,85 @@ export default function BulkDeploymentPage() {
       const { templateId, deviceId } = values;
 
       await panelTemplateService.createPanelFromTemplate(templateId, deviceId);
-      message.success('从模板创建面板成功');
+      message.success(t('bulkDeployment.messages.createPanelSuccess'));
       setTemplateModalVisible(false);
       form.resetFields();
     } catch (error: any) {
-      message.error('创建失败: ' + error.message);
+      message.error(t('bulkDeployment.messages.createPanelFailed') + ': ' + error.message);
     }
   };
 
   // 设备导入列配置
   const deviceColumns: BulkImportColumn[] = [
     {
-      title: '设备名称',
+      title: t('bulkDeployment.fields.deviceName'),
       dataIndex: 'name',
       key: 'name',
       required: true,
       validator: (value) => {
         if (typeof value !== 'string' || value.trim().length === 0) {
-          return '设备名称不能为空';
+          return t('bulkDeployment.validation.deviceNameRequired');
         }
         return null;
       },
     },
     {
-      title: '设备类型',
+      title: t('bulkDeployment.fields.deviceType'),
       dataIndex: 'type',
       key: 'type',
       required: true,
       validator: (value) => {
         const validTypes = ['SERVER', 'SWITCH', 'ROUTER', 'FIREWALL', 'STORAGE', 'PDU', 'OTHER'];
         if (!validTypes.includes(value)) {
-          return `设备类型必须是: ${validTypes.join(', ')}`;
+          return t('bulkDeployment.validation.deviceTypeRequired', { types: validTypes.join(', ') });
         }
         return null;
       },
     },
     {
-      title: '型号',
+      title: t('bulkDeployment.fields.model'),
       dataIndex: 'model',
       key: 'model',
       required: false,
     },
     {
-      title: '序列号',
+      title: t('bulkDeployment.fields.serialNo'),
       dataIndex: 'serialNo',
       key: 'serialNo',
       required: false,
     },
     {
-      title: '机柜ID',
+      title: t('bulkDeployment.fields.cabinetId'),
       dataIndex: 'cabinetId',
       key: 'cabinetId',
       required: true,
       validator: (value) => {
         if (!cabinets.find(c => c.id === value)) {
-          return '机柜ID不存在';
+          return t('bulkDeployment.validation.cabinetIdRequired');
         }
         return null;
       },
     },
     {
-      title: 'U位位置',
+      title: t('bulkDeployment.fields.uPosition'),
       dataIndex: 'uPosition',
       key: 'uPosition',
       required: false,
       validator: (value) => {
         if (value && (typeof value !== 'number' || value < 1 || value > 42)) {
-          return 'U位位置必须是1-42之间的数字';
+          return t('bulkDeployment.validation.uPositionInvalid');
         }
         return null;
       },
     },
     {
-      title: 'U高度',
+      title: t('bulkDeployment.fields.uHeight'),
       dataIndex: 'uHeight',
       key: 'uHeight',
       required: false,
       validator: (value) => {
         if (value && (typeof value !== 'number' || value < 1)) {
-          return 'U高度必须是正整数';
+          return t('bulkDeployment.validation.uHeightInvalid');
         }
         return null;
       },
@@ -182,56 +184,56 @@ export default function BulkDeploymentPage() {
   // 线缆导入列配置
   const cableColumns: BulkImportColumn[] = [
     {
-      title: '标签',
+      title: t('bulkDeployment.fields.cableLabel'),
       dataIndex: 'label',
       key: 'label',
       required: false,
     },
     {
-      title: '线缆类型',
+      title: t('bulkDeployment.fields.cableType'),
       dataIndex: 'type',
       key: 'type',
       required: true,
       validator: (value) => {
         const validTypes = ['CAT5E', 'CAT6', 'CAT6A', 'FIBER_SM', 'FIBER_MM', 'DAC', 'AOC', 'QSFP', 'OTHER'];
         if (!validTypes.includes(value)) {
-          return `线缆类型必须是: ${validTypes.join(', ')}`;
+          return t('bulkDeployment.validation.cableTypeRequired', { types: validTypes.join(', ') });
         }
         return null;
       },
     },
     {
-      title: '长度(米)',
+      title: t('bulkDeployment.fields.cableLength'),
       dataIndex: 'length',
       key: 'length',
       required: false,
       validator: (value) => {
         if (value && (typeof value !== 'number' || value <= 0)) {
-          return '长度必须是正数';
+          return t('bulkDeployment.validation.cableLengthInvalid');
         }
         return null;
       },
     },
     {
-      title: '颜色',
+      title: t('bulkDeployment.fields.cableColor'),
       dataIndex: 'color',
       key: 'color',
       required: false,
     },
     {
-      title: '备注',
+      title: t('bulkDeployment.fields.notes'),
       dataIndex: 'notes',
       key: 'notes',
       required: false,
     },
     {
-      title: '端口A ID',
+      title: t('bulkDeployment.fields.portAId'),
       dataIndex: 'portAId',
       key: 'portAId',
       required: true,
     },
     {
-      title: '端口B ID',
+      title: t('bulkDeployment.fields.portBId'),
       dataIndex: 'portBId',
       key: 'portBId',
       required: true,
@@ -258,15 +260,15 @@ export default function BulkDeploymentPage() {
 
       if (result.data.failed.length > 0) {
         Modal.warning({
-          title: '部分导入失败',
+          title: t('bulkDeployment.messages.partialImportFailed'),
           content: (
             <div>
-              <p>成功: {result.data.success.length} 条</p>
-              <p>失败: {result.data.failed.length} 条</p>
+              <p>{t('bulkDeployment.table.successCount', { count: result.data.success.length })}</p>
+              <p>{t('bulkDeployment.table.failedCount', { count: result.data.failed.length })}</p>
               <ul>
                 {result.data.failed.map((f: any) => (
                   <li key={f.index}>
-                    第 {f.index} 行: {f.error}
+                    {t('bulkDeployment.table.rowError', { row: f.index, error: f.error })}
                   </li>
                 ))}
               </ul>
@@ -283,7 +285,7 @@ export default function BulkDeploymentPage() {
 
   // 处理线缆批量导入（待实现后端API）
   const handleCableImport = async (data: any[]) => {
-    message.info('线缆批量导入功能开发中');
+    message.info(t('bulkDeployment.messages.importDevicesCablesDeveloping'));
     console.log('Cable import data:', data);
   };
 
@@ -292,16 +294,16 @@ export default function BulkDeploymentPage() {
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         <div>
           <Title level={2}>
-            <CloudUploadOutlined /> 批量上架管理
+            <CloudUploadOutlined /> {t('bulkDeployment.title')}
           </Title>
           <Paragraph type="secondary">
-            批量导入和初始化新设备、面板、端口和线缆连接
+            {t('bulkDeployment.description')}
           </Paragraph>
         </div>
 
         <Alert
-          message="批量上架助手"
-          description="支持通过 Excel/CSV 文件批量导入设备和线缆信息，快速完成数据中心设备上架工作。"
+          message={t('bulkDeployment.alerts.assistantTitle')}
+          description={t('bulkDeployment.alerts.assistantDescription')}
           type="info"
           showIcon
         />
@@ -311,27 +313,26 @@ export default function BulkDeploymentPage() {
             tab={
               <span>
                 <DatabaseOutlined />
-                批量创建设备
+                {t('bulkDeployment.tabs.devices')}
               </span>
             }
             key="devices"
           >
             <Card>
-              <Title level={4}>批量创建设备</Title>
+              <Title level={4}>{t('bulkDeployment.sections.devicesTitle')}</Title>
               <Paragraph>
-                支持通过 Excel/CSV 文件批量导入设备信息，包括：
+                {t('bulkDeployment.sections.devicesDescription')}
               </Paragraph>
               <ul>
-                <li>设备名称、型号、序列号</li>
-                <li>设备类型（SERVER, SWITCH, ROUTER, FIREWALL, STORAGE, PDU, OTHER）</li>
-                <li>所属机柜和U位分配</li>
-                <li>自动验证数据完整性和合法性</li>
+                {t('bulkDeployment.sections.devicesFeatures', { returnObjects: true }).map((feature: string, idx: number) => (
+                  <li key={idx}>{feature}</li>
+                ))}
               </ul>
               <Button
                 type="primary"
                 onClick={() => setDeviceImportVisible(true)}
               >
-                批量导入设备
+                {t('bulkDeployment.actions.importDevices')}
               </Button>
             </Card>
           </TabPane>
@@ -340,24 +341,23 @@ export default function BulkDeploymentPage() {
             tab={
               <span>
                 <ApartmentOutlined />
-                批量创建面板
+                {t('bulkDeployment.tabs.panels')}
               </span>
             }
             key="panels"
           >
             <Card>
-              <Title level={4}>批量创建面板</Title>
+              <Title level={4}>{t('bulkDeployment.sections.panelsTitle')}</Title>
               <Paragraph>
-                从预定义模板快速创建标准设备面板配置：
+                {t('bulkDeployment.sections.panelsDescription')}
               </Paragraph>
               <ul>
-                <li>网络设备标准面板模板（24口、48口等）</li>
-                <li>服务器面板模板（双网口、管理口等）</li>
-                <li>存储设备面板模板</li>
-                <li>PDU电源面板模板</li>
+                {t('bulkDeployment.sections.panelsFeatures', { returnObjects: true }).map((feature: string, idx: number) => (
+                  <li key={idx}>{feature}</li>
+                ))}
               </ul>
               <Button type="primary" onClick={handleCreateFromTemplate}>
-                从模板创建面板
+                {t('bulkDeployment.actions.createFromTemplate')}
               </Button>
             </Card>
           </TabPane>
@@ -366,35 +366,34 @@ export default function BulkDeploymentPage() {
             tab={
               <span>
                 <LinkOutlined />
-                批量导入线缆
+                {t('bulkDeployment.tabs.cables')}
               </span>
             }
             key="cables"
           >
             <Card>
-              <Title level={4}>批量导入线缆连接</Title>
+              <Title level={4}>{t('bulkDeployment.sections.cablesTitle')}</Title>
               <Paragraph>
-                通过 Excel/CSV 文件批量导入线缆连接信息：
+                {t('bulkDeployment.sections.cablesDescription')}
               </Paragraph>
               <ul>
-                <li>线缆类型、长度、颜色</li>
-                <li>本端端口和对端端口ID</li>
-                <li>自动建立连接关系</li>
-                <li>自动更新端口状态</li>
+                {t('bulkDeployment.sections.cablesFeatures', { returnObjects: true }).map((feature: string, idx: number) => (
+                  <li key={idx}>{feature}</li>
+                ))}
               </ul>
               <Button
                 type="primary"
                 onClick={() => setCableImportVisible(true)}
               >
-                批量导入线缆
+                {t('bulkDeployment.actions.importCables')}
               </Button>
             </Card>
           </TabPane>
         </Tabs>
 
         <Alert
-          message="提示"
-          description="批量导入前，请先创建好数据中心、机房和机柜等基础设施。导入时需要引用这些资源的ID。"
+          message={t('bulkDeployment.alerts.tipsTitle')}
+          description={t('bulkDeployment.alerts.tipsDescription')}
           type="warning"
           showIcon
         />
@@ -402,7 +401,7 @@ export default function BulkDeploymentPage() {
 
       {/* 从模板创建面板 Modal */}
       <Modal
-        title="从模板创建面板"
+        title={t('bulkDeployment.modals.createFromTemplate')}
         open={templateModalVisible}
         onOk={handleTemplateSubmit}
         onCancel={() => setTemplateModalVisible(false)}
@@ -411,10 +410,10 @@ export default function BulkDeploymentPage() {
         <Form form={form} layout="vertical">
           <Form.Item
             name="templateId"
-            label="选择模板"
-            rules={[{ required: true, message: '请选择模板' }]}
+            label={t('bulkDeployment.formLabels.selectTemplate')}
+            rules={[{ required: true, message: t('bulkDeployment.formLabels.selectTemplate') }]}
           >
-            <Select placeholder="选择面板模板">
+            <Select placeholder={t('bulkDeployment.formPlaceholders.selectTemplate')}>
               {templates.map((template) => (
                 <Select.Option key={template.id} value={template.id}>
                   {template.name} ({template.type} - {template.portCount}口)
@@ -425,10 +424,10 @@ export default function BulkDeploymentPage() {
 
           <Form.Item
             name="deviceId"
-            label="选择设备"
-            rules={[{ required: true, message: '请选择设备' }]}
+            label={t('bulkDeployment.formLabels.selectDevice')}
+            rules={[{ required: true, message: t('bulkDeployment.formLabels.selectDevice') }]}
           >
-            <Select placeholder="选择目标设备">
+            <Select placeholder={t('bulkDeployment.formPlaceholders.selectDevice')}>
               {devices.map((device) => (
                 <Select.Option key={device.id} value={device.id}>
                   {device.name} ({device.type})
@@ -442,7 +441,7 @@ export default function BulkDeploymentPage() {
       {/* 设备批量导入 Modal */}
       <BulkImportModal
         visible={deviceImportVisible}
-        title="批量导入设备"
+        title={t('bulkDeployment.modals.importDevices')}
         columns={deviceColumns}
         templateData={deviceTemplateData}
         onCancel={() => setDeviceImportVisible(false)}
@@ -452,7 +451,7 @@ export default function BulkDeploymentPage() {
       {/* 线缆批量导入 Modal */}
       <BulkImportModal
         visible={cableImportVisible}
-        title="批量导入线缆"
+        title={t('bulkDeployment.modals.importCables')}
         columns={cableColumns}
         templateData={cableTemplateData}
         onCancel={() => setCableImportVisible(false)}

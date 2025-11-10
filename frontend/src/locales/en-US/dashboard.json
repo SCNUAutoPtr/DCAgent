@@ -1,0 +1,41 @@
+{
+  "title": "System Overview",
+  "description": "Data Center Lifecycle Management - Device, Cable, and Connection Overview",
+  "statistics": {
+    "totalDevices": "Total Devices",
+    "cableConnections": "Cable Connections",
+    "cabinetCount": "Cabinet Count",
+    "portOccupancy": "Port Occupancy"
+  },
+  "cards": {
+    "recentDevices": "Recently Added Devices",
+    "cableStatus": "Cable Connection Status",
+    "roadmap": "Feature Roadmap"
+  },
+  "roadmap": {
+    "implemented": "Implemented",
+    "inDevelopment": "In Development",
+    "planned": "Planned",
+    "items": {
+      "implemented": [
+        "Device Management (Data Center → Room → Cabinet → Device)",
+        "Cable Connection Tracking (Port to Port)",
+        "Graph Database Integration (Neo4j)"
+      ],
+      "inDevelopment": [
+        "U Position Detailed Management and Visualization",
+        "IP Address Management and Port Mapping",
+        "Power Management (Phase, Grid/UPS)",
+        "Network Topology Visualization"
+      ],
+      "planned": [
+        "SNMP/IPMI Monitoring Integration",
+        "Device Health Tracking",
+        "Asset Inventory Function",
+        "AI Layout Optimization Suggestions",
+        "QR Code/RFID Label Management"
+      ]
+    }
+  },
+  "emptyState": "No Data"
+}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import './CabinetList.css';
 import {
   Card,
@@ -71,18 +72,20 @@ const { TabPane } = Tabs;
 const { Sider, Content } = Layout;
 const { Panel: CollapsePanel } = Collapse;
 
-// 设备类型配置
-const deviceTypeMap: Record<DeviceType, { label: string; color: string }> = {
-  SERVER: { label: '服务器', color: 'blue' },
-  SWITCH: { label: '交换机', color: 'green' },
-  ROUTER: { label: '路由器', color: 'orange' },
-  FIREWALL: { label: '防火墙', color: 'red' },
-  STORAGE: { label: '存储', color: 'purple' },
-  PDU: { label: 'PDU', color: 'cyan' },
-  OTHER: { label: '其他', color: 'default' },
-};
+// 设备类型配置 - 在useTranslation hook中使用后设置
+const getDeviceTypeMap = (t: any): Record<DeviceType, { label: string; color: string }> => ({
+  SERVER: { label: t('deviceTypes.SERVER'), color: 'blue' },
+  SWITCH: { label: t('deviceTypes.SWITCH'), color: 'green' },
+  ROUTER: { label: t('deviceTypes.ROUTER'), color: 'orange' },
+  FIREWALL: { label: t('deviceTypes.FIREWALL'), color: 'red' },
+  STORAGE: { label: t('deviceTypes.STORAGE'), color: 'purple' },
+  PDU: { label: t('deviceTypes.PDU'), color: 'cyan' },
+  OTHER: { label: t('deviceTypes.OTHER'), color: 'default' },
+});
 
 export default function CabinetList() {
+  const { t } = useTranslation('cabinet');
+  const deviceTypeMap = getDeviceTypeMap(t);
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const [cabinets, setCabinets] = useState<Cabinet[]>([]);
@@ -157,7 +160,7 @@ export default function CabinetList() {
       }
       setCabinets(data);
     } catch (error) {
-      message.error('加载机柜列表失败');
+      message.error(t('messages.loadFailed'));
       console.error(error);
     } finally {
       setLoading(false);
@@ -257,10 +260,10 @@ export default function CabinetList() {
       const values = await form.validateFields();
       if (editingCabinet) {
         await cabinetService.update(editingCabinet.id, values);
-        message.success('机柜更新成功');
+        message.success(t('messages.updateSuccess'));
       } else {
         await cabinetService.create(values);
-        message.success('机柜创建成功');
+        message.success(t('messages.createSuccess'));
       }
       handleCloseModal();
       loadCabinets(undefined, selectedRoom);
@@ -268,7 +271,7 @@ export default function CabinetList() {
       if (error.errorFields) {
         return;
       }
-      message.error(editingCabinet ? '更新失败' : '创建失败');
+      message.error(editingCabinet ? t('messages.updateFailed') : t('messages.createFailed'));
       console.error(error);
     }
   };
@@ -277,10 +280,10 @@ export default function CabinetList() {
   const handleDelete = async (id: string) => {
     try {
       await cabinetService.delete(id);
-      message.success('机柜删除成功');
+      message.success(t('messages.deleteSuccess'));
       loadCabinets(undefined, selectedRoom);
     } catch (error) {
-      message.error('删除失败');
+      message.error(t('messages.deleteFailed'));
       console.error(error);
     }
   };
@@ -391,7 +394,7 @@ export default function CabinetList() {
       setPanelViewModalVisible(true);
     } catch (error) {
       console.error('Error loading device panels:', error);
-      message.error('加载设备面板失败');
+      message.error(t('messages.panelLoadFailed'));
     }
   };
 
@@ -399,7 +402,7 @@ export default function CabinetList() {
   const handleUnbindPanel = async (panelId: string) => {
     try {
       await panelTemplateService.unbindPanel(panelId);
-      message.success('面板已从模板解绑，现在可以自定义端口布局');
+      message.success(t('messages.panelUnbindSuccess'));
 
       // 重新加载面板信息
       if (viewingDevice) {
@@ -407,7 +410,7 @@ export default function CabinetList() {
         setDevicePanels(panels);
       }
     } catch (error: any) {
-      message.error('解绑失败: ' + error.message);
+      message.error(t('messages.panelUnbindFailed') + ': ' + error.message);
       console.error('Error unbinding panel:', error);
     }
   };
@@ -419,10 +422,10 @@ export default function CabinetList() {
       // console.log('Saving device with values:', values);
       if (editingDevice) {
         await deviceService.update(editingDevice.id, values);
-        message.success('设备更新成功');
+        message.success(t('messages.deviceUpdated'));
       } else {
         await deviceService.create(values);
-        message.success('设备创建成功');
+        message.success(t('messages.deviceCreated'));
       }
       setDeviceModalVisible(false);
       deviceForm.resetFields();
@@ -432,7 +435,7 @@ export default function CabinetList() {
       if (error.errorFields) return;
       // console.error('Save device error:', error);
       // console.error('Error details:', JSON.stringify(error.data?.details, null, 2));
-      message.error(editingDevice ? '更新失败' : '创建失败');
+      message.error(editingDevice ? t('messages.updateFailed') : t('messages.createFailed'));
       console.error(error);
     }
   };
@@ -440,19 +443,19 @@ export default function CabinetList() {
   // 删除设备
   const handleDeleteDevice = async (device: Device) => {
     Modal.confirm({
-      title: '确定要删除这个设备吗？',
-      content: `设备 ${device.name} (${device.model || '未知型号'})`,
-      okText: '确定',
+      title: t('messages.deviceDeleteConfirm'),
+      content: `${t('labels.deviceName')} ${device.name} (${device.model || t('placeholders.height')})`,
+      okText: t('buttons.confirm'),
       okType: 'danger',
-      cancelText: '取消',
+      cancelText: t('buttons.cancel'),
       onOk: async () => {
         try {
           await deviceService.delete(device.id);
-          message.success('设备删除成功');
+          message.success(t('messages.deviceDeleted'));
           await loadAllData();
           await loadCabinets();
         } catch (error) {
-          message.error('删除失败');
+          message.error(t('messages.deleteFailed'));
           console.error(error);
         }
       },
@@ -520,7 +523,7 @@ export default function CabinetList() {
       );
 
       if (!isPositionAvailable) {
-        message.error(`目标位置 U${targetUPosition} 已被占用`);
+        message.error(t('messages.positionOccupied', { uPosition: targetUPosition }));
         return;
       }
 
@@ -530,14 +533,14 @@ export default function CabinetList() {
         uPosition: targetUPosition,
       });
 
-      message.success(`设备 ${selectedDeviceForAction.name} 已移动到新位置`);
+      message.success(t('messages.deviceTransferSuccess'));
       setDeviceTransferVisible(false);
       setSelectedDeviceForAction(null);
 
       await loadAllData();
       await loadCabinets();
     } catch (error) {
-      message.error('设备移动失败');
+      message.error(t('messages.deviceTransferFailed'));
       console.error('Failed to transfer device:', error);
     }
   };
@@ -559,13 +562,13 @@ export default function CabinetList() {
       );
 
       if (!isPositionAvailable) {
-        message.error(`目标位置 U${targetUPosition} 已被占用`);
+        message.error(t('messages.positionOccupied', { uPosition: targetUPosition }));
         return;
       }
 
       // 创建设备副本
       const deviceCopy = {
-        name: `${selectedDeviceForAction.name}_副本`,
+        name: `${selectedDeviceForAction.name}_${t('buttons.deviceCopy')}`,
         type: selectedDeviceForAction.type,
         model: selectedDeviceForAction.model,
         cabinetId: targetCabinetId,
@@ -574,44 +577,44 @@ export default function CabinetList() {
       };
 
       await deviceService.create(deviceCopy);
-      message.success(`设备 ${selectedDeviceForAction.name} 复制成功`);
+      message.success(t('messages.deviceCopySuccess'));
       setDeviceCopyVisible(false);
       setSelectedDeviceForAction(null);
 
       await loadAllData();
       await loadCabinets();
     } catch (error) {
-      message.error('设备复制失败');
+      message.error(t('messages.deviceCopyFailed'));
       console.error('Failed to copy device:', error);
     }
   };
 
   const columns = [
     {
-      title: 'ID',
+      title: t('fields.shortId'),
       dataIndex: 'shortId',
       key: 'shortId',
       width: 80,
     },
     {
-      title: '机柜名称',
+      title: t('fields.name'),
       dataIndex: 'name',
       key: 'name',
     },
     {
-      title: '位置',
+      title: t('fields.position'),
       dataIndex: 'position',
       key: 'position',
       render: (text: string) => text || '-',
     },
     {
-      title: 'U数',
+      title: t('fields.height'),
       dataIndex: 'height',
       key: 'height',
       render: (height: number) => `${height}U`,
     },
     {
-      title: '所属机房',
+      title: t('fields.room'),
       dataIndex: 'roomId',
       key: 'roomId',
       render: (roomId: string) => {
@@ -627,13 +630,13 @@ export default function CabinetList() {
       },
     },
     {
-      title: '创建时间',
+      title: t('fields.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (text: string) => new Date(text).toLocaleString('zh-CN'),
     },
     {
-      title: '操作',
+      title: t('fields.actions'),
       key: 'actions',
       width: 200,
       render: (_: any, record: Cabinet) => (
@@ -644,7 +647,7 @@ export default function CabinetList() {
             icon={<EyeOutlined />}
             onClick={() => handleViewCabinet(record)}
           >
-            可视化
+            {t('buttons.visualize')}
           </Button>
           <Button
             type="link"
@@ -652,17 +655,17 @@ export default function CabinetList() {
             icon={<EditOutlined />}
             onClick={() => handleOpenModal(record)}
           >
-            编辑
+            {t('buttons.edit')}
           </Button>
           <Popconfirm
-            title="确定要删除这个机柜吗？"
-            description="删除后将同时删除其下所有设备"
+            title={t('messages.deleteConfirm')}
+            description={t('messages.deleteWarning')}
             onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('buttons.confirm')}
+            cancelText={t('buttons.cancel')}
           >
             <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
+              {t('buttons.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -681,10 +684,10 @@ export default function CabinetList() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <Title level={2} style={{ margin: 0 }}>
-            <InboxOutlined /> 机柜管理
+            <InboxOutlined /> {t('title')}
           </Title>
           <Text type="secondary" style={{ fontSize: 14 }}>
-            管理机房内的所有机柜和U位，支持2D/3D可视化视图
+            {t('description')}
           </Text>
         </div>
       </div>
@@ -696,15 +699,15 @@ export default function CabinetList() {
         style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
         className="full-height-tabs"
       >
-        <TabPane tab={<span><InboxOutlined /> 机柜列表</span>} key="list">
+        <TabPane tab={<span><InboxOutlined /> {t('tabs.cabinetList')}</span>} key="list">
           <Card>
             <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
               <Space>
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
-                  新建机柜
+                  {t('buttons.create')}
                 </Button>
                 <Select
-                  placeholder="选择机房"
+                  placeholder={t('buttons.selectRoom')}
                   allowClear
                   style={{ width: 200 }}
                   onChange={handleRoomFilter}
@@ -721,7 +724,7 @@ export default function CabinetList() {
                 </Select>
               </Space>
               <Search
-                placeholder="搜索机柜名称"
+                placeholder={t('placeholders.search')}
                 allowClear
                 onSearch={handleSearch}
                 style={{ width: 300 }}
@@ -743,17 +746,17 @@ export default function CabinetList() {
               pagination={{
                 pageSize: 10,
                 showSizeChanger: true,
-                showTotal: (total) => `共 ${total} 条`,
+                showTotal: (total) => t('table.total', { total }),
               }}
             />
           </Card>
         </TabPane>
 
-        <TabPane tab={<span><EyeOutlined /> 可视化视图</span>} key="visual">
+        <TabPane tab={<span><EyeOutlined /> {t('tabs.visualization')}</span>} key="visual">
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ flexShrink: 0, marginBottom: 12, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
               <Button.Group size="small">
-                <Tooltip title="2D前面板视图">
+                <Tooltip title={t('views.2dFrontPanel')}>
                   <Button
                     type={viewMode === '2d' ? 'primary' : 'default'}
                     icon={<AppstoreOutlined />}
@@ -762,7 +765,7 @@ export default function CabinetList() {
                     2D
                   </Button>
                 </Tooltip>
-                <Tooltip title="3D立体视图">
+                <Tooltip title={t('views.3dView')}>
                   <Button
                     type={viewMode === '3d' ? 'primary' : 'default'}
                     icon={<BlockOutlined />}
@@ -789,12 +792,12 @@ export default function CabinetList() {
                 {/* 机柜选择器 */}
                 <div style={{ marginBottom: 16 }} title="机柜选择器容器">
                   <Text type="secondary" style={{ fontSize: 12, marginBottom: 4, display: 'block' }}>
-                    选择机柜
+                    {t('views.selectCabinet')}
                   </Text>
                   <Select
                     showSearch
                     style={{ width: '100%' }}
-                    placeholder="选择或搜索机柜"
+                    placeholder={t('labels.selectCabinetPlaceholder')}
                     value={selectedCabinet?.id}
                     onChange={(cabinetId) => {
                       const cabinet = cabinets.find(c => c.id === cabinetId);
@@ -867,7 +870,7 @@ export default function CabinetList() {
                                 block
                                 size="small"
                               >
-                                添加设备
+                                {t('buttons.addDevice')}
                               </Button>
                               <Button
                                 icon={<EditOutlined />}
@@ -875,7 +878,7 @@ export default function CabinetList() {
                                 block
                                 size="small"
                               >
-                                编辑机柜
+                                {t('buttons.editCabinet')}
                               </Button>
                             </Space>
                           </>
@@ -885,7 +888,7 @@ export default function CabinetList() {
 
                     {/* 设备列表 */}
                     <Card
-                      title="设备列表"
+                      title={t('panels.devicePanels')}
                       size="small"
                       bodyStyle={{ padding: '8px 0' }}
                     >
@@ -981,7 +984,7 @@ export default function CabinetList() {
                     </Card>
                   </>
                 ) : (
-                  <Empty description="请选择一个机柜" />
+                  <Empty description={t('messages.selectCabinet')} />
                 )}
               </div>
             </Sider>
@@ -1034,7 +1037,7 @@ export default function CabinetList() {
                       title="机柜全览标题"
                     >
                       <InboxOutlined style={{ marginRight: 4 }} />
-                      机柜全览
+                      {t('labels.cabinetOverview')}
                     </div>
                     <CabinetThumbnail
                       cabinet={selectedCabinet}
@@ -1046,7 +1049,7 @@ export default function CabinetList() {
                     />
                   </div>
                 ) : (
-                  <Empty description="请选择一个机柜" />
+                  <Empty description={t('messages.selectCabinet')} />
                 )}
               </div>
             </Sider>
@@ -1056,38 +1059,38 @@ export default function CabinetList() {
       </Tabs>
 
       <Modal
-        title={editingCabinet ? '编辑机柜' : '新建机柜'}
+        title={editingCabinet ? t('editTitle') : t('createTitle')}
         open={modalVisible}
         onOk={handleSave}
         onCancel={handleCloseModal}
-        okText="保存"
-        cancelText="取消"
+        okText={t('buttons.save')}
+        cancelText={t('buttons.cancel')}
       >
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="机柜名称"
-            rules={[{ required: true, message: '请输入机柜名称' }]}
+            label={t('labels.cabinetName')}
+            rules={[{ required: true, message: t('validation.nameRequired') }]}
           >
-            <Input placeholder="例如：A-01" />
+            <Input placeholder={t('placeholders.name')} />
           </Form.Item>
-          <Form.Item name="position" label="位置">
-            <Input placeholder="例如：第一排第三列" />
+          <Form.Item name="position" label={t('labels.position')}>
+            <Input placeholder={t('placeholders.position')} />
           </Form.Item>
           <Form.Item
             name="height"
-            label="U数"
+            label={t('labels.uHeight')}
             initialValue={42}
-            rules={[{ required: true, message: '请输入U数' }]}
+            rules={[{ required: true, message: t('validation.heightRequired') }]}
           >
             <InputNumber min={1} max={52} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item
             name="roomId"
-            label="所属机房"
-            rules={[{ required: true, message: '请选择机房' }]}
+            label={t('labels.selectRoom')}
+            rules={[{ required: true, message: t('validation.roomRequired') }]}
           >
-            <Select placeholder="选择机房" showSearch optionFilterProp="children">
+            <Select placeholder={t('labels.selectRoom')} showSearch optionFilterProp="children">
               {rooms.map((room) => {
                 const dc = dataCenters.find((d) => d.id === room.dataCenterId);
                 return (
@@ -1103,7 +1106,7 @@ export default function CabinetList() {
 
       {/* 设备编辑对话框 */}
       <Modal
-        title={editingDevice ? '编辑设备' : '新建设备'}
+        title={editingDevice ? t('buttons.editDevice') : t('buttons.addDevice')}
         open={deviceModalVisible}
         onOk={handleSaveDevice}
         onCancel={() => {
@@ -1116,38 +1119,38 @@ export default function CabinetList() {
         <Form form={deviceForm} layout="vertical">
           <Form.Item
             name="name"
-            label="设备名称"
-            rules={[{ required: true, message: '请输入设备名称' }]}
+            label={t('labels.deviceName')}
+            rules={[{ required: true, message: t('validation.deviceNameRequired') }]}
           >
-            <Input placeholder="例如：WEB-Server-01" />
+            <Input placeholder="e.g.: WEB-Server-01" />
           </Form.Item>
           <Form.Item
             name="type"
-            label="设备类型"
-            rules={[{ required: true, message: '请选择设备类型' }]}
+            label={t('labels.deviceType')}
+            rules={[{ required: true, message: t('validation.deviceTypeRequired') }]}
           >
-            <Select placeholder="选择设备类型">
-              <Option value="SERVER">服务器</Option>
-              <Option value="SWITCH">交换机</Option>
-              <Option value="ROUTER">路由器</Option>
-              <Option value="FIREWALL">防火墙</Option>
-              <Option value="STORAGE">存储</Option>
-              <Option value="PDU">PDU</Option>
-              <Option value="OTHER">其他</Option>
+            <Select placeholder={t('labels.deviceType')}>
+              <Option value="SERVER">{t('deviceTypes.SERVER')}</Option>
+              <Option value="SWITCH">{t('deviceTypes.SWITCH')}</Option>
+              <Option value="ROUTER">{t('deviceTypes.ROUTER')}</Option>
+              <Option value="FIREWALL">{t('deviceTypes.FIREWALL')}</Option>
+              <Option value="STORAGE">{t('deviceTypes.STORAGE')}</Option>
+              <Option value="PDU">{t('deviceTypes.PDU')}</Option>
+              <Option value="OTHER">{t('deviceTypes.OTHER')}</Option>
             </Select>
           </Form.Item>
-          <Form.Item name="model" label="型号">
-            <Input placeholder="例如：Dell PowerEdge R740" />
+          <Form.Item name="model" label={t('labels.deviceModel')}>
+            <Input placeholder="e.g.: Dell PowerEdge R740" />
           </Form.Item>
-          <Form.Item name="serialNo" label="序列号">
-            <Input placeholder="例如：SN123456789" />
+          <Form.Item name="serialNo" label={t('labels.serialNo')}>
+            <Input placeholder="e.g.: SN123456789" />
           </Form.Item>
           <Form.Item
             name="cabinetId"
-            label="所属机柜"
-            rules={[{ required: true, message: '请选择机柜' }]}
+            label={t('labels.selectCabinet')}
+            rules={[{ required: true, message: t('validation.deviceCabinetRequired') }]}
           >
-            <Select placeholder="选择机柜" showSearch optionFilterProp="children">
+            <Select placeholder={t('labels.selectCabinet')} showSearch optionFilterProp="children">
               {cabinets.map((cabinet) => {
                 const room = rooms.find((r) => r.id === cabinet.roomId);
                 const dc = dataCenters.find((d) => d.id === room?.dataCenterId);
@@ -1160,10 +1163,10 @@ export default function CabinetList() {
             </Select>
           </Form.Item>
           <Space style={{ width: '100%' }}>
-            <Form.Item name="uPosition" label="起始U位" style={{ marginBottom: 0 }}>
+            <Form.Item name="uPosition" label={t('labels.uPosition')} style={{ marginBottom: 0 }}>
               <InputNumber min={1} max={52} placeholder="1" style={{ width: 120 }} />
             </Form.Item>
-            <Form.Item name="uHeight" label="占用U数" initialValue={1} style={{ marginBottom: 0 }}>
+            <Form.Item name="uHeight" label={t('labels.uHeight')} initialValue={1} style={{ marginBottom: 0 }}>
               <InputNumber min={1} max={10} placeholder="1" style={{ width: 120 }} />
             </Form.Item>
           </Space>
@@ -1175,7 +1178,7 @@ export default function CabinetList() {
         title={
           <Space>
             <CloudServerOutlined />
-            {viewingDevice?.name} - 面板视图
+            {viewingDevice?.name} - {t('panels.title')}
           </Space>
         }
         open={panelViewModalVisible}
@@ -1194,7 +1197,7 @@ export default function CabinetList() {
               handleOpenDeviceModal(viewingDevice || undefined);
             }}
           >
-            编辑设备
+            {t('buttons.editDeviceButton')}
           </Button>,
           <Button
             key="close"
@@ -1206,7 +1209,7 @@ export default function CabinetList() {
               setPanelPorts(new Map());
             }}
           >
-            关闭
+            {t('buttons.cancel')}
           </Button>,
         ]}
         width={900}
@@ -1215,34 +1218,34 @@ export default function CabinetList() {
         {viewingDevice && (
           <div>
             <Descriptions column={2} size="small" bordered style={{ marginBottom: 16 }}>
-              <Descriptions.Item label="设备类型">
+              <Descriptions.Item label={t('descriptions.deviceType')}>
                 <Tag color={deviceTypeMap[viewingDevice.type]?.color}>
                   {deviceTypeMap[viewingDevice.type]?.label || viewingDevice.type}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="型号">
+              <Descriptions.Item label={t('descriptions.model')}>
                 {viewingDevice.model || '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="序列号">
+              <Descriptions.Item label={t('descriptions.serialNo')}>
                 {viewingDevice.serialNo || '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="U位">
-                U{viewingDevice.uPosition} (高度: {viewingDevice.uHeight}U)
+              <Descriptions.Item label={t('descriptions.uPosition')}>
+                U{viewingDevice.uPosition} (Height: {viewingDevice.uHeight}U)
               </Descriptions.Item>
             </Descriptions>
 
-            <Divider orientation="left">设备面板</Divider>
+            <Divider orientation="left">{t('panels.title')}</Divider>
 
             {devicePanels.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px' }}>
-                <Empty description="该设备暂无面板" />
+                <Empty description={t('panels.noPanels')} />
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
                   onClick={() => handleOpenPanelEditor()}
                   style={{ marginTop: 16 }}
                 >
-                  添加面板
+                  {t('buttons.addPanel')}
                 </Button>
               </div>
             ) : (
@@ -1271,18 +1274,18 @@ export default function CabinetList() {
                             icon={<EditOutlined />}
                             onClick={() => handleOpenPanelEditor(panel)}
                           >
-                            编辑面板信息
+                            {t('buttons.editPanel')}
                           </Button>
                           {hasTemplate && (
                             <Popconfirm
-                              title="确认解绑模板？"
-                              description="解绑后可以自定义端口布局，但将失去模板更新。"
+                              title={t('panels.unbindConfirmTitle')}
+                              description={t('panels.unbindConfirmDesc')}
                               onConfirm={() => handleUnbindPanel(panel.id)}
-                              okText="确认"
-                              cancelText="取消"
+                              okText={t('buttons.confirm')}
+                              cancelText={t('buttons.cancel')}
                             >
                               <Button type="link" size="small">
-                                解绑模板
+                                {t('buttons.unbindTemplate')}
                               </Button>
                             </Popconfirm>
                           )}
@@ -1291,8 +1294,8 @@ export default function CabinetList() {
 
                       {hasTemplate && (
                         <Alert
-                          message="此面板使用模板"
-                          description="该面板基于模板创建，端口布局由模板定义。解绑后可以自定义端口布局。"
+                          message={t('panels.templateAlert')}
+                          description={t('panels.templateAlertDesc')}
                           type="info"
                           showIcon
                           style={{ marginBottom: 16 }}
@@ -1303,7 +1306,7 @@ export default function CabinetList() {
                         panel={panel}
                         ports={ports}
                         onPortClick={(port) => {
-                          message.info(`端口: ${port.number} - 状态: ${port.status}`);
+                          message.info(`${t('panels.portNumber')}: ${port.number} - ${t('panels.portStatus')}: ${port.status}`);
                         }}
                         onPortPositionChange={async (portId, x, y) => {
                           try {
@@ -1318,10 +1321,10 @@ export default function CabinetList() {
                               newMap.set(panel.id, updatedPorts);
                               return newMap;
                             });
-                            message.success('端口位置已更新');
+                            message.success(t('messages.portPositionUpdated'));
                           } catch (error) {
                             console.error('Failed to update port position:', error);
-                            message.error('更新端口位置失败');
+                            message.error(t('messages.portPositionUpdateFailed'));
                           }
                         }}
                         onPortsUpdated={async () => {
@@ -1364,7 +1367,7 @@ export default function CabinetList() {
 
       {/* 设备发送对话框 */}
       <Modal
-        title={`发送设备: ${selectedDeviceForAction?.name}`}
+        title={t('transfer.title')}
         open={deviceTransferVisible}
         onCancel={() => {
           setDeviceTransferVisible(false);
@@ -1378,8 +1381,8 @@ export default function CabinetList() {
             handleDeviceTransfer(values.cabinetId, values.uPosition);
           }}>
             <Alert
-              message="设备移动"
-              description={`设备 ${selectedDeviceForAction.name} 将从当前位置移动到目标位置，原位置将被释放。`}
+              message={t('transfer.title')}
+              description={t('transfer.description', { deviceName: selectedDeviceForAction.name })}
               type="warning"
               showIcon
               style={{ marginBottom: 16 }}
@@ -1387,10 +1390,10 @@ export default function CabinetList() {
 
             <Form.Item
               name="cabinetId"
-              label="目标机柜"
-              rules={[{ required: true, message: '请选择目标机柜' }]}
+              label={t('labels.targetCabinet')}
+              rules={[{ required: true, message: t('validation.cabinetRequired') }]}
             >
-              <Select placeholder="选择目标机柜" showSearch optionFilterProp="children">
+              <Select placeholder={t('labels.targetCabinet')} showSearch optionFilterProp="children">
                 {cabinets.map((cabinet) => {
                   const room = rooms.find((r) => r.id === cabinet.roomId);
                   const dc = dataCenters.find((d) => d.id === room?.dataCenterId);
@@ -1405,12 +1408,12 @@ export default function CabinetList() {
 
             <Form.Item
               name="uPosition"
-              label="目标U位"
-              rules={[{ required: true, message: '请输入目标U位' }]}
+              label={t('labels.targetUPosition')}
+              rules={[{ required: true, message: t('validation.uPositionRequired') }]}
             >
               <InputNumber
                 style={{ width: '100%' }}
-                placeholder="输入U位数字"
+                placeholder={t('labels.targetUPosition')}
                 min={1}
                 max={52}
               />
@@ -1419,13 +1422,13 @@ export default function CabinetList() {
             <Form.Item>
               <Space>
                 <Button type="primary" htmlType="submit">
-                  确认发送
+                  {t('buttons.confirmTransfer')}
                 </Button>
                 <Button onClick={() => {
                   setDeviceTransferVisible(false);
                   setSelectedDeviceForAction(null);
                 }}>
-                  取消
+                  {t('buttons.cancel')}
                 </Button>
               </Space>
             </Form.Item>
@@ -1435,7 +1438,7 @@ export default function CabinetList() {
 
       {/* 设备复制对话框 */}
       <Modal
-        title={`复制设备: ${selectedDeviceForAction?.name}`}
+        title={t('copy.title')}
         open={deviceCopyVisible}
         onCancel={() => {
           setDeviceCopyVisible(false);
@@ -1449,8 +1452,8 @@ export default function CabinetList() {
             handleDeviceCopy(values.cabinetId, values.uPosition);
           }}>
             <Alert
-              message="设备复制"
-              description={`将创建设备 ${selectedDeviceForAction.name} 的副本，包含基本配置信息。`}
+              message={t('copy.title')}
+              description={t('copy.description', { deviceName: selectedDeviceForAction.name })}
               type="info"
               showIcon
               style={{ marginBottom: 16 }}
@@ -1458,10 +1461,10 @@ export default function CabinetList() {
 
             <Form.Item
               name="cabinetId"
-              label="目标机柜"
-              rules={[{ required: true, message: '请选择目标机柜' }]}
+              label={t('labels.targetCabinet')}
+              rules={[{ required: true, message: t('validation.cabinetRequired') }]}
             >
-              <Select placeholder="选择目标机柜" showSearch optionFilterProp="children">
+              <Select placeholder={t('labels.targetCabinet')} showSearch optionFilterProp="children">
                 {cabinets.map((cabinet) => {
                   const room = rooms.find((r) => r.id === cabinet.roomId);
                   const dc = dataCenters.find((d) => d.id === room?.dataCenterId);
@@ -1476,12 +1479,12 @@ export default function CabinetList() {
 
             <Form.Item
               name="uPosition"
-              label="目标U位"
-              rules={[{ required: true, message: '请输入目标U位' }]}
+              label={t('labels.targetUPosition')}
+              rules={[{ required: true, message: t('validation.uPositionRequired') }]}
             >
               <InputNumber
                 style={{ width: '100%' }}
-                placeholder="输入U位数字"
+                placeholder={t('labels.targetUPosition')}
                 min={1}
                 max={52}
               />
@@ -1490,13 +1493,13 @@ export default function CabinetList() {
             <Form.Item>
               <Space>
                 <Button type="primary" htmlType="submit">
-                  确认复制
+                  {t('buttons.confirmCopy')}
                 </Button>
                 <Button onClick={() => {
                   setDeviceCopyVisible(false);
                   setSelectedDeviceForAction(null);
                 }}>
-                  取消
+                  {t('buttons.cancel')}
                 </Button>
               </Space>
             </Form.Item>

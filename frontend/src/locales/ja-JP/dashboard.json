@@ -1,0 +1,41 @@
+{
+  "title": "システム概要",
+  "description": "データセンター全ライフサイクル管理 - デバイス、ケーブル、接続関係が一目瞭然",
+  "statistics": {
+    "totalDevices": "デバイス総数",
+    "cableConnections": "ケーブル接続",
+    "cabinetCount": "キャビネット数",
+    "portOccupancy": "ポート使用率"
+  },
+  "cards": {
+    "recentDevices": "最近追加されたデバイス",
+    "cableStatus": "ケーブル接続状態",
+    "roadmap": "機能ロードマップ"
+  },
+  "roadmap": {
+    "implemented": "実装済み",
+    "inDevelopment": "開発中",
+    "planned": "計画中",
+    "items": {
+      "implemented": [
+        "デバイス管理（データセンター→機械室→キャビネット→デバイス）",
+        "ケーブル接続追跡（ポート間）",
+        "グラフデータベース統合（Neo4j）"
+      ],
+      "inDevelopment": [
+        "Uスペース詳細管理と可視化",
+        "IPアドレス管理とポートマッピング",
+        "電力管理（フェーズ、商用電源/UPS）",
+        "メッシュトポロジー可視化"
+      ],
+      "planned": [
+        "SNMP/IPMI監視統合",
+        "デバイスヘルス追跡",
+        "資産棚卸機能",
+        "AI最適レイアウト提案",
+        "QRコード/RFIDラベル管理"
+      ]
+    }
+  },
+  "emptyState": "データなし"
+}

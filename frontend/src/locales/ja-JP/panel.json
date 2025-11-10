@@ -1,0 +1,68 @@
+{
+  "title": "パネル管理",
+  "description": "デバイス上の各種パネルを管理します (ネットワークポート、光ファイバー、電源など)",
+  "createTitle": "新しいパネルを作成",
+  "editTitle": "パネルを編集",
+  "fields": {
+    "id": "ID",
+    "shortId": "shortID",
+    "name": "パネル名",
+    "type": "タイプ",
+    "device": "所属デバイス",
+    "template": "テンプレート",
+    "isCustomized": "カスタマイズ",
+    "portCount": "ポート数",
+    "createdAt": "作成日時",
+    "actions": "操作"
+  },
+  "panelTypes": {
+    "ETHERNET": "イーサネットポート",
+    "FIBER": "光ファイバー",
+    "POWER": "電源",
+    "SERIAL": "シリアルポート",
+    "USB": "USB",
+    "OTHER": "その他"
+  },
+  "placeholders": {
+    "name": "例: eth0",
+    "type": "パネルタイプを選択",
+    "device": "デバイスを選択",
+    "template": "テンプレートを選択",
+    "search": "パネル名で検索"
+  },
+  "messages": {
+    "deleteConfirm": "このパネルを削除してもよろしいですか?",
+    "deleteWarning": "削除すると、このパネル配下のすべてのポートも削除されます",
+    "createSuccess": "パネルが正常に作成されました",
+    "updateSuccess": "パネルが正常に更新されました",
+    "deleteSuccess": "パネルが正常に削除されました",
+    "loadFailed": "パネルリストの読み込みに失敗しました",
+    "updateFailed": "更新に失敗しました",
+    "createFailed": "作成に失敗しました",
+    "deleteFailed": "削除に失敗しました"
+  },
+  "validation": {
+    "nameRequired": "パネル名を入力してください",
+    "typeRequired": "パネルタイプを選択してください",
+    "deviceRequired": "デバイスを選択してください"
+  },
+  "table": {
+    "total": "全 {total} 件"
+  },
+  "labels": {
+    "customized": "カスタマイズ",
+    "fromTemplate": "テンプレートから"
+  },
+  "buttons": {
+    "create": "新しいパネルを作成",
+    "edit": "編集",
+    "delete": "削除",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "confirm": "確定"
+  },
+  "filters": {
+    "selectDevice": "デバイスを選択",
+    "selectType": "タイプを選択"
+  }
+}

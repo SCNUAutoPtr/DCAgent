@@ -1,0 +1,40 @@
+{
+  "title": "Room List",
+  "description": "Manage all rooms in the data center",
+  "createTitle": "Create Room",
+  "editTitle": "Edit Room",
+  "fields": {
+    "id": "ID",
+    "shortId": "ID",
+    "name": "Room Name",
+    "floor": "Floor",
+    "dataCenter": "Data Center",
+    "cabinetCount": "Cabinet Count",
+    "createdAt": "Created At",
+    "actions": "Actions"
+  },
+  "placeholders": {
+    "name": "e.g.: Room A",
+    "floor": "e.g.: 3F",
+    "dataCenter": "Select data center",
+    "search": "Search room name"
+  },
+  "messages": {
+    "deleteConfirm": "Are you sure to delete this room?",
+    "deleteWarning": "All cabinets and devices under it will be deleted",
+    "createSuccess": "Room created successfully",
+    "updateSuccess": "Room updated successfully",
+    "deleteSuccess": "Room deleted successfully",
+    "loadFailed": "Failed to load room list",
+    "updateFailed": "Update failed",
+    "createFailed": "Create failed",
+    "deleteFailed": "Delete failed"
+  },
+  "validation": {
+    "nameRequired": "Please enter room name",
+    "dataCenterRequired": "Please select data center"
+  },
+  "table": {
+    "total": "Total {total} items"
+  }
+}

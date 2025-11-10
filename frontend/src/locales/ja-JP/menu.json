@@ -1,0 +1,19 @@
+{
+  "dashboard": "ダッシュボード",
+  "infrastructure": "インフラストラクチャ",
+  "dataCenter": "データセンター",
+  "room": "機械室",
+  "cabinet": "キャビネット",
+  "device": "デバイス",
+  "connectionManagement": "接続管理",
+  "panel": "パネル",
+  "port": "ポート",
+  "cable": "ケーブル",
+  "opticalModule": "光モジュール管理",
+  "opticalModuleList": "光モジュールリスト",
+  "cableTopology": "ケーブルトポロジー",
+  "cableManualInventory": "ケーブル手動入庫",
+  "shortIdPool": "shortIDプール管理",
+  "bulkDeployment": "一括配置",
+  "panelTemplate": "パネルテンプレート"
+}

@@ -1,0 +1,341 @@
+{
+  "shortIdPool": {
+    "title": "shortID池管理",
+    "description": "统一管理所有实体类型的shortID，支持批量生成、打印任务、导出CSV",
+    "tabs": {
+      "pool": "shortID池",
+      "tasks": "打印任务"
+    },
+    "fields": {
+      "id": "ID",
+      "shortId": "shortID",
+      "entityType": "实体类型",
+      "status": "状态",
+      "batchNo": "批次号",
+      "printTask": "打印任务",
+      "printedAt": "打印时间",
+      "entityId": "绑定实体ID",
+      "boundAt": "绑定时间",
+      "notes": "备注",
+      "createdAt": "创建时间",
+      "completedAt": "完成时间",
+      "createdBy": "创建人",
+      "count": "数量",
+      "taskName": "任务名称"
+    },
+    "entityTypes": {
+      "DATA_CENTER": "数据中心",
+      "ROOM": "机房",
+      "CABINET": "机柜",
+      "DEVICE": "设备",
+      "PANEL": "面板",
+      "PORT": "端口",
+      "CABLE": "线缆"
+    },
+    "statuses": {
+      "GENERATED": "已生成",
+      "PRINTED": "已打印",
+      "BOUND": "已绑定",
+      "CANCELLED": "已报废",
+      "PENDING": "待处理",
+      "PRINTING": "打印中",
+      "COMPLETED": "已完成",
+      "FAILED": "失败"
+    },
+    "actions": {
+      "allocate": "分配",
+      "release": "释放",
+      "regenerate": "重新生成",
+      "createPrintTask": "创建打印任务",
+      "directGenerate": "直接生成",
+      "exportCSV": "导出CSV",
+      "complete": "完成",
+      "scrap": "报废",
+      "search": "搜索shortID",
+      "refresh": "刷新"
+    },
+    "stats": {
+      "total": "总计",
+      "generated": "已生成",
+      "printed": "已打印",
+      "bound": "已绑定",
+      "cancelled": "已报废"
+    },
+    "modals": {
+      "createPrintTask": "创建打印任务",
+      "directGenerate": "直接生成shortID",
+      "scrapShortId": "报废shortID",
+      "confirmScrap": "确认报废"
+    },
+    "formLabels": {
+      "taskName": "任务名称",
+      "generateCount": "生成数量",
+      "createdBy": "创建人",
+      "batchNo": "批次号",
+      "reason": "报废原因"
+    },
+    "formPlaceholders": {
+      "taskName": "如：2025年第一批标签",
+      "generateCount": "1-10000",
+      "createdBy": "可选",
+      "batchNo": "可选，如：2025年第一批",
+      "reason": "如：标签损坏、丢失等"
+    },
+    "messages": {
+      "loadPoolRecordsFailed": "加载池记录失败",
+      "loadPrintTasksFailed": "加载打印任务失败",
+      "createPrintTaskSuccess": "打印任务已创建",
+      "createPrintTaskFailed": "创建打印任务失败",
+      "generateShortIdSuccess": "shortID生成成功",
+      "generateShortIdFailed": "生成shortID失败",
+      "exportSuccess": "导出成功",
+      "exportFailed": "导出失败",
+      "completePrintTaskSuccess": "打印任务已标记为完成",
+      "completePrintTaskFailed": "操作失败",
+      "scrapShortIdSuccess": "shortID已报废",
+      "scrapShortIdFailed": "操作失败"
+    },
+    "filters": {
+      "entityType": "实体类型",
+      "status": "状态"
+    },
+    "validation": {
+      "taskNameRequired": "请输入任务名称",
+      "generateCountRequired": "请输入生成数量",
+      "reasonRequired": "请输入报废原因"
+    },
+    "pagination": {
+      "total": "共 {total} 条"
+    }
+  },
+  "bulkDeployment": {
+    "title": "批量上架管理",
+    "description": "批量导入和初始化新设备、面板、端口和线缆连接",
+    "tabs": {
+      "devices": "批量创建设备",
+      "panels": "批量创建面板",
+      "cables": "批量导入线缆"
+    },
+    "steps": {
+      "upload": "上传文件",
+      "validate": "数据验证",
+      "preview": "预览",
+      "deploy": "执行部署"
+    },
+    "fields": {
+      "deviceName": "设备名称",
+      "deviceType": "设备类型",
+      "model": "型号",
+      "serialNo": "序列号",
+      "cabinetId": "机柜ID",
+      "uPosition": "U位位置",
+      "uHeight": "U高度",
+      "cableLabel": "标签",
+      "cableType": "线缆类型",
+      "cableLength": "长度(米)",
+      "cableColor": "颜色",
+      "portAId": "端口A ID",
+      "portBId": "端口B ID"
+    },
+    "deviceTypes": {
+      "SERVER": "服务器",
+      "SWITCH": "交换机",
+      "ROUTER": "路由器",
+      "FIREWALL": "防火墙",
+      "STORAGE": "存储",
+      "PDU": "PDU",
+      "OTHER": "其他"
+    },
+    "cableTypes": {
+      "CAT5E": "CAT5E",
+      "CAT6": "CAT6",
+      "CAT6A": "CAT6A",
+      "FIBER_SM": "单模光纤",
+      "FIBER_MM": "多模光纤",
+      "DAC": "DAC",
+      "AOC": "AOC",
+      "QSFP": "QSFP",
+      "OTHER": "其他"
+    },
+    "sections": {
+      "devicesTitle": "批量创建设备",
+      "devicesDescription": "支持通过 Excel/CSV 文件批量导入设备信息，包括：",
+      "devicesFeatures": [
+        "设备名称、型号、序列号",
+        "设备类型（SERVER, SWITCH, ROUTER, FIREWALL, STORAGE, PDU, OTHER）",
+        "所属机柜和U位分配",
+        "自动验证数据完整性和合法性"
+      ],
+      "panelsTitle": "批量创建面板",
+      "panelsDescription": "从预定义模板快速创建标准设备面板配置：",
+      "panelsFeatures": [
+        "网络设备标准面板模板（24口、48口等）",
+        "服务器面板模板（双网口、管理口等）",
+        "存储设备面板模板",
+        "PDU电源面板模板"
+      ],
+      "cablesTitle": "批量导入线缆连接",
+      "cablesDescription": "通过 Excel/CSV 文件批量导入线缆连接信息：",
+      "cablesFeatures": [
+        "线缆类型、长度、颜色",
+        "本端端口和对端端口ID",
+        "自动建立连接关系",
+        "自动更新端口状态"
+      ]
+    },
+    "actions": {
+      "importDevices": "批量导入设备",
+      "createFromTemplate": "从模板创建面板",
+      "importCables": "批量导入线缆"
+    },
+    "modals": {
+      "importDevices": "批量导入设备",
+      "importCables": "批量导入线缆",
+      "createFromTemplate": "从模板创建面板",
+      "selectTemplate": "选择模板",
+      "selectDevice": "选择设备"
+    },
+    "formLabels": {
+      "selectTemplate": "选择模板",
+      "selectDevice": "选择设备"
+    },
+    "formPlaceholders": {
+      "selectTemplate": "选择面板模板",
+      "selectDevice": "选择目标设备"
+    },
+    "messages": {
+      "loadTemplatesFailed": "加载模板失败",
+      "loadDevicesFailed": "加载设备失败",
+      "loadCabinetsFailed": "加载机柜失败",
+      "createPanelSuccess": "从模板创建面板成功",
+      "createPanelFailed": "创建失败",
+      "partialImportFailed": "部分导入失败",
+      "importDevicesCablesDeveloping": "线缆批量导入功能开发中",
+      "importSuccess": "批量导入成功"
+    },
+    "alerts": {
+      "assistantTitle": "批量上架助手",
+      "assistantDescription": "支持通过 Excel/CSV 文件批量导入设备和线缆信息，快速完成数据中心设备上架工作。",
+      "tipsTitle": "提示",
+      "tipsDescription": "批量导入前，请先创建好数据中心、机房和机柜等基础设施。导入时需要引用这些资源的ID。"
+    },
+    "table": {
+      "success": "成功",
+      "failed": "失败",
+      "successCount": "成功: {count} 条",
+      "failedCount": "失败: {count} 条",
+      "rowError": "第 {row} 行: {error}"
+    },
+    "validation": {
+      "deviceNameRequired": "设备名称不能为空",
+      "deviceTypeRequired": "设备类型必须是: {types}",
+      "cabinetIdRequired": "机柜ID不存在",
+      "uPositionInvalid": "U位位置必须是1-42之间的数字",
+      "uHeightInvalid": "U高度必须是正整数",
+      "cableLengthInvalid": "长度必须是正数",
+      "cableTypeRequired": "线缆类型必须是: {types}"
+    }
+  },
+  "panelTemplate": {
+    "title": "面板模板管理",
+    "description": "管理可复用的面板配置模板，用于快速创建标准化的设备面板",
+    "tabs": {
+      "overview": "概览",
+      "portLayout": "端口布局",
+      "usage": "使用情况"
+    },
+    "fields": {
+      "id": "ID",
+      "name": "模板名称",
+      "type": "面板类型",
+      "portCount": "端口数量",
+      "description": "描述",
+      "width": "宽度",
+      "height": "高度",
+      "size": "尺寸",
+      "usage": "使用次数",
+      "isSystem": "系统预设",
+      "createdAt": "创建时间",
+      "updatedAt": "更新时间"
+    },
+    "panelTypes": {
+      "ETHERNET": "以太网",
+      "FIBER": "光纤",
+      "POWER": "电源",
+      "SERIAL": "串口",
+      "USB": "USB",
+      "OTHER": "其他"
+    },
+    "actions": {
+      "create": "创建自定义模板",
+      "edit": "编辑",
+      "editLayout": "编辑布局",
+      "delete": "删除",
+      "view": "查看",
+      "initSystemTemplates": "初始化系统模板"
+    },
+    "modals": {
+      "createTitle": "创建模板",
+      "editTitle": "编辑模板",
+      "viewTitle": "模板详情",
+      "editLayoutTitle": "编辑面板布局",
+      "deleteConfirm": "确认删除此模板？",
+      "deleteConfirmDescription": "删除后无法恢复",
+      "basicInfo": "基本信息",
+      "portLayoutPreview": "端口布局预览",
+      "usePanels": "使用此模板的面板"
+    },
+    "formLabels": {
+      "name": "模板名称",
+      "type": "面板类型",
+      "portCount": "端口数量",
+      "description": "描述"
+    },
+    "formPlaceholders": {
+      "name": "例如：24口交换机面板",
+      "description": "模板描述信息"
+    },
+    "messages": {
+      "loadTemplatesFailed": "加载模板失败",
+      "loadTemplateDetailFailed": "加载模板详情失败",
+      "createSuccess": "创建成功",
+      "createFailed": "创建失败",
+      "updateSuccess": "更新成功",
+      "updateFailed": "更新失败",
+      "deleteSuccess": "删除成功",
+      "deleteFailed": "删除失败",
+      "saveSuccess": "模板已保存",
+      "saveFailed": "保存失败",
+      "initSuccess": "系统预设模板初始化成功",
+      "initFailed": "初始化失败",
+      "portInfo": "端口 {number}"
+    },
+    "validation": {
+      "nameRequired": "请输入模板名称",
+      "typeRequired": "请选择面板类型",
+      "portCountRequired": "请输入端口数量"
+    },
+    "table": {
+      "systemTag": "系统预设",
+      "noData": "暂无数据",
+      "total": "共 {total} 条",
+      "panelCount": "共 {count} 个面板使用此模板"
+    },
+    "buttons": {
+      "close": "关闭",
+      "confirm": "确认",
+      "cancel": "取消",
+      "save": "保存",
+      "delete": "删除",
+      "apply": "应用"
+    },
+    "portConfig": {
+      "title": "端口配置",
+      "addPort": "添加端口",
+      "removePort": "删除端口",
+      "portNumber": "端口号",
+      "position": "位置",
+      "size": "尺寸"
+    }
+  }
+}

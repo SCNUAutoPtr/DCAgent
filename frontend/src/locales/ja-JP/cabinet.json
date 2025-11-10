@@ -1,0 +1,157 @@
+{
+  "title": "ラック一覧",
+  "description": "機械室内のすべてのラックとユニット（U）を管理します。2D/3D可視化ビューに対応",
+  "createTitle": "新しいラックを作成",
+  "editTitle": "ラックを編集",
+  "fields": {
+    "id": "ID",
+    "shortId": "ID",
+    "name": "ラック名",
+    "position": "位置",
+    "height": "Uサイズ",
+    "room": "所属機械室",
+    "deviceCount": "デバイス数",
+    "portUtilization": "ポート使用率",
+    "createdAt": "作成日時",
+    "actions": "操作"
+  },
+  "placeholders": {
+    "name": "例：A-01",
+    "position": "例：第1列第3行",
+    "height": "Uサイズを入力",
+    "room": "機械室を選択",
+    "search": "ラック名で検索"
+  },
+  "messages": {
+    "deleteConfirm": "このラックを削除してもよろしいですか？",
+    "deleteWarning": "削除後、配下のすべてのデバイスも一緒に削除されます",
+    "createSuccess": "ラックの作成に成功しました",
+    "updateSuccess": "ラックの更新に成功しました",
+    "deleteSuccess": "ラックの削除に成功しました",
+    "loadFailed": "ラック一覧の読み込みに失敗しました",
+    "updateFailed": "更新に失敗しました",
+    "createFailed": "作成に失敗しました",
+    "deleteFailed": "削除に失敗しました",
+    "selectCabinet": "ラックを選択してください",
+    "selectCabinetVisual": "左側からラックを選択して可視化を表示してください",
+    "noCabinets": "ラックがありません",
+    "panelLoadFailed": "デバイスパネルの読み込みに失敗しました",
+    "panelUnbindSuccess": "パネルがテンプレートから解除されました。ポートレイアウトをカスタマイズできるようになりました",
+    "panelUnbindFailed": "解除に失敗しました",
+    "deviceDeleteConfirm": "このデバイスを削除してもよろしいですか？",
+    "deviceCreated": "デバイスの作成に成功しました",
+    "deviceUpdated": "デバイスの更新に成功しました",
+    "deviceDeleted": "デバイスの削除に成功しました",
+    "deviceTransferSuccess": "デバイスが新しい位置に移動されました",
+    "deviceTransferFailed": "デバイスの移動に失敗しました",
+    "deviceCopySuccess": "デバイスの複製に成功しました",
+    "deviceCopyFailed": "デバイスの複製に失敗しました",
+    "positionOccupied": "ターゲット位置 U{uPosition} は既に使用されています",
+    "portPositionUpdated": "ポート位置が更新されました",
+    "portPositionUpdateFailed": "ポート位置の更新に失敗しました",
+    "deviceTypeError": "デバイスタイプを選択してください"
+  },
+  "validation": {
+    "nameRequired": "ラック名を入力してください",
+    "heightRequired": "Uサイズを入力してください",
+    "roomRequired": "機械室を選択してください",
+    "deviceNameRequired": "デバイス名を入力してください",
+    "deviceTypeRequired": "デバイスタイプを選択してください",
+    "deviceCabinetRequired": "ラックを選択してください",
+    "cabinetRequired": "ターゲットラックを選択してください",
+    "uPositionRequired": "ターゲットU位置を入力してください"
+  },
+  "table": {
+    "total": "合計 {total} 件"
+  },
+  "tabs": {
+    "cabinetList": "ラック一覧",
+    "visualization": "可視化ビュー"
+  },
+  "buttons": {
+    "create": "新しいラックを作成",
+    "addDevice": "デバイスを追加",
+    "editCabinet": "ラックを編集",
+    "editDevice": "デバイスを編集",
+    "editPanel": "パネル情報を編集",
+    "visualize": "可視化",
+    "edit": "編集",
+    "delete": "削除",
+    "selectRoom": "機械室を選択",
+    "search": "検索",
+    "confirm": "確認",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "addPanel": "パネルを追加",
+    "unbindTemplate": "テンプレートを解除",
+    "deviceTransfer": "送信",
+    "deviceCopy": "複製",
+    "confirmTransfer": "送信を確認",
+    "confirmCopy": "複製を確認",
+    "editDeviceButton": "デバイスを編集"
+  },
+  "labels": {
+    "cabinetName": "ラック名",
+    "position": "位置",
+    "uHeight": "Uサイズ",
+    "selectRoom": "所属機械室",
+    "deviceName": "デバイス名",
+    "deviceType": "デバイスタイプ",
+    "deviceModel": "型番",
+    "serialNo": "シリアルナンバー",
+    "selectCabinet": "所属ラック",
+    "uPosition": "開始U位置",
+    "uHeight": "占有U数",
+    "targetCabinet": "ターゲットラック",
+    "targetUPosition": "ターゲットU位置",
+    "deviceType": "デバイスタイプ",
+    "cabinetOverview": "ラック全景",
+    "selectCabinetPlaceholder": "ラックを選択または検索",
+    "cabinetStats": "ラック統計",
+    "devices": "台のデバイス"
+  },
+  "deviceTypes": {
+    "SERVER": "サーバー",
+    "SWITCH": "スイッチ",
+    "ROUTER": "ルーター",
+    "FIREWALL": "ファイアウォール",
+    "STORAGE": "ストレージ",
+    "PDU": "PDU",
+    "OTHER": "その他"
+  },
+  "panels": {
+    "title": "デバイスパネル",
+    "devicePanels": "デバイスパネル",
+    "noPanels": "このデバイスはパネルがありません",
+    "templateBound": "テンプレート",
+    "customized": "カスタマイズ済み",
+    "templateAlert": "このパネルはテンプレートを使用しています",
+    "templateAlertDesc": "このパネルはテンプレートに基づいて作成されており、ポートレイアウトはテンプレートで定義されています。解除後はポートレイアウトをカスタマイズできますが、テンプレートの更新を受け取れなくなります。",
+    "unbindConfirmTitle": "テンプレート解除を確認しますか？",
+    "unbindConfirmDesc": "解除後はポートレイアウトをカスタマイズできますが、テンプレートの更新を受け取れなくなります。",
+    "portNumber": "ポート",
+    "portStatus": "ステータス"
+  },
+  "transfer": {
+    "title": "デバイス移動",
+    "description": "デバイス {deviceName} は現在の位置からターゲット位置に移動します。元の位置は解放されます。"
+  },
+  "copy": {
+    "title": "デバイス複製",
+    "description": "デバイス {deviceName} のコピーを作成します。基本設定情報が含まれます。"
+  },
+  "views": {
+    "2dFrontPanel": "2Dフロントパネルビュー",
+    "3dView": "3D立体ビュー",
+    "selectCabinet": "ラックを選択"
+  },
+  "descriptions": {
+    "deviceType": "デバイスタイプ",
+    "model": "型番",
+    "serialNo": "シリアルナンバー",
+    "uPosition": "U位置"
+  },
+  "special": {
+    "visualize": "可視化"
+  }
+}

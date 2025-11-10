@@ -1,0 +1,69 @@
+{
+  "title": "设备管理",
+  "description": "管理机柜内的所有设备，包括服务器、交换机、路由器等",
+  "createTitle": "新建设备",
+  "editTitle": "编辑设备",
+  "fields": {
+    "id": "ID",
+    "name": "设备名称",
+    "type": "类型",
+    "model": "型号",
+    "serialNo": "序列号",
+    "uPosition": "U位",
+    "uHeight": "占用U数",
+    "cabinet": "所在位置",
+    "createdAt": "创建时间",
+    "actions": "操作"
+  },
+  "deviceTypes": {
+    "SERVER": "服务器",
+    "SWITCH": "交换机",
+    "ROUTER": "路由器",
+    "FIREWALL": "防火墙",
+    "STORAGE": "存储",
+    "PDU": "PDU",
+    "OTHER": "其他"
+  },
+  "placeholders": {
+    "name": "例如：WEB-Server-01",
+    "type": "选择设备类型",
+    "model": "例如：Dell PowerEdge R740",
+    "serialNo": "例如：SN123456789",
+    "uPosition": "1",
+    "uHeight": "1",
+    "cabinet": "选择机柜",
+    "search": "搜索设备名称或型号"
+  },
+  "messages": {
+    "deleteConfirm": "确定要删除这个设备吗？",
+    "deleteWarning": "删除后将同时删除其下所有面板和端口",
+    "createSuccess": "设备创建成功",
+    "updateSuccess": "设备更新成功",
+    "deleteSuccess": "设备删除成功",
+    "loadFailed": "加载设备列表失败",
+    "updateFailed": "更新失败",
+    "createFailed": "创建失败",
+    "deleteFailed": "删除失败"
+  },
+  "validation": {
+    "nameRequired": "请输入设备名称",
+    "typeRequired": "请选择设备类型",
+    "cabinetRequired": "请选择机柜",
+    "uHeightRequired": "占用U数为必填项"
+  },
+  "table": {
+    "total": "共 {total} 条"
+  },
+  "buttons": {
+    "create": "新建设备",
+    "edit": "编辑",
+    "delete": "删除",
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确定"
+  },
+  "filters": {
+    "selectCabinet": "选择机柜",
+    "selectType": "选择类型"
+  }
+}

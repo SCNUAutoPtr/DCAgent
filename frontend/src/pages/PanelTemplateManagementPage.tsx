@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   Table,
@@ -33,6 +34,7 @@ const { Title, Paragraph } = Typography;
  * 面板模板管理页面
  */
 export default function PanelTemplateManagementPage() {
+  const { t } = useTranslation('management');
   const [templates, setTemplates] = useState<PanelTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -52,7 +54,7 @@ export default function PanelTemplateManagementPage() {
       const data = await panelTemplateService.getAll();
       setTemplates(data);
     } catch (error: any) {
-      message.error('加载模板失败: ' + error.message);
+      message.error(t('panelTemplate.messages.loadTemplatesFailed') + ': ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -82,7 +84,7 @@ export default function PanelTemplateManagementPage() {
       setViewingTemplate(fullTemplate);
       setViewModalVisible(true);
     } catch (error: any) {
-      message.error('加载模板详情失败: ' + error.message);
+      message.error(t('panelTemplate.messages.loadTemplateDetailFailed') + ': ' + error.message);
     }
   };
 
@@ -92,7 +94,7 @@ export default function PanelTemplateManagementPage() {
       setEditingTemplate(fullTemplate);
       setEditorModalVisible(true);
     } catch (error: any) {
-      message.error('加载模板失败: ' + error.message);
+      message.error(t('panelTemplate.messages.loadTemplatesFailed') + ': ' + error.message);
     }
   };
 
@@ -119,22 +121,22 @@ export default function PanelTemplateManagementPage() {
         layoutConfig: { groups }, // 保存端口组信息
       });
 
-      message.success('模板已保存');
+      message.success(t('panelTemplate.messages.saveSuccess'));
       setEditorModalVisible(false);
       setEditingTemplate(null);
       loadTemplates();
     } catch (error: any) {
-      message.error('保存失败: ' + error.message);
+      message.error(t('panelTemplate.messages.saveFailed') + ': ' + error.message);
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await panelTemplateService.delete(id);
-      message.success('删除成功');
+      message.success(t('panelTemplate.messages.deleteSuccess'));
       loadTemplates();
     } catch (error: any) {
-      message.error('删除失败: ' + error.message);
+      message.error(t('panelTemplate.messages.deleteFailed') + ': ' + error.message);
     }
   };
 
@@ -145,78 +147,78 @@ export default function PanelTemplateManagementPage() {
       if (editingTemplate) {
         // 更新
         await panelTemplateService.update(editingTemplate.id, values);
-        message.success('更新成功');
+        message.success(t('panelTemplate.messages.updateSuccess'));
       } else {
         // 创建
         await panelTemplateService.create(values);
-        message.success('创建成功');
+        message.success(t('panelTemplate.messages.createSuccess'));
       }
 
       setModalVisible(false);
       loadTemplates();
     } catch (error: any) {
-      message.error('保存失败: ' + error.message);
+      message.error(t('panelTemplate.messages.saveFailed') + ': ' + error.message);
     }
   };
 
   const handleInitSystemTemplates = async () => {
     try {
       await panelTemplateService.initSystemTemplates();
-      message.success('系统预设模板初始化成功');
+      message.success(t('panelTemplate.messages.initSuccess'));
       loadTemplates();
     } catch (error: any) {
-      message.error('初始化失败: ' + error.message);
+      message.error(t('panelTemplate.messages.initFailed') + ': ' + error.message);
     }
   };
 
   const columns = [
     {
-      title: '模板名称',
+      title: t('panelTemplate.fields.name'),
       dataIndex: 'name',
       key: 'name',
       render: (text: string, record: PanelTemplate) => (
         <Space>
           {text}
-          {record.isSystem && <Tag color="blue">系统预设</Tag>}
+          {record.isSystem && <Tag color="blue">{t('panelTemplate.table.systemTag')}</Tag>}
         </Space>
       ),
     },
     {
-      title: '面板类型',
+      title: t('panelTemplate.fields.type'),
       dataIndex: 'type',
       key: 'type',
       render: (type: PanelType) => {
         const typeLabels: Record<PanelType, string> = {
-          ETHERNET: '以太网',
-          FIBER: '光纤',
-          POWER: '电源',
-          SERIAL: '串口',
-          USB: 'USB',
-          OTHER: '其他',
+          ETHERNET: t('panelTemplate.panelTypes.ETHERNET'),
+          FIBER: t('panelTemplate.panelTypes.FIBER'),
+          POWER: t('panelTemplate.panelTypes.POWER'),
+          SERIAL: t('panelTemplate.panelTypes.SERIAL'),
+          USB: t('panelTemplate.panelTypes.USB'),
+          OTHER: t('panelTemplate.panelTypes.OTHER'),
         };
         return typeLabels[type] || type;
       },
     },
     {
-      title: '端口数量',
+      title: t('panelTemplate.fields.portCount'),
       dataIndex: 'portCount',
       key: 'portCount',
     },
     {
-      title: '描述',
+      title: t('panelTemplate.fields.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
     },
     {
-      title: '使用次数',
+      title: t('panelTemplate.fields.usage'),
       key: 'usage',
       render: (_: any, record: any) => {
         return record.panels?.length || 0;
       },
     },
     {
-      title: '操作',
+      title: t('panelTemplate.actions.create'),
       key: 'action',
       render: (_: any, record: PanelTemplate) => (
         <Space>
@@ -225,14 +227,14 @@ export default function PanelTemplateManagementPage() {
             icon={<EyeOutlined />}
             onClick={() => handleView(record)}
           >
-            查看
+            {t('panelTemplate.actions.view')}
           </Button>
           <Button
             type="link"
             icon={<LayoutOutlined />}
             onClick={() => handleOpenEditor(record)}
           >
-            编辑布局
+            {t('panelTemplate.actions.editLayout')}
           </Button>
           {!record.isSystem && (
             <>
@@ -241,17 +243,17 @@ export default function PanelTemplateManagementPage() {
                 icon={<EditOutlined />}
                 onClick={() => handleEdit(record)}
               >
-                编辑
+                {t('panelTemplate.actions.edit')}
               </Button>
               <Popconfirm
-                title="确认删除此模板？"
-                description="删除后无法恢复"
+                title={t('panelTemplate.modals.deleteConfirm')}
+                description={t('panelTemplate.modals.deleteConfirmDescription')}
                 onConfirm={() => handleDelete(record.id)}
-                okText="确认"
-                cancelText="取消"
+                okText={t('panelTemplate.buttons.confirm')}
+                cancelText={t('panelTemplate.buttons.cancel')}
               >
                 <Button type="link" danger icon={<DeleteOutlined />}>
-                  删除
+                  {t('panelTemplate.actions.delete')}
                 </Button>
               </Popconfirm>
             </>
@@ -267,19 +269,19 @@ export default function PanelTemplateManagementPage() {
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <div>
-              <Title level={3}>面板模板管理</Title>
+              <Title level={3}>{t('panelTemplate.title')}</Title>
               <Paragraph type="secondary">
-                管理可复用的面板配置模板，用于快速创建标准化的设备面板
+                {t('panelTemplate.description')}
               </Paragraph>
             </div>
             <Space>
-              <Button onClick={handleInitSystemTemplates}>初始化系统模板</Button>
+              <Button onClick={handleInitSystemTemplates}>{t('panelTemplate.actions.initSystemTemplates')}</Button>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={handleCreate}
               >
-                创建自定义模板
+                {t('panelTemplate.actions.create')}
               </Button>
             </Space>
           </div>
@@ -296,7 +298,7 @@ export default function PanelTemplateManagementPage() {
 
       {/* 创建/编辑模板 Modal */}
       <Modal
-        title={editingTemplate ? '编辑模板' : '创建模板'}
+        title={editingTemplate ? t('panelTemplate.modals.editTitle') : t('panelTemplate.modals.createTitle')}
         open={modalVisible}
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
@@ -305,75 +307,75 @@ export default function PanelTemplateManagementPage() {
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="模板名称"
-            rules={[{ required: true, message: '请输入模板名称' }]}
+            label={t('panelTemplate.formLabels.name')}
+            rules={[{ required: true, message: t('panelTemplate.validation.nameRequired') }]}
           >
-            <Input placeholder="例如：24口交换机面板" />
+            <Input placeholder={t('panelTemplate.formPlaceholders.name')} />
           </Form.Item>
 
           <Form.Item
             name="type"
-            label="面板类型"
-            rules={[{ required: true, message: '请选择面板类型' }]}
+            label={t('panelTemplate.formLabels.type')}
+            rules={[{ required: true, message: t('panelTemplate.validation.typeRequired') }]}
           >
             <Select>
-              <Select.Option value="ETHERNET">以太网</Select.Option>
-              <Select.Option value="FIBER">光纤</Select.Option>
-              <Select.Option value="POWER">电源</Select.Option>
-              <Select.Option value="SERIAL">串口</Select.Option>
-              <Select.Option value="USB">USB</Select.Option>
-              <Select.Option value="OTHER">其他</Select.Option>
+              <Select.Option value="ETHERNET">{t('panelTemplate.panelTypes.ETHERNET')}</Select.Option>
+              <Select.Option value="FIBER">{t('panelTemplate.panelTypes.FIBER')}</Select.Option>
+              <Select.Option value="POWER">{t('panelTemplate.panelTypes.POWER')}</Select.Option>
+              <Select.Option value="SERIAL">{t('panelTemplate.panelTypes.SERIAL')}</Select.Option>
+              <Select.Option value="USB">{t('panelTemplate.panelTypes.USB')}</Select.Option>
+              <Select.Option value="OTHER">{t('panelTemplate.panelTypes.OTHER')}</Select.Option>
             </Select>
           </Form.Item>
 
           <Form.Item
             name="portCount"
-            label="端口数量"
-            rules={[{ required: true, message: '请输入端口数量' }]}
+            label={t('panelTemplate.formLabels.portCount')}
+            rules={[{ required: true, message: t('panelTemplate.validation.portCountRequired') }]}
           >
             <InputNumber min={1} max={96} style={{ width: '100%' }} />
           </Form.Item>
 
-          <Form.Item name="description" label="描述">
-            <Input.TextArea rows={3} placeholder="模板描述信息" />
+          <Form.Item name="description" label={t('panelTemplate.formLabels.description')}>
+            <Input.TextArea rows={3} placeholder={t('panelTemplate.formPlaceholders.description')} />
           </Form.Item>
         </Form>
       </Modal>
 
       {/* 查看模板详情 Modal */}
       <Modal
-        title="模板详情"
+        title={t('panelTemplate.modals.viewTitle')}
         open={viewModalVisible}
         onCancel={() => setViewModalVisible(false)}
         footer={[
           <Button key="close" onClick={() => setViewModalVisible(false)}>
-            关闭
+            {t('panelTemplate.buttons.close')}
           </Button>,
         ]}
         width={800}
       >
         {viewingTemplate && (
           <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-            <Card size="small" title="基本信息">
+            <Card size="small" title={t('panelTemplate.modals.basicInfo')}>
               <p>
-                <strong>模板名称:</strong> {viewingTemplate.name}
+                <strong>{t('panelTemplate.fields.name')}:</strong> {viewingTemplate.name}
               </p>
               <p>
-                <strong>面板类型:</strong> {viewingTemplate.type}
+                <strong>{t('panelTemplate.fields.type')}:</strong> {viewingTemplate.type}
               </p>
               <p>
-                <strong>端口数量:</strong> {viewingTemplate.portCount}
+                <strong>{t('panelTemplate.fields.portCount')}:</strong> {viewingTemplate.portCount}
               </p>
               <p>
-                <strong>描述:</strong> {viewingTemplate.description || '无'}
+                <strong>{t('panelTemplate.fields.description')}:</strong> {viewingTemplate.description || t('panelTemplate.table.noData')}
               </p>
               <p>
-                <strong>尺寸:</strong> {formatPanelSize(viewingTemplate.width, viewingTemplate.height)}
+                <strong>{t('panelTemplate.fields.size')}:</strong> {formatPanelSize(viewingTemplate.width, viewingTemplate.height)}
               </p>
             </Card>
 
             {viewingTemplate.portDefinitions && (
-              <Card size="small" title="端口布局预览">
+              <Card size="small" title={t('panelTemplate.modals.portLayoutPreview')}>
                 {(() => {
                   // 将模板转换为Panel和Port格式以供PanelVisualizer使用
                   const previewPanel: Panel = {
@@ -410,7 +412,7 @@ export default function PanelTemplateManagementPage() {
                       panel={previewPanel}
                       ports={previewPorts}
                       onPortClick={(port) => {
-                        message.info(`端口 ${port.number}`);
+                        message.info(t('panelTemplate.messages.portInfo', { number: port.number }));
                       }}
                     />
                   );
@@ -419,8 +421,8 @@ export default function PanelTemplateManagementPage() {
             )}
 
             {(viewingTemplate as any).panels && (
-              <Card size="small" title="使用此模板的面板">
-                <p>共 {(viewingTemplate as any).panels.length} 个面板使用此模板</p>
+              <Card size="small" title={t('panelTemplate.modals.usePanels')}>
+                <p>{t('panelTemplate.table.panelCount', { count: (viewingTemplate as any).panels.length })}</p>
               </Card>
             )}
           </Space>
@@ -429,7 +431,7 @@ export default function PanelTemplateManagementPage() {
 
       {/* 布局编辑器 Modal */}
       <Modal
-        title="编辑面板布局"
+        title={t('panelTemplate.modals.editLayoutTitle')}
         open={editorModalVisible}
         onCancel={() => {
           setEditorModalVisible(false);

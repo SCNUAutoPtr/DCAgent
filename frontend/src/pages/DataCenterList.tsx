@@ -17,6 +17,7 @@ import {
   DeleteOutlined,
   DatabaseOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { DataCenter } from '@/types';
 import { dataCenterService } from '@/services/dataCenterService';
 
@@ -24,6 +25,7 @@ const { Title } = Typography;
 const { Search } = Input;
 
 export default function DataCenterList() {
+  const { t } = useTranslation(['dataCenter', 'common']);
   const [dataCenters, setDataCenters] = useState<DataCenter[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -39,7 +41,7 @@ export default function DataCenterList() {
         : await dataCenterService.getAll();
       setDataCenters(data);
     } catch (error) {
-      message.error('加载数据中心列表失败');
+      message.error(t('dataCenter:messages.loadFailed'));
       console.error(error);
     } finally {
       setLoading(false);
@@ -75,10 +77,10 @@ export default function DataCenterList() {
       const values = await form.validateFields();
       if (editingDataCenter) {
         await dataCenterService.update(editingDataCenter.id, values);
-        message.success('数据中心更新成功');
+        message.success(t('dataCenter:messages.updateSuccess'));
       } else {
         await dataCenterService.create(values);
-        message.success('数据中心创建成功');
+        message.success(t('dataCenter:messages.createSuccess'));
       }
       handleCloseModal();
       loadDataCenters();
@@ -87,7 +89,7 @@ export default function DataCenterList() {
         // 表单验证错误
         return;
       }
-      message.error(editingDataCenter ? '更新失败' : '创建失败');
+      message.error(editingDataCenter ? t('dataCenter:messages.updateFailed') : t('dataCenter:messages.createFailed'));
       console.error(error);
     }
   };
@@ -96,10 +98,10 @@ export default function DataCenterList() {
   const handleDelete = async (id: string) => {
     try {
       await dataCenterService.delete(id);
-      message.success('数据中心删除成功');
+      message.success(t('dataCenter:messages.deleteSuccess'));
       loadDataCenters();
     } catch (error) {
-      message.error('删除失败');
+      message.error(t('dataCenter:messages.deleteFailed'));
       console.error(error);
     }
   };
@@ -111,30 +113,30 @@ export default function DataCenterList() {
 
   const columns = [
     {
-      title: 'ID',
+      title: t('dataCenter:fields.id'),
       dataIndex: 'shortId',
       key: 'shortId',
       width: 80,
     },
     {
-      title: '名称',
+      title: t('dataCenter:fields.name'),
       dataIndex: 'name',
       key: 'name',
     },
     {
-      title: '位置',
+      title: t('dataCenter:fields.location'),
       dataIndex: 'location',
       key: 'location',
       render: (text: string) => text || '-',
     },
     {
-      title: '创建时间',
+      title: t('dataCenter:fields.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (text: string) => new Date(text).toLocaleString('zh-CN'),
     },
     {
-      title: '操作',
+      title: t('dataCenter:fields.actions'),
       key: 'actions',
       width: 150,
       render: (_: any, record: DataCenter) => (
@@ -145,17 +147,17 @@ export default function DataCenterList() {
             icon={<EditOutlined />}
             onClick={() => handleOpenModal(record)}
           >
-            编辑
+            {t('common:actions.edit')}
           </Button>
           <Popconfirm
-            title="确定要删除这个数据中心吗？"
-            description="删除后将同时删除其下所有机房、机柜和设备"
+            title={t('dataCenter:messages.deleteConfirm')}
+            description={t('dataCenter:messages.deleteWarning')}
             onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
           >
             <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
+              {t('common:actions.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -166,19 +168,19 @@ export default function DataCenterList() {
   return (
     <div>
       <Title level={2}>
-        <DatabaseOutlined /> 数据中心管理
+        <DatabaseOutlined /> {t('dataCenter:title')}
       </Title>
       <p style={{ color: '#8c8c8c', marginBottom: 24 }}>
-        管理所有数据中心，每个数据中心可以包含多个机房
+        {t('dataCenter:description')}
       </p>
 
       <Card>
         <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
-            新建数据中心
+            {t('common:actions.create')} {t('dataCenter:createTitle')}
           </Button>
           <Search
-            placeholder="搜索数据中心名称或位置"
+            placeholder={t('dataCenter:placeholders.search')}
             allowClear
             onSearch={handleSearch}
             style={{ width: 300 }}
@@ -193,29 +195,29 @@ export default function DataCenterList() {
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: (total) => t('dataCenter:table.total', { total }),
           }}
         />
       </Card>
 
       <Modal
-        title={editingDataCenter ? '编辑数据中心' : '新建数据中心'}
+        title={editingDataCenter ? t('dataCenter:editTitle') : t('dataCenter:createTitle')}
         open={modalVisible}
         onOk={handleSave}
         onCancel={handleCloseModal}
-        okText="保存"
-        cancelText="取消"
+        okText={t('common:actions.save')}
+        cancelText={t('common:actions.cancel')}
       >
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="数据中心名称"
-            rules={[{ required: true, message: '请输入数据中心名称' }]}
+            label={t('dataCenter:fields.name')}
+            rules={[{ required: true, message: t('dataCenter:validation.nameRequired') }]}
           >
-            <Input placeholder="例如：北京数据中心" />
+            <Input placeholder={t('dataCenter:placeholders.name')} />
           </Form.Item>
-          <Form.Item name="location" label="位置">
-            <Input placeholder="例如：北京市朝阳区" />
+          <Form.Item name="location" label={t('dataCenter:fields.location')}>
+            <Input placeholder={t('dataCenter:placeholders.location')} />
           </Form.Item>
         </Form>
       </Modal>

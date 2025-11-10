@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   Descriptions,
@@ -38,27 +39,31 @@ import dayjs from 'dayjs';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-// 状态映射
-const moduleStatusMap: Record<ModuleStatus, { label: string; color: string }> = {
-  IN_STOCK: { label: '在库', color: 'default' },
-  INSTALLED: { label: '已安装', color: 'green' },
-  RESERVED: { label: '预留', color: 'blue' },
-  FAULTY: { label: '故障', color: 'red' },
-  SCRAPPED: { label: '已报废', color: 'gray' },
-};
+// 获取状态映射的函数
+const getModuleStatusMap = (t: any): Record<ModuleStatus, { label: string; color: string }> => ({
+  IN_STOCK: { label: t('moduleStatus.IN_STOCK'), color: 'default' },
+  INSTALLED: { label: t('moduleStatus.INSTALLED'), color: 'green' },
+  RESERVED: { label: t('moduleStatus.RESERVED'), color: 'blue' },
+  FAULTY: { label: t('moduleStatus.FAULTY'), color: 'red' },
+  SCRAPPED: { label: t('moduleStatus.SCRAPPED'), color: 'gray' },
+});
 
-// 移动类型映射
-const movementTypeMap: Record<MovementType, { label: string; icon: any; color: string }> = {
-  PURCHASE: { label: '采购入库', icon: <ImportOutlined />, color: 'blue' },
-  INSTALL: { label: '安装', icon: <CheckCircleOutlined />, color: 'green' },
-  UNINSTALL: { label: '卸下', icon: <ExportOutlined />, color: 'orange' },
-  TRANSFER: { label: '转移', icon: <SyncOutlined />, color: 'purple' },
-  REPAIR: { label: '送修', icon: <ToolOutlined />, color: 'red' },
-  RETURN: { label: '返回', icon: <CheckCircleOutlined />, color: 'cyan' },
-  SCRAP: { label: '报废', icon: <CloseCircleOutlined />, color: 'gray' },
-};
+// 获取移动类型映射的函数
+const getMovementTypeMap = (t: any): Record<MovementType, { label: string; icon: any; color: string }> => ({
+  PURCHASE: { label: t('movementTypes.PURCHASE'), icon: <ImportOutlined />, color: 'blue' },
+  INSTALL: { label: t('movementTypes.INSTALL'), icon: <CheckCircleOutlined />, color: 'green' },
+  UNINSTALL: { label: t('movementTypes.UNINSTALL'), icon: <ExportOutlined />, color: 'orange' },
+  TRANSFER: { label: t('movementTypes.TRANSFER'), icon: <SyncOutlined />, color: 'purple' },
+  REPAIR: { label: t('movementTypes.REPAIR'), icon: <ToolOutlined />, color: 'red' },
+  RETURN: { label: t('movementTypes.RETURN'), icon: <CheckCircleOutlined />, color: 'cyan' },
+  SCRAP: { label: t('movementTypes.SCRAP'), icon: <CloseCircleOutlined />, color: 'gray' },
+});
 
 export default function OpticalModuleDetail() {
+  const { t } = useTranslation('opticalModule');
+  const moduleStatusMap = getModuleStatusMap(t);
+  const movementTypeMap = getMovementTypeMap(t);
+
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [module, setModule] = useState<OpticalModule | null>(null);
@@ -87,7 +92,7 @@ export default function OpticalModuleDetail() {
       const data = await response.json();
       setModule(data);
     } catch (error) {
-      message.error('加载光模块信息失败');
+      message.error(t('messages.loadDetailFailed'));
       console.error(error);
     } finally {
       setLoading(false);
@@ -105,7 +110,7 @@ export default function OpticalModuleDetail() {
       const data = await response.json();
       setMovements(data);
     } catch (error) {
-      console.error('加载移动历史失败:', error);
+      console.error(t('messages.loadHistoryFailed'), error);
     }
   };
 
@@ -127,13 +132,13 @@ export default function OpticalModuleDetail() {
         const error = await response.json();
         throw new Error(error.error);
       }
-      message.success('安装成功');
+      message.success(t('messages.installSuccess'));
       setInstallModalVisible(false);
       installForm.resetFields();
       loadModule();
       loadHistory();
     } catch (error: any) {
-      message.error(error.message || '安装失败');
+      message.error(error.message || t('messages.installFailed'));
     }
   };
 
@@ -150,13 +155,13 @@ export default function OpticalModuleDetail() {
         const error = await response.json();
         throw new Error(error.error);
       }
-      message.success('卸下成功');
+      message.success(t('messages.uninstallSuccess'));
       setUninstallModalVisible(false);
       uninstallForm.resetFields();
       loadModule();
       loadHistory();
     } catch (error: any) {
-      message.error(error.message || '卸下失败');
+      message.error(error.message || t('messages.uninstallFailed'));
     }
   };
 
@@ -173,13 +178,13 @@ export default function OpticalModuleDetail() {
         const error = await response.json();
         throw new Error(error.error);
       }
-      message.success('转移成功');
+      message.success(t('messages.transferSuccess'));
       setTransferModalVisible(false);
       transferForm.resetFields();
       loadModule();
       loadHistory();
     } catch (error: any) {
-      message.error(error.message || '转移失败');
+      message.error(error.message || t('messages.transferFailed'));
     }
   };
 
@@ -196,13 +201,13 @@ export default function OpticalModuleDetail() {
         const error = await response.json();
         throw new Error(error.error);
       }
-      message.success('报废成功');
+      message.success(t('messages.scrapSuccess'));
       setScrapModalVisible(false);
       scrapForm.resetFields();
       loadModule();
       loadHistory();
     } catch (error: any) {
-      message.error(error.message || '报废失败');
+      message.error(error.message || t('messages.scrapFailed'));
     }
   };
 
@@ -217,8 +222,8 @@ export default function OpticalModuleDetail() {
   if (!module) {
     return (
       <Alert
-        message="光模块不存在"
-        description="未找到该光模块信息"
+        message={t('noData.moduleNotFound')}
+        description={t('noData.moduleNotFound')}
         type="error"
         showIcon
       />
@@ -230,87 +235,87 @@ export default function OpticalModuleDetail() {
       {/* 头部操作栏 */}
       <Space style={{ marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/optical-modules')}>
-          返回列表
+          {t('buttons.back')}
         </Button>
         <Button icon={<EditOutlined />} onClick={() => navigate(`/optical-modules/${id}/edit`)}>
-          编辑信息
+          {t('buttons.editInfo')}
         </Button>
         {module.status === 'IN_STOCK' && (
           <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => setInstallModalVisible(true)}>
-            安装到端口
+            {t('buttons.install')}
           </Button>
         )}
         {module.status === 'INSTALLED' && (
           <>
             <Button icon={<ExportOutlined />} onClick={() => setUninstallModalVisible(true)}>
-              卸下
+              {t('buttons.uninstall')}
             </Button>
             <Button icon={<SyncOutlined />} onClick={() => setTransferModalVisible(true)}>
-              转移
+              {t('buttons.transfer')}
             </Button>
           </>
         )}
         {module.status !== 'SCRAPPED' && (
           <Popconfirm
-            title="确定报废该光模块吗？"
-            description="报废后无法恢复"
+            title={t('messages.scrappingConfirm')}
+            description={t('messages.scrappingWarning')}
             onConfirm={() => setScrapModalVisible(true)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('buttons.confirm')}
+            cancelText={t('buttons.cancel')}
           >
             <Button danger icon={<DeleteOutlined />}>
-              报废
+              {t('buttons.scrap')}
             </Button>
           </Popconfirm>
         )}
       </Space>
 
       <Title level={2}>
-        <ToolOutlined /> 光模块详情
+        <ToolOutlined /> {t('detailTitle')}
       </Title>
 
       {/* 基本信息卡片 */}
-      <Card title="基本信息" style={{ marginBottom: 16 }}>
+      <Card title={t('tabs.basicInfo')} style={{ marginBottom: 16 }}>
         <Descriptions bordered column={2}>
-          <Descriptions.Item label="序列号" span={2}>
+          <Descriptions.Item label={t('fields.serialNo')} span={2}>
             <Text strong copyable>
               {module.serialNo}
             </Text>
           </Descriptions.Item>
-          <Descriptions.Item label="型号">{module.model}</Descriptions.Item>
-          <Descriptions.Item label="厂商">{module.vendor}</Descriptions.Item>
-          <Descriptions.Item label="模块类型">{module.moduleType}</Descriptions.Item>
-          <Descriptions.Item label="状态">
+          <Descriptions.Item label={t('fields.model')}>{module.model}</Descriptions.Item>
+          <Descriptions.Item label={t('fields.vendor')}>{module.vendor}</Descriptions.Item>
+          <Descriptions.Item label={t('fields.moduleType')}>{module.moduleType}</Descriptions.Item>
+          <Descriptions.Item label={t('fields.status')}>
             <Tag color={moduleStatusMap[module.status]?.color}>
               {moduleStatusMap[module.status]?.label}
             </Tag>
           </Descriptions.Item>
-          <Descriptions.Item label="波长">
+          <Descriptions.Item label={t('fields.wavelength')}>
             {module.wavelength || '-'}
           </Descriptions.Item>
-          <Descriptions.Item label="传输距离">
+          <Descriptions.Item label={t('fields.distance')}>
             {module.distance || '-'}
           </Descriptions.Item>
-          <Descriptions.Item label="DDM支持" span={2}>
-            {module.ddmSupport ? <Tag color="green">支持</Tag> : <Tag>不支持</Tag>}
+          <Descriptions.Item label={t('fields.ddmSupport')} span={2}>
+            {module.ddmSupport ? <Tag color="green">{t('moduleStatus.INSTALLED')}</Tag> : <Tag>{t('noData.noLocation')}</Tag>}
           </Descriptions.Item>
         </Descriptions>
       </Card>
 
       {/* 当前位置信息 */}
       {module.currentPort && (
-        <Card title="当前位置" style={{ marginBottom: 16 }}>
+        <Card title={t('tabs.currentLocation')} style={{ marginBottom: 16 }}>
           <Descriptions bordered column={2}>
-            <Descriptions.Item label="设备">
-              {module.currentPort.panel?.device?.name || '未知设备'}
+            <Descriptions.Item label={t('fields.currentPort')}>
+              {module.currentPort.panel?.device?.name || t('noData.moduleNotFound')}
             </Descriptions.Item>
-            <Descriptions.Item label="面板">
-              {module.currentPort.panel?.name || '未知面板'}
+            <Descriptions.Item label={t('tabs.basicInfo')}>
+              {module.currentPort.panel?.name || t('noData.moduleNotFound')}
             </Descriptions.Item>
-            <Descriptions.Item label="端口编号">
+            <Descriptions.Item label={t('fields.currentPort')}>
               {module.currentPort.number}
             </Descriptions.Item>
-            <Descriptions.Item label="端口类型">
+            <Descriptions.Item label={t('fields.moduleType')}>
               {module.currentPort.portType || '-'}
             </Descriptions.Item>
           </Descriptions>
@@ -318,30 +323,30 @@ export default function OpticalModuleDetail() {
       )}
 
       {/* 采购信息 */}
-      <Card title="采购信息" style={{ marginBottom: 16 }}>
+      <Card title={t('tabs.purchaseInfo')} style={{ marginBottom: 16 }}>
         <Descriptions bordered column={2}>
-          <Descriptions.Item label="供应商">
+          <Descriptions.Item label={t('fields.supplier')}>
             {module.supplier || '-'}
           </Descriptions.Item>
-          <Descriptions.Item label="采购价格">
+          <Descriptions.Item label={t('fields.price')}>
             {module.price ? `¥${module.price}` : '-'}
           </Descriptions.Item>
-          <Descriptions.Item label="采购日期">
+          <Descriptions.Item label={t('fields.purchaseDate')}>
             {module.purchaseDate ? dayjs(module.purchaseDate).format('YYYY-MM-DD') : '-'}
           </Descriptions.Item>
-          <Descriptions.Item label="保修到期">
+          <Descriptions.Item label={t('fields.warranty')}>
             {module.warrantyExpiry ? dayjs(module.warrantyExpiry).format('YYYY-MM-DD') : '-'}
           </Descriptions.Item>
-          <Descriptions.Item label="备注" span={2}>
+          <Descriptions.Item label={t('fields.notes')} span={2}>
             {module.notes || '-'}
           </Descriptions.Item>
         </Descriptions>
       </Card>
 
       {/* 移动历史 */}
-      <Card title={<><HistoryOutlined /> 移动历史</>}>
+      <Card title={<><HistoryOutlined /> {t('tabs.movementHistory')}</>}>
         {movements.length === 0 ? (
-          <Text type="secondary">暂无移动历史</Text>
+          <Text type="secondary">{t('noData.noHistory')}</Text>
         ) : (
           <Timeline
             items={movements.map((movement) => {
@@ -359,20 +364,20 @@ export default function OpticalModuleDetail() {
                         {dayjs(movement.createdAt).format('YYYY-MM-DD HH:mm:ss')}
                       </Text>
                       {movement.operator && (
-                        <Text type="secondary">操作人: {movement.operator}</Text>
+                        <Text type="secondary">{t('fields.operator')}: {movement.operator}</Text>
                       )}
                       {movement.fromPort && (
                         <Text type="secondary">
-                          从: {movement.fromPort.panel?.device?.name} - {movement.fromPort.number}
+                          {t('movementTypes.TRANSFER')}: {movement.fromPort.panel?.device?.name} - {movement.fromPort.number}
                         </Text>
                       )}
                       {movement.toPort && (
                         <Text type="secondary">
-                          到: {movement.toPort.panel?.device?.name} - {movement.toPort.number}
+                          {t('movementTypes.INSTALL')}: {movement.toPort.panel?.device?.name} - {movement.toPort.number}
                         </Text>
                       )}
                       {movement.notes && (
-                        <Text type="secondary">备注: {movement.notes}</Text>
+                        <Text type="secondary">{t('fields.notes')}: {movement.notes}</Text>
                       )}
                     </Space>
                   </div>
@@ -385,16 +390,16 @@ export default function OpticalModuleDetail() {
 
       {/* 安装对话框 */}
       <Modal
-        title="安装到端口"
+        title={t('buttons.install')}
         open={installModalVisible}
         onOk={handleInstall}
         onCancel={() => setInstallModalVisible(false)}
-        okText="安装"
-        cancelText="取消"
+        okText={t('buttons.install')}
+        cancelText={t('buttons.cancel')}
       >
         <Alert
-          message="提示"
-          description="请输入目标端口的ID。安装后光模块状态将变为'已安装'。"
+          message={t('buttons.install')}
+          description={t('alerts.installInfo')}
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
@@ -402,58 +407,58 @@ export default function OpticalModuleDetail() {
         <Form form={installForm} layout="vertical">
           <Form.Item
             name="portId"
-            label="目标端口ID"
-            rules={[{ required: true, message: '请输入端口ID' }]}
+            label={t('fields.currentPort')}
+            rules={[{ required: true, message: t('validation.portIdRequired') }]}
           >
-            <Input placeholder="端口UUID" />
+            <Input placeholder={t('placeholders.portId')} />
           </Form.Item>
-          <Form.Item name="operator" label="操作人">
-            <Input placeholder="可选" />
+          <Form.Item name="operator" label={t('fields.operator')}>
+            <Input placeholder={t('placeholders.operator')} />
           </Form.Item>
-          <Form.Item name="notes" label="备注">
-            <Input.TextArea rows={3} placeholder="可选" />
+          <Form.Item name="notes" label={t('fields.notes')}>
+            <Input.TextArea rows={3} placeholder={t('placeholders.operator')} />
           </Form.Item>
         </Form>
       </Modal>
 
       {/* 卸下对话框 */}
       <Modal
-        title="从端口卸下"
+        title={t('buttons.uninstall')}
         open={uninstallModalVisible}
         onOk={handleUninstall}
         onCancel={() => setUninstallModalVisible(false)}
-        okText="卸下"
-        cancelText="取消"
+        okText={t('buttons.uninstall')}
+        cancelText={t('buttons.cancel')}
       >
         <Alert
-          message="注意"
-          description="卸下前请确保端口未连接线缆。卸下后光模块将回到库存。"
+          message={t('buttons.uninstall')}
+          description={t('alerts.uninstallWarning')}
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
         />
         <Form form={uninstallForm} layout="vertical">
-          <Form.Item name="operator" label="操作人">
-            <Input placeholder="可选" />
+          <Form.Item name="operator" label={t('fields.operator')}>
+            <Input placeholder={t('placeholders.operator')} />
           </Form.Item>
-          <Form.Item name="notes" label="备注">
-            <Input.TextArea rows={3} placeholder="可选" />
+          <Form.Item name="notes" label={t('fields.notes')}>
+            <Input.TextArea rows={3} placeholder={t('placeholders.operator')} />
           </Form.Item>
         </Form>
       </Modal>
 
       {/* 转移对话框 */}
       <Modal
-        title="转移到其他端口"
+        title={t('buttons.transfer')}
         open={transferModalVisible}
         onOk={handleTransfer}
         onCancel={() => setTransferModalVisible(false)}
-        okText="转移"
-        cancelText="取消"
+        okText={t('buttons.transfer')}
+        cancelText={t('buttons.cancel')}
       >
         <Alert
-          message="注意"
-          description="转移前请确保当前端口未连接线缆。"
+          message={t('buttons.transfer')}
+          description={t('alerts.transferWarning')}
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
@@ -461,47 +466,47 @@ export default function OpticalModuleDetail() {
         <Form form={transferForm} layout="vertical">
           <Form.Item
             name="targetPortId"
-            label="目标端口ID"
-            rules={[{ required: true, message: '请输入目标端口ID' }]}
+            label={t('fields.currentPort')}
+            rules={[{ required: true, message: t('validation.targetPortIdRequired') }]}
           >
-            <Input placeholder="端口UUID" />
+            <Input placeholder={t('placeholders.targetPortId')} />
           </Form.Item>
-          <Form.Item name="operator" label="操作人">
-            <Input placeholder="可选" />
+          <Form.Item name="operator" label={t('fields.operator')}>
+            <Input placeholder={t('placeholders.operator')} />
           </Form.Item>
-          <Form.Item name="notes" label="备注">
-            <Input.TextArea rows={3} placeholder="可选" />
+          <Form.Item name="notes" label={t('fields.notes')}>
+            <Input.TextArea rows={3} placeholder={t('placeholders.operator')} />
           </Form.Item>
         </Form>
       </Modal>
 
       {/* 报废对话框 */}
       <Modal
-        title="报废光模块"
+        title={t('buttons.scrap')}
         open={scrapModalVisible}
         onOk={handleScrap}
         onCancel={() => setScrapModalVisible(false)}
-        okText="确认报废"
-        cancelText="取消"
+        okText={t('buttons.scrap')}
+        cancelText={t('buttons.cancel')}
         okButtonProps={{ danger: true }}
       >
         <Alert
-          message="警告"
-          description="报废操作不可逆，请确认该光模块确实需要报废。"
+          message={t('buttons.scrap')}
+          description={t('alerts.scrappingWarning')}
           type="error"
           showIcon
           style={{ marginBottom: 16 }}
         />
         <Form form={scrapForm} layout="vertical">
-          <Form.Item name="operator" label="操作人">
-            <Input placeholder="可选" />
+          <Form.Item name="operator" label={t('fields.operator')}>
+            <Input placeholder={t('placeholders.operator')} />
           </Form.Item>
           <Form.Item
             name="notes"
-            label="报废原因"
-            rules={[{ required: true, message: '请说明报废原因' }]}
+            label={t('fields.notes')}
+            rules={[{ required: true, message: t('validation.notesRequired') }]}
           >
-            <Input.TextArea rows={3} placeholder="请详细说明报废原因" />
+            <Input.TextArea rows={3} placeholder={t('placeholders.scrappingReason')} />
           </Form.Item>
         </Form>
       </Modal>

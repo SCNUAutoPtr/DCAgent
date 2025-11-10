@@ -1,5 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
-import { Layout } from 'antd';
+import { Layout, ConfigProvider } from 'antd';
+import { useTranslation } from 'react-i18next';
+import { getAntdLocale } from './locales/languages';
 import AppHeader from './components/Layout/AppHeader';
 import AppSidebar from './components/Layout/AppSidebar';
 import Dashboard from './pages/Dashboard';
@@ -22,22 +24,28 @@ import OpticalModuleDetail from './pages/OpticalModuleDetail';
 const { Content } = Layout;
 
 function App() {
+  const { i18n } = useTranslation();
+
+  // 根据当前语言动态获取 Ant Design 的 locale
+  const antdLocale = getAntdLocale(i18n.language);
+
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <AppHeader />
-      <Layout>
-        <AppSidebar />
-        <Layout style={{ padding: '24px' }}>
-          <Content
-            style={{
-              padding: 24,
-              margin: 0,
-              minHeight: 280,
-              background: '#fff',
-              borderRadius: 8,
-            }}
-          >
-            <Routes>
+    <ConfigProvider locale={antdLocale}>
+      <Layout style={{ minHeight: '100vh' }}>
+        <AppHeader />
+        <Layout>
+          <AppSidebar />
+          <Layout style={{ padding: '24px' }}>
+            <Content
+              style={{
+                padding: 24,
+                margin: 0,
+                minHeight: 280,
+                background: '#fff',
+                borderRadius: 8,
+              }}
+            >
+              <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/datacenters" element={<DataCenterList />} />
               <Route path="/rooms" element={<RoomList />} />
@@ -56,11 +64,12 @@ function App() {
               <Route path="/optical-modules/:id" element={<OpticalModuleDetail />} />
               {/* SNMP 监控路由已隐藏 */}
               {/* <Route path="/monitoring" element={<MonitoringPage />} /> */}
-            </Routes>
-          </Content>
+              </Routes>
+            </Content>
+          </Layout>
         </Layout>
       </Layout>
-    </Layout>
+    </ConfigProvider>
   );
 }
 

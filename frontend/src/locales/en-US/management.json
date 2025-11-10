@@ -1,0 +1,341 @@
+{
+  "shortIdPool": {
+    "title": "ShortID Pool Management",
+    "description": "Unified management of shortIDs for all entity types, supporting batch generation, print tasks, and CSV export",
+    "tabs": {
+      "pool": "ShortID Pool",
+      "tasks": "Print Tasks"
+    },
+    "fields": {
+      "id": "ID",
+      "shortId": "ShortID",
+      "entityType": "Entity Type",
+      "status": "Status",
+      "batchNo": "Batch Number",
+      "printTask": "Print Task",
+      "printedAt": "Printed At",
+      "entityId": "Bound Entity ID",
+      "boundAt": "Bound At",
+      "notes": "Notes",
+      "createdAt": "Created At",
+      "completedAt": "Completed At",
+      "createdBy": "Created By",
+      "count": "Count",
+      "taskName": "Task Name"
+    },
+    "entityTypes": {
+      "DATA_CENTER": "Data Center",
+      "ROOM": "Room",
+      "CABINET": "Cabinet",
+      "DEVICE": "Device",
+      "PANEL": "Panel",
+      "PORT": "Port",
+      "CABLE": "Cable"
+    },
+    "statuses": {
+      "GENERATED": "Generated",
+      "PRINTED": "Printed",
+      "BOUND": "Bound",
+      "CANCELLED": "Cancelled",
+      "PENDING": "Pending",
+      "PRINTING": "Printing",
+      "COMPLETED": "Completed",
+      "FAILED": "Failed"
+    },
+    "actions": {
+      "allocate": "Allocate",
+      "release": "Release",
+      "regenerate": "Regenerate",
+      "createPrintTask": "Create Print Task",
+      "directGenerate": "Generate Directly",
+      "exportCSV": "Export CSV",
+      "complete": "Complete",
+      "scrap": "Scrap",
+      "search": "Search ShortID",
+      "refresh": "Refresh"
+    },
+    "stats": {
+      "total": "Total",
+      "generated": "Generated",
+      "printed": "Printed",
+      "bound": "Bound",
+      "cancelled": "Cancelled"
+    },
+    "modals": {
+      "createPrintTask": "Create Print Task",
+      "directGenerate": "Generate ShortID Directly",
+      "scrapShortId": "Scrap ShortID",
+      "confirmScrap": "Confirm Scrap"
+    },
+    "formLabels": {
+      "taskName": "Task Name",
+      "generateCount": "Generate Count",
+      "createdBy": "Created By",
+      "batchNo": "Batch Number",
+      "reason": "Reason"
+    },
+    "formPlaceholders": {
+      "taskName": "e.g.: First batch of labels in 2025",
+      "generateCount": "1-10000",
+      "createdBy": "Optional",
+      "batchNo": "Optional, e.g.: First batch in 2025",
+      "reason": "e.g.: Label damaged, lost, etc."
+    },
+    "messages": {
+      "loadPoolRecordsFailed": "Failed to load pool records",
+      "loadPrintTasksFailed": "Failed to load print tasks",
+      "createPrintTaskSuccess": "Print task created successfully",
+      "createPrintTaskFailed": "Failed to create print task",
+      "generateShortIdSuccess": "ShortID generated successfully",
+      "generateShortIdFailed": "Failed to generate ShortID",
+      "exportSuccess": "Exported successfully",
+      "exportFailed": "Export failed",
+      "completePrintTaskSuccess": "Print task marked as completed",
+      "completePrintTaskFailed": "Operation failed",
+      "scrapShortIdSuccess": "ShortID scrapped",
+      "scrapShortIdFailed": "Operation failed"
+    },
+    "filters": {
+      "entityType": "Entity Type",
+      "status": "Status"
+    },
+    "validation": {
+      "taskNameRequired": "Please enter task name",
+      "generateCountRequired": "Please enter generate count",
+      "reasonRequired": "Please enter reason"
+    },
+    "pagination": {
+      "total": "Total {total} records"
+    }
+  },
+  "bulkDeployment": {
+    "title": "Bulk Deployment Management",
+    "description": "Batch import and initialize new devices, panels, ports and cable connections",
+    "tabs": {
+      "devices": "Batch Create Devices",
+      "panels": "Batch Create Panels",
+      "cables": "Batch Import Cables"
+    },
+    "steps": {
+      "upload": "Upload File",
+      "validate": "Data Validation",
+      "preview": "Preview",
+      "deploy": "Execute Deployment"
+    },
+    "fields": {
+      "deviceName": "Device Name",
+      "deviceType": "Device Type",
+      "model": "Model",
+      "serialNo": "Serial Number",
+      "cabinetId": "Cabinet ID",
+      "uPosition": "U Position",
+      "uHeight": "U Height",
+      "cableLabel": "Label",
+      "cableType": "Cable Type",
+      "cableLength": "Length(m)",
+      "cableColor": "Color",
+      "portAId": "Port A ID",
+      "portBId": "Port B ID"
+    },
+    "deviceTypes": {
+      "SERVER": "Server",
+      "SWITCH": "Switch",
+      "ROUTER": "Router",
+      "FIREWALL": "Firewall",
+      "STORAGE": "Storage",
+      "PDU": "PDU",
+      "OTHER": "Other"
+    },
+    "cableTypes": {
+      "CAT5E": "CAT5E",
+      "CAT6": "CAT6",
+      "CAT6A": "CAT6A",
+      "FIBER_SM": "Single Mode Fiber",
+      "FIBER_MM": "Multi Mode Fiber",
+      "DAC": "DAC",
+      "AOC": "AOC",
+      "QSFP": "QSFP",
+      "OTHER": "Other"
+    },
+    "sections": {
+      "devicesTitle": "Batch Create Devices",
+      "devicesDescription": "Support batch import of device information through Excel/CSV files, including:",
+      "devicesFeatures": [
+        "Device name, model, serial number",
+        "Device type (SERVER, SWITCH, ROUTER, FIREWALL, STORAGE, PDU, OTHER)",
+        "Associated cabinet and U position allocation",
+        "Automatic validation of data integrity and legality"
+      ],
+      "panelsTitle": "Batch Create Panels",
+      "panelsDescription": "Quickly create standard device panel configurations from predefined templates:",
+      "panelsFeatures": [
+        "Network device standard panel templates (24 ports, 48 ports, etc.)",
+        "Server panel templates (dual network ports, management ports, etc.)",
+        "Storage device panel templates",
+        "PDU power panel templates"
+      ],
+      "cablesTitle": "Batch Import Cable Connections",
+      "cablesDescription": "Batch import cable connection information through Excel/CSV files:",
+      "cablesFeatures": [
+        "Cable type, length, color",
+        "Local port and remote port ID",
+        "Automatically establish connection relationships",
+        "Automatically update port status"
+      ]
+    },
+    "actions": {
+      "importDevices": "Batch Import Devices",
+      "createFromTemplate": "Create Panel from Template",
+      "importCables": "Batch Import Cables"
+    },
+    "modals": {
+      "importDevices": "Batch Import Devices",
+      "importCables": "Batch Import Cables",
+      "createFromTemplate": "Create Panel from Template",
+      "selectTemplate": "Select Template",
+      "selectDevice": "Select Device"
+    },
+    "formLabels": {
+      "selectTemplate": "Select Template",
+      "selectDevice": "Select Device"
+    },
+    "formPlaceholders": {
+      "selectTemplate": "Select a panel template",
+      "selectDevice": "Select target device"
+    },
+    "messages": {
+      "loadTemplatesFailed": "Failed to load templates",
+      "loadDevicesFailed": "Failed to load devices",
+      "loadCabinetsFailed": "Failed to load cabinets",
+      "createPanelSuccess": "Panel created from template successfully",
+      "createPanelFailed": "Failed to create",
+      "partialImportFailed": "Partial import failed",
+      "importDevicesCablesDeveloping": "Cable batch import feature is in development",
+      "importSuccess": "Batch import successful"
+    },
+    "alerts": {
+      "assistantTitle": "Bulk Deployment Assistant",
+      "assistantDescription": "Support batch import of device and cable information through Excel/CSV files, quickly complete the device rack-mounting work of data centers.",
+      "tipsTitle": "Tips",
+      "tipsDescription": "Before batch importing, please create data centers, rooms and cabinets as basic infrastructure first. You need to reference the IDs of these resources when importing."
+    },
+    "table": {
+      "success": "Success",
+      "failed": "Failed",
+      "successCount": "Success: {count} records",
+      "failedCount": "Failed: {count} records",
+      "rowError": "Row {row}: {error}"
+    },
+    "validation": {
+      "deviceNameRequired": "Device name cannot be empty",
+      "deviceTypeRequired": "Device type must be: {types}",
+      "cabinetIdRequired": "Cabinet ID does not exist",
+      "uPositionInvalid": "U position must be a number between 1-42",
+      "uHeightInvalid": "U height must be a positive integer",
+      "cableLengthInvalid": "Length must be a positive number",
+      "cableTypeRequired": "Cable type must be: {types}"
+    }
+  },
+  "panelTemplate": {
+    "title": "Panel Template Management",
+    "description": "Manage reusable panel configuration templates for quick creation of standardized device panels",
+    "tabs": {
+      "overview": "Overview",
+      "portLayout": "Port Layout",
+      "usage": "Usage"
+    },
+    "fields": {
+      "id": "ID",
+      "name": "Template Name",
+      "type": "Panel Type",
+      "portCount": "Port Count",
+      "description": "Description",
+      "width": "Width",
+      "height": "Height",
+      "size": "Size",
+      "usage": "Usage Count",
+      "isSystem": "System Preset",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At"
+    },
+    "panelTypes": {
+      "ETHERNET": "Ethernet",
+      "FIBER": "Fiber",
+      "POWER": "Power",
+      "SERIAL": "Serial",
+      "USB": "USB",
+      "OTHER": "Other"
+    },
+    "actions": {
+      "create": "Create Custom Template",
+      "edit": "Edit",
+      "editLayout": "Edit Layout",
+      "delete": "Delete",
+      "view": "View",
+      "initSystemTemplates": "Initialize System Templates"
+    },
+    "modals": {
+      "createTitle": "Create Template",
+      "editTitle": "Edit Template",
+      "viewTitle": "Template Details",
+      "editLayoutTitle": "Edit Panel Layout",
+      "deleteConfirm": "Confirm deletion of this template?",
+      "deleteConfirmDescription": "Cannot be recovered after deletion",
+      "basicInfo": "Basic Information",
+      "portLayoutPreview": "Port Layout Preview",
+      "usePanels": "Panels using this template"
+    },
+    "formLabels": {
+      "name": "Template Name",
+      "type": "Panel Type",
+      "portCount": "Port Count",
+      "description": "Description"
+    },
+    "formPlaceholders": {
+      "name": "e.g.: 24 Port Switch Panel",
+      "description": "Template description information"
+    },
+    "messages": {
+      "loadTemplatesFailed": "Failed to load templates",
+      "loadTemplateDetailFailed": "Failed to load template details",
+      "createSuccess": "Created successfully",
+      "createFailed": "Failed to create",
+      "updateSuccess": "Updated successfully",
+      "updateFailed": "Failed to update",
+      "deleteSuccess": "Deleted successfully",
+      "deleteFailed": "Failed to delete",
+      "saveSuccess": "Template saved",
+      "saveFailed": "Failed to save",
+      "initSuccess": "System preset templates initialized successfully",
+      "initFailed": "Initialization failed",
+      "portInfo": "Port {number}"
+    },
+    "validation": {
+      "nameRequired": "Please enter template name",
+      "typeRequired": "Please select panel type",
+      "portCountRequired": "Please enter port count"
+    },
+    "table": {
+      "systemTag": "System Preset",
+      "noData": "No data",
+      "total": "Total {total} records",
+      "panelCount": "{count} panels use this template"
+    },
+    "buttons": {
+      "close": "Close",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "save": "Save",
+      "delete": "Delete",
+      "apply": "Apply"
+    },
+    "portConfig": {
+      "title": "Port Configuration",
+      "addPort": "Add Port",
+      "removePort": "Remove Port",
+      "portNumber": "Port Number",
+      "position": "Position",
+      "size": "Size"
+    }
+  }
+}

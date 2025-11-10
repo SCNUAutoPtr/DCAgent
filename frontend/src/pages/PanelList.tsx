@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   Table,
@@ -28,17 +29,18 @@ const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
-// 面板类型中文映射
-const panelTypeMap: Record<PanelType, { label: string; color: string }> = {
-  ETHERNET: { label: '网口', color: 'blue' },
-  FIBER: { label: '光纤', color: 'cyan' },
-  POWER: { label: '电源', color: 'red' },
-  SERIAL: { label: '串口', color: 'orange' },
-  USB: { label: 'USB', color: 'purple' },
-  OTHER: { label: '其他', color: 'default' },
+// 面板类型颜色映射
+const panelTypeColorMap: Record<PanelType, string> = {
+  ETHERNET: 'blue',
+  FIBER: 'cyan',
+  POWER: 'red',
+  SERIAL: 'orange',
+  USB: 'purple',
+  OTHER: 'default',
 };
 
 export default function PanelList() {
+  const { t } = useTranslation('panel');
   const [panels, setPanels] = useState<Panel[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(false);
@@ -74,7 +76,7 @@ export default function PanelList() {
       }
       setPanels(data);
     } catch (error) {
-      message.error('加载面板列表失败');
+      message.error(t('messages.loadFailed'));
       console.error(error);
     } finally {
       setLoading(false);
@@ -111,10 +113,10 @@ export default function PanelList() {
       const values = await form.validateFields();
       if (editingPanel) {
         await panelService.update(editingPanel.id, values);
-        message.success('面板更新成功');
+        message.success(t('messages.updateSuccess'));
       } else {
         await panelService.create(values);
-        message.success('面板创建成功');
+        message.success(t('messages.createSuccess'));
       }
       handleCloseModal();
       loadPanels(undefined, selectedDevice, selectedType);
@@ -122,7 +124,7 @@ export default function PanelList() {
       if (error.errorFields) {
         return;
       }
-      message.error(editingPanel ? '更新失败' : '创建失败');
+      message.error(editingPanel ? t('messages.updateFailed') : t('messages.createFailed'));
       console.error(error);
     }
   };
@@ -131,10 +133,10 @@ export default function PanelList() {
   const handleDelete = async (id: string) => {
     try {
       await panelService.delete(id);
-      message.success('面板删除成功');
+      message.success(t('messages.deleteSuccess'));
       loadPanels(undefined, selectedDevice, selectedType);
     } catch (error) {
-      message.error('删除失败');
+      message.error(t('messages.deleteFailed'));
       console.error(error);
     }
   };
@@ -158,7 +160,7 @@ export default function PanelList() {
 
   const columns = [
     {
-      title: 'shortID',
+      title: t('fields.shortId'),
       dataIndex: 'shortId',
       key: 'shortId',
       width: 120,
@@ -166,21 +168,21 @@ export default function PanelList() {
         shortId ? <Text code>{ShortIdFormatter.toDisplayFormat(shortId)}</Text> : '-',
     },
     {
-      title: '面板名称',
+      title: t('fields.name'),
       dataIndex: 'name',
       key: 'name',
     },
     {
-      title: '类型',
+      title: t('fields.type'),
       dataIndex: 'type',
       key: 'type',
       render: (type: PanelType) => {
-        const config = panelTypeMap[type];
-        return <Tag color={config.color}>{config.label}</Tag>;
+        const color = panelTypeColorMap[type];
+        return <Tag color={color}>{t(`panelTypes.${type}`)}</Tag>;
       },
     },
     {
-      title: '所属设备',
+      title: t('fields.device'),
       dataIndex: 'deviceId',
       key: 'deviceId',
       render: (deviceId: string) => {
@@ -189,19 +191,19 @@ export default function PanelList() {
       },
     },
     {
-      title: '端口数',
+      title: t('fields.portCount'),
       dataIndex: 'ports',
       key: 'ports',
       render: (ports: any[]) => ports?.length || 0,
     },
     {
-      title: '创建时间',
+      title: t('fields.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (text: string) => new Date(text).toLocaleString('zh-CN'),
     },
     {
-      title: '操作',
+      title: t('fields.actions'),
       key: 'actions',
       width: 150,
       render: (_: any, record: Panel) => (
@@ -212,17 +214,17 @@ export default function PanelList() {
             icon={<EditOutlined />}
             onClick={() => handleOpenModal(record)}
           >
-            编辑
+            {t('buttons.edit')}
           </Button>
           <Popconfirm
-            title="确定要删除这个面板吗？"
-            description="删除后将同时删除其下所有端口"
+            title={t('messages.deleteConfirm')}
+            description={t('messages.deleteWarning')}
             onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('buttons.confirm')}
+            cancelText={t('buttons.cancel')}
           >
             <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
+              {t('buttons.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -233,20 +235,20 @@ export default function PanelList() {
   return (
     <div>
       <Title level={2}>
-        <ApartmentOutlined /> 面板管理
+        <ApartmentOutlined /> {t('title')}
       </Title>
       <p style={{ color: '#8c8c8c', marginBottom: 24 }}>
-        管理设备上的各类面板 (网口、光纤、电源等)
+        {t('description')}
       </p>
 
       <Card>
         <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
-              新建面板
+              {t('buttons.create')}
             </Button>
             <Select
-              placeholder="选择设备"
+              placeholder={t('filters.selectDevice')}
               allowClear
               style={{ width: 200 }}
               onChange={handleDeviceFilter}
@@ -262,7 +264,7 @@ export default function PanelList() {
               ))}
             </Select>
             <Select
-              placeholder="选择类型"
+              placeholder={t('filters.selectType')}
               allowClear
               style={{ width: 120 }}
               onChange={handleTypeFilter}
@@ -271,15 +273,15 @@ export default function PanelList() {
                 loadPanels();
               }}
             >
-              {Object.entries(panelTypeMap).map(([key, value]) => (
+              {Object.entries(panelTypeColorMap).map(([key]) => (
                 <Option key={key} value={key}>
-                  {value.label}
+                  {t(`panelTypes.${key}`)}
                 </Option>
               ))}
             </Select>
           </Space>
           <Search
-            placeholder="搜索面板名称"
+            placeholder={t('placeholders.search')}
             allowClear
             onSearch={handleSearch}
             style={{ width: 300 }}
@@ -294,46 +296,46 @@ export default function PanelList() {
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: (total) => t('table.total', { total }),
           }}
         />
       </Card>
 
       <Modal
-        title={editingPanel ? '编辑面板' : '新建面板'}
+        title={editingPanel ? t('editTitle') : t('createTitle')}
         open={modalVisible}
         onOk={handleSave}
         onCancel={handleCloseModal}
-        okText="保存"
-        cancelText="取消"
+        okText={t('buttons.save')}
+        cancelText={t('buttons.cancel')}
       >
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="面板名称"
-            rules={[{ required: true, message: '请输入面板名称' }]}
+            label={t('fields.name')}
+            rules={[{ required: true, message: t('validation.nameRequired') }]}
           >
-            <Input placeholder="例如：eth0" />
+            <Input placeholder={t('placeholders.name')} />
           </Form.Item>
           <Form.Item
             name="type"
-            label="面板类型"
-            rules={[{ required: true, message: '请选择面板类型' }]}
+            label={t('fields.type')}
+            rules={[{ required: true, message: t('validation.typeRequired') }]}
           >
-            <Select placeholder="选择面板类型">
-              {Object.entries(panelTypeMap).map(([key, value]) => (
+            <Select placeholder={t('placeholders.type')}>
+              {Object.entries(panelTypeColorMap).map(([key]) => (
                 <Option key={key} value={key}>
-                  {value.label}
+                  {t(`panelTypes.${key}`)}
                 </Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item
             name="deviceId"
-            label="所属设备"
-            rules={[{ required: true, message: '请选择设备' }]}
+            label={t('fields.device')}
+            rules={[{ required: true, message: t('validation.deviceRequired') }]}
           >
-            <Select placeholder="选择设备" showSearch optionFilterProp="children">
+            <Select placeholder={t('placeholders.device')} showSearch optionFilterProp="children">
               {devices.map((device) => (
                 <Option key={device.id} value={device.id}>
                   {device.name} ({device.type})

@@ -1,0 +1,68 @@
+{
+  "title": "面板管理",
+  "description": "管理设备上的各类面板 (网口、光纤、电源等)",
+  "createTitle": "新建面板",
+  "editTitle": "编辑面板",
+  "fields": {
+    "id": "ID",
+    "shortId": "shortID",
+    "name": "面板名称",
+    "type": "类型",
+    "device": "所属设备",
+    "template": "模板",
+    "isCustomized": "自定义",
+    "portCount": "端口数",
+    "createdAt": "创建时间",
+    "actions": "操作"
+  },
+  "panelTypes": {
+    "ETHERNET": "网口",
+    "FIBER": "光纤",
+    "POWER": "电源",
+    "SERIAL": "串口",
+    "USB": "USB",
+    "OTHER": "其他"
+  },
+  "placeholders": {
+    "name": "例如：eth0",
+    "type": "选择面板类型",
+    "device": "选择设备",
+    "template": "选择模板",
+    "search": "搜索面板名称"
+  },
+  "messages": {
+    "deleteConfirm": "确定要删除这个面板吗？",
+    "deleteWarning": "删除后将同时删除其下所有端口",
+    "createSuccess": "面板创建成功",
+    "updateSuccess": "面板更新成功",
+    "deleteSuccess": "面板删除成功",
+    "loadFailed": "加载面板列表失败",
+    "updateFailed": "更新失败",
+    "createFailed": "创建失败",
+    "deleteFailed": "删除失败"
+  },
+  "validation": {
+    "nameRequired": "请输入面板名称",
+    "typeRequired": "请选择面板类型",
+    "deviceRequired": "请选择设备"
+  },
+  "table": {
+    "total": "共 {total} 条"
+  },
+  "labels": {
+    "customized": "自定义",
+    "fromTemplate": "从模板"
+  },
+  "buttons": {
+    "create": "新建面板",
+    "edit": "编辑",
+    "delete": "删除",
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确定"
+  },
+  "filters": {
+    "selectDevice": "选择设备",
+    "selectType": "选择类型"
+  }
+}

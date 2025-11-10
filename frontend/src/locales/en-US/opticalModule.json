@@ -1,0 +1,147 @@
+{
+  "title": "Optical Module Management",
+  "description": "Manage the life cycle of optical modules, including purchase, installation, transfer, repair, and scrapping",
+  "createTitle": "Purchase and Stock In",
+  "editTitle": "Edit Optical Module",
+  "detailTitle": "Optical Module Details",
+  "fields": {
+    "id": "ID",
+    "serialNo": "Serial Number",
+    "model": "Model",
+    "vendor": "Vendor",
+    "moduleType": "Module Type",
+    "wavelength": "Wavelength",
+    "distance": "Transmission Distance",
+    "ddmSupport": "DDM Support",
+    "status": "Status",
+    "currentPort": "Current Location",
+    "purchaseInfo": "Purchase Information",
+    "supplier": "Supplier",
+    "price": "Purchase Price",
+    "purchaseDate": "Purchase Date",
+    "warranty": "Warranty Expiry",
+    "warrantyExpiry": "Warranty Expiry Date",
+    "notes": "Notes",
+    "operator": "Operator",
+    "createdAt": "Created At",
+    "actions": "Actions"
+  },
+  "moduleStatus": {
+    "IN_STOCK": "In Stock",
+    "INSTALLED": "Installed",
+    "RESERVED": "Reserved",
+    "FAULTY": "Faulty",
+    "SCRAPPED": "Scrapped"
+  },
+  "moduleTypes": {
+    "SFP": "SFP (1G)",
+    "SFP_PLUS": "SFP+ (10G)",
+    "QSFP": "QSFP (40G)",
+    "QSFP28": "QSFP28 (100G)",
+    "QSFP_DD": "QSFP-DD (400G)"
+  },
+  "movementTypes": {
+    "PURCHASE": "Purchase",
+    "INSTALL": "Install",
+    "UNINSTALL": "Uninstall",
+    "TRANSFER": "Transfer",
+    "REPAIR": "Repair",
+    "RETURN": "Return",
+    "SCRAP": "Scrap"
+  },
+  "placeholders": {
+    "serialNo": "Enter optical module serial number",
+    "model": "e.g., SFP-10G-LR",
+    "vendor": "Select vendor",
+    "moduleType": "Select module type",
+    "wavelength": "e.g., 850nm, 1310nm",
+    "distance": "e.g., 300m, 10km",
+    "supplier": "Supplier",
+    "price": "Unit: RMB",
+    "notes": "Additional notes",
+    "portId": "Port UUID",
+    "targetPortId": "Target Port UUID",
+    "operator": "Optional",
+    "scrappingReason": "Please explain the reason for scrapping",
+    "search": "Search by serial number, model, or vendor"
+  },
+  "messages": {
+    "deleteConfirm": "Are you sure to delete this optical module?",
+    "scrappingConfirm": "Are you sure to scrap this optical module?",
+    "scrappingWarning": "This operation cannot be undone",
+    "createSuccess": "Optical module created successfully",
+    "updateSuccess": "Optical module updated successfully",
+    "deleteSuccess": "Deleted successfully",
+    "installSuccess": "Installed successfully",
+    "uninstallSuccess": "Uninstalled successfully",
+    "transferSuccess": "Transferred successfully",
+    "scrapSuccess": "Scrapped successfully",
+    "loadFailed": "Failed to load optical module list",
+    "loadDetailFailed": "Failed to load optical module information",
+    "loadHistoryFailed": "Failed to load movement history",
+    "updateFailed": "Update failed",
+    "createFailed": "Create failed",
+    "deleteFailed": "Delete failed",
+    "installFailed": "Installation failed",
+    "uninstallFailed": "Uninstall failed",
+    "transferFailed": "Transfer failed",
+    "scrapFailed": "Scrap failed"
+  },
+  "validation": {
+    "serialNoRequired": "Please enter serial number",
+    "modelRequired": "Please enter model",
+    "vendorRequired": "Please select vendor",
+    "moduleTypeRequired": "Please select module type",
+    "portIdRequired": "Please enter port ID",
+    "targetPortIdRequired": "Please enter target port ID",
+    "notesRequired": "Please explain the reason for scrapping"
+  },
+  "tabs": {
+    "basicInfo": "Basic Information",
+    "currentLocation": "Current Location",
+    "purchaseInfo": "Purchase Information",
+    "movementHistory": "Movement History"
+  },
+  "buttons": {
+    "create": "Purchase and Stock In",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "install": "Install to Port",
+    "uninstall": "Uninstall",
+    "transfer": "Transfer",
+    "scrap": "Scrap",
+    "viewHistory": "View History",
+    "viewDetail": "Details",
+    "back": "Back to List",
+    "editInfo": "Edit Information"
+  },
+  "filters": {
+    "search": "Search by serial number, model, or vendor",
+    "status": "Status",
+    "moduleType": "Module Type",
+    "applyFilter": "Apply Filter",
+    "reset": "Reset"
+  },
+  "statistics": {
+    "total": "Total",
+    "inStock": "In Stock",
+    "installed": "Installed",
+    "reserved": "Reserved",
+    "faulty": "Faulty",
+    "scrapped": "Scrapped"
+  },
+  "alerts": {
+    "installInfo": "Please enter the target port ID. After installation, the module status will change to 'Installed'.",
+    "uninstallWarning": "Before uninstalling, ensure the port is not connected to any cables. After uninstall, the module will return to stock.",
+    "transferWarning": "Before transferring, ensure the current port is not connected to any cables.",
+    "scrappingWarning": "This operation cannot be undone. Please confirm that this module needs to be scrapped."
+  },
+  "noData": {
+    "noHistory": "No movement history",
+    "noLocation": "In Stock",
+    "moduleNotFound": "Optical module not found"
+  }
+}

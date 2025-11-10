@@ -1,0 +1,35 @@
+{
+  "title": "Data Center List",
+  "description": "Manage all data centers, each data center can contain multiple rooms",
+  "createTitle": "Create Data Center",
+  "editTitle": "Edit Data Center",
+  "fields": {
+    "id": "ID",
+    "name": "Data Center Name",
+    "location": "Location",
+    "createdAt": "Created At",
+    "actions": "Actions"
+  },
+  "placeholders": {
+    "name": "e.g.: Beijing Data Center",
+    "location": "e.g.: Chaoyang District, Beijing",
+    "search": "Search data center name or location"
+  },
+  "messages": {
+    "deleteConfirm": "Are you sure to delete this data center?",
+    "deleteWarning": "All rooms, cabinets and devices under it will be deleted",
+    "createSuccess": "Data center created successfully",
+    "updateSuccess": "Data center updated successfully",
+    "deleteSuccess": "Data center deleted successfully",
+    "loadFailed": "Failed to load data center list",
+    "updateFailed": "Update failed",
+    "createFailed": "Create failed",
+    "deleteFailed": "Delete failed"
+  },
+  "validation": {
+    "nameRequired": "Please enter data center name"
+  },
+  "table": {
+    "total": "Total {total} items"
+  }
+}

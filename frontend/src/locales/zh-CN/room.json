@@ -1,0 +1,40 @@
+{
+  "title": "机房列表",
+  "description": "管理数据中心内的所有机房",
+  "createTitle": "新建机房",
+  "editTitle": "编辑机房",
+  "fields": {
+    "id": "ID",
+    "shortId": "ID",
+    "name": "机房名称",
+    "floor": "楼层",
+    "dataCenter": "所属数据中心",
+    "cabinetCount": "机柜数",
+    "createdAt": "创建时间",
+    "actions": "操作"
+  },
+  "placeholders": {
+    "name": "例如：A区机房",
+    "floor": "例如：3F",
+    "dataCenter": "选择数据中心",
+    "search": "搜索机房名称"
+  },
+  "messages": {
+    "deleteConfirm": "确定要删除这个机房吗？",
+    "deleteWarning": "删除后将同时删除其下所有机柜和设备",
+    "createSuccess": "机房创建成功",
+    "updateSuccess": "机房更新成功",
+    "deleteSuccess": "机房删除成功",
+    "loadFailed": "加载机房列表失败",
+    "updateFailed": "更新失败",
+    "createFailed": "创建失败",
+    "deleteFailed": "删除失败"
+  },
+  "validation": {
+    "nameRequired": "请输入机房名称",
+    "dataCenterRequired": "请选择数据中心"
+  },
+  "table": {
+    "total": "共 {total} 条"
+  }
+}

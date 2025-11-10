@@ -1,0 +1,41 @@
+{
+  "title": "系统概览",
+  "description": "数据中心全生命周期管理 - 设备、线缆、连接关系一览无余",
+  "statistics": {
+    "totalDevices": "设备总数",
+    "cableConnections": "线缆连接",
+    "cabinetCount": "机柜数量",
+    "portOccupancy": "端口占用率"
+  },
+  "cards": {
+    "recentDevices": "最近添加的设备",
+    "cableStatus": "线缆连接状态",
+    "roadmap": "功能路线图"
+  },
+  "roadmap": {
+    "implemented": "已实现",
+    "inDevelopment": "开发中",
+    "planned": "计划中",
+    "items": {
+      "implemented": [
+        "设备管理（数据中心 → 机房 → 机柜 → 设备）",
+        "线缆连接跟踪（端口到端口）",
+        "图数据库集成（Neo4j）"
+      ],
+      "inDevelopment": [
+        "U位详细管理和可视化",
+        "IP地址管理和端口映射",
+        "电源管理（Phase、市电/UPS）",
+        "网状拓扑图可视化"
+      ],
+      "planned": [
+        "SNMP/IPMI 监控集成",
+        "设备健康追踪",
+        "资产盘点功能",
+        "AI 优化布局建议",
+        "二维码/RFID 标签管理"
+      ]
+    }
+  },
+  "emptyState": "暂无数据"
+}

@@ -1,0 +1,341 @@
+{
+  "shortIdPool": {
+    "title": "shortID プール管理",
+    "description": "すべてのエンティティタイプの shortID を統一管理し、一括生成、印刷タスク、CSV エクスポートをサポート",
+    "tabs": {
+      "pool": "shortID プール",
+      "tasks": "印刷タスク"
+    },
+    "fields": {
+      "id": "ID",
+      "shortId": "shortID",
+      "entityType": "エンティティタイプ",
+      "status": "ステータス",
+      "batchNo": "バッチ番号",
+      "printTask": "印刷タスク",
+      "printedAt": "印刷時刻",
+      "entityId": "バインドエンティティID",
+      "boundAt": "バインド時刻",
+      "notes": "備考",
+      "createdAt": "作成時刻",
+      "completedAt": "完了時刻",
+      "createdBy": "作成者",
+      "count": "数量",
+      "taskName": "タスク名"
+    },
+    "entityTypes": {
+      "DATA_CENTER": "データセンター",
+      "ROOM": "コンピュータルーム",
+      "CABINET": "キャビネット",
+      "DEVICE": "デバイス",
+      "PANEL": "パネル",
+      "PORT": "ポート",
+      "CABLE": "ケーブル"
+    },
+    "statuses": {
+      "GENERATED": "生成済み",
+      "PRINTED": "印刷済み",
+      "BOUND": "バインド済み",
+      "CANCELLED": "廃棄済み",
+      "PENDING": "保留中",
+      "PRINTING": "印刷中",
+      "COMPLETED": "完了",
+      "FAILED": "失敗"
+    },
+    "actions": {
+      "allocate": "割り当て",
+      "release": "リリース",
+      "regenerate": "再生成",
+      "createPrintTask": "印刷タスク作成",
+      "directGenerate": "直接生成",
+      "exportCSV": "CSV エクスポート",
+      "complete": "完了",
+      "scrap": "廃棄",
+      "search": "shortID を検索",
+      "refresh": "更新"
+    },
+    "stats": {
+      "total": "合計",
+      "generated": "生成済み",
+      "printed": "印刷済み",
+      "bound": "バインド済み",
+      "cancelled": "廃棄済み"
+    },
+    "modals": {
+      "createPrintTask": "印刷タスク作成",
+      "directGenerate": "shortID 直接生成",
+      "scrapShortId": "shortID 廃棄",
+      "confirmScrap": "廃棄確認"
+    },
+    "formLabels": {
+      "taskName": "タスク名",
+      "generateCount": "生成数量",
+      "createdBy": "作成者",
+      "batchNo": "バッチ番号",
+      "reason": "廃棄理由"
+    },
+    "formPlaceholders": {
+      "taskName": "例：2025年第一批标签",
+      "generateCount": "1-10000",
+      "createdBy": "オプション",
+      "batchNo": "オプション、例：2025年第一批",
+      "reason": "例：ラベル破損、紛失など"
+    },
+    "messages": {
+      "loadPoolRecordsFailed": "プールレコード読み込み失敗",
+      "loadPrintTasksFailed": "印刷タスク読み込み失敗",
+      "createPrintTaskSuccess": "印刷タスク作成完了",
+      "createPrintTaskFailed": "印刷タスク作成失敗",
+      "generateShortIdSuccess": "shortID 生成成功",
+      "generateShortIdFailed": "shortID 生成失敗",
+      "exportSuccess": "エクスポート成功",
+      "exportFailed": "エクスポート失敗",
+      "completePrintTaskSuccess": "印刷タスクを完了としてマーク",
+      "completePrintTaskFailed": "操作失敗",
+      "scrapShortIdSuccess": "shortID 廃棄完了",
+      "scrapShortIdFailed": "操作失敗"
+    },
+    "filters": {
+      "entityType": "エンティティタイプ",
+      "status": "ステータス"
+    },
+    "validation": {
+      "taskNameRequired": "タスク名を入力してください",
+      "generateCountRequired": "生成数量を入力してください",
+      "reasonRequired": "廃棄理由を入力してください"
+    },
+    "pagination": {
+      "total": "合計 {total} 件"
+    }
+  },
+  "bulkDeployment": {
+    "title": "一括上架管理",
+    "description": "Excel/CSV ファイルを通じて新しいデバイス、パネル、ポート、ケーブル接続を一括インポートして初期化",
+    "tabs": {
+      "devices": "デバイス一括作成",
+      "panels": "パネル一括作成",
+      "cables": "ケーブル一括インポート"
+    },
+    "steps": {
+      "upload": "ファイルアップロード",
+      "validate": "データ検証",
+      "preview": "プレビュー",
+      "deploy": "デプロイ実行"
+    },
+    "fields": {
+      "deviceName": "デバイス名",
+      "deviceType": "デバイスタイプ",
+      "model": "モデル",
+      "serialNo": "シリアルナンバー",
+      "cabinetId": "キャビネット ID",
+      "uPosition": "U位置",
+      "uHeight": "U 高",
+      "cableLabel": "ラベル",
+      "cableType": "ケーブルタイプ",
+      "cableLength": "長さ(メートル)",
+      "cableColor": "色",
+      "portAId": "ポート A ID",
+      "portBId": "ポート B ID"
+    },
+    "deviceTypes": {
+      "SERVER": "サーバー",
+      "SWITCH": "スイッチ",
+      "ROUTER": "ルーター",
+      "FIREWALL": "ファイアウォール",
+      "STORAGE": "ストレージ",
+      "PDU": "PDU",
+      "OTHER": "その他"
+    },
+    "cableTypes": {
+      "CAT5E": "CAT5E",
+      "CAT6": "CAT6",
+      "CAT6A": "CAT6A",
+      "FIBER_SM": "単一モード光ファイバー",
+      "FIBER_MM": "マルチモード光ファイバー",
+      "DAC": "DAC",
+      "AOC": "AOC",
+      "QSFP": "QSFP",
+      "OTHER": "その他"
+    },
+    "sections": {
+      "devicesTitle": "デバイス一括作成",
+      "devicesDescription": "Excel/CSV ファイルを通じてデバイス情報を一括インポートをサポート：",
+      "devicesFeatures": [
+        "デバイス名、モデル、シリアルナンバー",
+        "デバイスタイプ（SERVER, SWITCH, ROUTER, FIREWALL, STORAGE, PDU, OTHER）",
+        "所属キャビネット U 位割り当て",
+        "自動データ完全性と合法性検証"
+      ],
+      "panelsTitle": "パネル一括作成",
+      "panelsDescription": "事前定義テンプレートから標準デバイスパネル構成を迅速作成：",
+      "panelsFeatures": [
+        "ネットワークデバイス標準パネルテンプレート（24 ポート、48 ポートなど）",
+        "サーバーパネルテンプレート（デュアルネットワークポート、管理ポートなど）",
+        "ストレージデバイスパネルテンプレート",
+        "PDU 電源パネルテンプレート"
+      ],
+      "cablesTitle": "ケーブル一括接続インポート",
+      "cablesDescription": "Excel/CSV ファイルを通じてケーブル接続情報を一括インポート：",
+      "cablesFeatures": [
+        "ケーブルタイプ、長さ、色",
+        "ローカルポートと対向ポート ID",
+        "自動接続関係構築",
+        "ポートステータス自動更新"
+      ]
+    },
+    "actions": {
+      "importDevices": "デバイス一括インポート",
+      "createFromTemplate": "テンプレートからパネル作成",
+      "importCables": "ケーブル一括インポート"
+    },
+    "modals": {
+      "importDevices": "デバイス一括インポート",
+      "importCables": "ケーブル一括インポート",
+      "createFromTemplate": "テンプレートからパネル作成",
+      "selectTemplate": "テンプレート選択",
+      "selectDevice": "デバイス選択"
+    },
+    "formLabels": {
+      "selectTemplate": "テンプレート選択",
+      "selectDevice": "デバイス選択"
+    },
+    "formPlaceholders": {
+      "selectTemplate": "パネルテンプレートを選択",
+      "selectDevice": "ターゲットデバイスを選択"
+    },
+    "messages": {
+      "loadTemplatesFailed": "テンプレート読み込み失敗",
+      "loadDevicesFailed": "デバイス読み込み失敗",
+      "loadCabinetsFailed": "キャビネット読み込み失敗",
+      "createPanelSuccess": "テンプレートからパネル作成成功",
+      "createPanelFailed": "作成失敗",
+      "partialImportFailed": "一部インポート失敗",
+      "importDevicesCablesDeveloping": "ケーブル一括インポート機能開発中",
+      "importSuccess": "一括インポート成功"
+    },
+    "alerts": {
+      "assistantTitle": "一括上架アシスタント",
+      "assistantDescription": "Excel/CSV ファイルを通じてデバイスとケーブル情報を一括インポートし、データセンターデバイス上架作業を迅速に完成",
+      "tipsTitle": "ヒント",
+      "tipsDescription": "一括インポート前に、データセンター、コンピュータルーム、キャビネットなど基本インフラを作成してください。インポート時にこれらのリソース ID が必要です。"
+    },
+    "table": {
+      "success": "成功",
+      "failed": "失敗",
+      "successCount": "成功: {count} 件",
+      "failedCount": "失敗: {count} 件",
+      "rowError": "行 {row}: {error}"
+    },
+    "validation": {
+      "deviceNameRequired": "デバイス名が空でないこと",
+      "deviceTypeRequired": "デバイスタイプは必須: {types}",
+      "cabinetIdRequired": "キャビネット ID が存在しません",
+      "uPositionInvalid": "U 位は 1-42 の数字である必要があります",
+      "uHeightInvalid": "U 高は正の整数である必要があります",
+      "cableLengthInvalid": "長さは正の数である必要があります",
+      "cableTypeRequired": "ケーブルタイプは必須: {types}"
+    }
+  },
+  "panelTemplate": {
+    "title": "パネルテンプレート管理",
+    "description": "再利用可能なパネル構成テンプレートを管理し、標準化されたデバイスパネル迅速作成",
+    "tabs": {
+      "overview": "概要",
+      "portLayout": "ポートレイアウト",
+      "usage": "使用状況"
+    },
+    "fields": {
+      "id": "ID",
+      "name": "テンプレート名",
+      "type": "パネルタイプ",
+      "portCount": "ポート数",
+      "description": "説明",
+      "width": "幅",
+      "height": "高さ",
+      "size": "サイズ",
+      "usage": "使用回数",
+      "isSystem": "システムプリセット",
+      "createdAt": "作成時刻",
+      "updatedAt": "更新時刻"
+    },
+    "panelTypes": {
+      "ETHERNET": "イーサネット",
+      "FIBER": "光ファイバー",
+      "POWER": "電源",
+      "SERIAL": "シリアル",
+      "USB": "USB",
+      "OTHER": "その他"
+    },
+    "actions": {
+      "create": "カスタムテンプレート作成",
+      "edit": "編集",
+      "editLayout": "レイアウト編集",
+      "delete": "削除",
+      "view": "表示",
+      "initSystemTemplates": "システムテンプレート初期化"
+    },
+    "modals": {
+      "createTitle": "テンプレート作成",
+      "editTitle": "テンプレート編集",
+      "viewTitle": "テンプレート詳細",
+      "editLayoutTitle": "パネルレイアウト編集",
+      "deleteConfirm": "このテンプレートを削除してもよろしいですか？",
+      "deleteConfirmDescription": "削除後は復旧できません",
+      "basicInfo": "基本情報",
+      "portLayoutPreview": "ポートレイアウトプレビュー",
+      "usePanels": "このテンプレートを使用するパネル"
+    },
+    "formLabels": {
+      "name": "テンプレート名",
+      "type": "パネルタイプ",
+      "portCount": "ポート数",
+      "description": "説明"
+    },
+    "formPlaceholders": {
+      "name": "例：24 ポートスイッチパネル",
+      "description": "テンプレート説明情報"
+    },
+    "messages": {
+      "loadTemplatesFailed": "テンプレート読み込み失敗",
+      "loadTemplateDetailFailed": "テンプレート詳細読み込み失敗",
+      "createSuccess": "作成成功",
+      "createFailed": "作成失敗",
+      "updateSuccess": "更新成功",
+      "updateFailed": "更新失敗",
+      "deleteSuccess": "削除成功",
+      "deleteFailed": "削除失敗",
+      "saveSuccess": "テンプレート保存成功",
+      "saveFailed": "保存失敗",
+      "initSuccess": "システムプリセットテンプレート初期化成功",
+      "initFailed": "初期化失敗",
+      "portInfo": "ポート {number}"
+    },
+    "validation": {
+      "nameRequired": "テンプレート名を入力してください",
+      "typeRequired": "パネルタイプを選択してください",
+      "portCountRequired": "ポート数を入力してください"
+    },
+    "table": {
+      "systemTag": "システムプリセット",
+      "noData": "データなし",
+      "total": "合計 {total} 件",
+      "panelCount": "このテンプレートを使用する {count} 個のパネル"
+    },
+    "buttons": {
+      "close": "閉じる",
+      "confirm": "確認",
+      "cancel": "キャンセル",
+      "save": "保存",
+      "delete": "削除",
+      "apply": "適用"
+    },
+    "portConfig": {
+      "title": "ポート構成",
+      "addPort": "ポート追加",
+      "removePort": "ポート削除",
+      "portNumber": "ポート番号",
+      "position": "位置",
+      "size": "サイズ"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "title": "機械室一覧",
+  "description": "データセンター内のすべての機械室を管理します",
+  "createTitle": "新しい機械室を作成",
+  "editTitle": "機械室を編集",
+  "fields": {
+    "id": "ID",
+    "shortId": "ID",
+    "name": "機械室名",
+    "floor": "階層",
+    "dataCenter": "所属データセンター",
+    "cabinetCount": "ラック数",
+    "createdAt": "作成日時",
+    "actions": "操作"
+  },
+  "placeholders": {
+    "name": "例：A区機械室",
+    "floor": "例：3F",
+    "dataCenter": "データセンターを選択",
+    "search": "機械室名で検索"
+  },
+  "messages": {
+    "deleteConfirm": "この機械室を削除してもよろしいですか？",
+    "deleteWarning": "削除後、配下のすべてのラックとデバイスも一緒に削除されます",
+    "createSuccess": "機械室の作成に成功しました",
+    "updateSuccess": "機械室の更新に成功しました",
+    "deleteSuccess": "機械室の削除に成功しました",
+    "loadFailed": "機械室一覧の読み込みに失敗しました",
+    "updateFailed": "更新に失敗しました",
+    "createFailed": "作成に失敗しました",
+    "deleteFailed": "削除に失敗しました"
+  },
+  "validation": {
+    "nameRequired": "機械室名を入力してください",
+    "dataCenterRequired": "データセンターを選択してください"
+  },
+  "table": {
+    "total": "合計 {total} 件"
+  }
+}

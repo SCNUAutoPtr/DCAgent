@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react';
 import { Layout, Typography, AutoComplete, Input, message } from 'antd';
 import { DatabaseOutlined, SearchOutlined, BarcodeOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '../LanguageSwitcher';
 import searchService, { SearchResult } from '../../services/searchService';
 import {
   formatSearchResultLabel,
@@ -16,6 +18,7 @@ const { Title } = Typography;
 
 export default function AppHeader() {
   const navigate = useNavigate();
+  const { t } = useTranslation('common');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOptions, setSearchOptions] = useState<{ value: string; label: string; data: SearchResult }[]>([]);
   const [searching, setSearching] = useState(false);
@@ -71,7 +74,7 @@ export default function AppHeader() {
       );
     } catch (error) {
       console.error('Error in global search:', error);
-      message.error('搜索失败，请稍后重试');
+      message.error(t('searchFailed'));
       setSearchOptions([]);
     } finally {
       setSearching(false);
@@ -149,7 +152,7 @@ export default function AppHeader() {
           onSearch={handleSearch}
           onSelect={handleSelect}
           style={{ width: '100%' }}
-          placeholder="搜索或扫描二维码..."
+          placeholder={t('searchPlaceholder')}
         >
           <Input
             prefix={<SearchOutlined />}
@@ -159,6 +162,11 @@ export default function AppHeader() {
             onPressEnter={handlePressEnter}
           />
         </AutoComplete>
+      </div>
+
+      {/* 语言切换器 */}
+      <div style={{ marginLeft: '16px' }}>
+        <LanguageSwitcher />
       </div>
     </Header>
   );

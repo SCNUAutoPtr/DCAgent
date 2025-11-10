@@ -1,0 +1,45 @@
+{
+  "appName": "データセンター資産管理システム",
+  "actions": {
+    "create": "新規作成",
+    "edit": "編集",
+    "delete": "削除",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "confirm": "確定",
+    "search": "検索",
+    "reset": "リセット",
+    "submit": "送信",
+    "back": "戻る",
+    "view": "表示",
+    "export": "エクスポート",
+    "import": "インポート",
+    "refresh": "更新",
+    "visualize": "可視化"
+  },
+  "status": {
+    "success": "成功",
+    "failed": "失敗",
+    "loading": "読み込み中",
+    "noData": "データなし"
+  },
+  "validation": {
+    "required": "この項目は必須です",
+    "pleaseEnter": "入力してください",
+    "pleaseSelect": "選択してください"
+  },
+  "messages": {
+    "deleteConfirm": "削除してよろしいですか？",
+    "deleteSuccess": "削除成功",
+    "deleteFailed": "削除失敗",
+    "createSuccess": "作成成功",
+    "createFailed": "作成失敗",
+    "updateSuccess": "更新成功",
+    "updateFailed": "更新失敗",
+    "loadFailed": "読み込み失敗。後でもう一度お試しください",
+    "operationSuccess": "操作成功",
+    "operationFailed": "操作失敗"
+  },
+  "searchPlaceholder": "検索またはQRコードをスキャン...",
+  "searchFailed": "検索失敗。後でもう一度お試しください"
+}

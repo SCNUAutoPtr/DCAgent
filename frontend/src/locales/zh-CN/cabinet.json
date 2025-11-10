@@ -1,0 +1,157 @@
+{
+  "title": "机柜列表",
+  "description": "管理机房内的所有机柜和U位，支持2D/3D可视化视图",
+  "createTitle": "新建机柜",
+  "editTitle": "编辑机柜",
+  "fields": {
+    "id": "ID",
+    "shortId": "ID",
+    "name": "机柜名称",
+    "position": "位置",
+    "height": "U数",
+    "room": "所属机房",
+    "deviceCount": "设备数量",
+    "portUtilization": "端口占用率",
+    "createdAt": "创建时间",
+    "actions": "操作"
+  },
+  "placeholders": {
+    "name": "例如：A-01",
+    "position": "例如：第一排第三列",
+    "height": "输入U数",
+    "room": "选择机房",
+    "search": "搜索机柜名称"
+  },
+  "messages": {
+    "deleteConfirm": "确定要删除这个机柜吗？",
+    "deleteWarning": "删除后将同时删除其下所有设备",
+    "createSuccess": "机柜创建成功",
+    "updateSuccess": "机柜更新成功",
+    "deleteSuccess": "机柜删除成功",
+    "loadFailed": "加载机柜列表失败",
+    "updateFailed": "更新失败",
+    "createFailed": "创建失败",
+    "deleteFailed": "删除失败",
+    "selectCabinet": "请选择一个机柜",
+    "selectCabinetVisual": "请从左侧选择一个机柜进行可视化展示",
+    "noCabinets": "暂无机柜",
+    "panelLoadFailed": "加载设备面板失败",
+    "panelUnbindSuccess": "面板已从模板解绑，现在可以自定义端口布局",
+    "panelUnbindFailed": "解绑失败",
+    "deviceDeleteConfirm": "确定要删除这个设备吗？",
+    "deviceCreated": "设备创建成功",
+    "deviceUpdated": "设备更新成功",
+    "deviceDeleted": "设备删除成功",
+    "deviceTransferSuccess": "设备已移动到新位置",
+    "deviceTransferFailed": "设备移动失败",
+    "deviceCopySuccess": "设备复制成功",
+    "deviceCopyFailed": "设备复制失败",
+    "positionOccupied": "目标位置 U{uPosition} 已被占用",
+    "portPositionUpdated": "端口位置已更新",
+    "portPositionUpdateFailed": "更新端口位置失败",
+    "deviceTypeError": "请选择设备类型"
+  },
+  "validation": {
+    "nameRequired": "请输入机柜名称",
+    "heightRequired": "请输入U数",
+    "roomRequired": "请选择机房",
+    "deviceNameRequired": "请输入设备名称",
+    "deviceTypeRequired": "请选择设备类型",
+    "deviceCabinetRequired": "请选择机柜",
+    "cabinetRequired": "请选择目标机柜",
+    "uPositionRequired": "请输入目标U位"
+  },
+  "table": {
+    "total": "共 {total} 条"
+  },
+  "tabs": {
+    "cabinetList": "机柜列表",
+    "visualization": "可视化视图"
+  },
+  "buttons": {
+    "create": "新建机柜",
+    "addDevice": "添加设备",
+    "editCabinet": "编辑机柜",
+    "editDevice": "编辑设备",
+    "editPanel": "编辑面板信息",
+    "visualize": "可视化",
+    "edit": "编辑",
+    "delete": "删除",
+    "selectRoom": "选择机房",
+    "search": "搜索",
+    "confirm": "确定",
+    "cancel": "取消",
+    "save": "保存",
+    "addPanel": "添加面板",
+    "unbindTemplate": "解绑模板",
+    "deviceTransfer": "发送",
+    "deviceCopy": "复制",
+    "confirmTransfer": "确认发送",
+    "confirmCopy": "确认复制",
+    "editDeviceButton": "编辑设备"
+  },
+  "labels": {
+    "cabinetName": "机柜名称",
+    "position": "位置",
+    "uHeight": "U数",
+    "selectRoom": "所属机房",
+    "deviceName": "设备名称",
+    "deviceType": "设备类型",
+    "deviceModel": "型号",
+    "serialNo": "序列号",
+    "selectCabinet": "所属机柜",
+    "uPosition": "起始U位",
+    "uHeight": "占用U数",
+    "targetCabinet": "目标机柜",
+    "targetUPosition": "目标U位",
+    "deviceType": "设备类型",
+    "cabinetOverview": "机柜全览",
+    "selectCabinetPlaceholder": "选择或搜索机柜",
+    "cabinetStats": "机柜统计",
+    "devices": "台设备"
+  },
+  "deviceTypes": {
+    "SERVER": "服务器",
+    "SWITCH": "交换机",
+    "ROUTER": "路由器",
+    "FIREWALL": "防火墙",
+    "STORAGE": "存储",
+    "PDU": "PDU",
+    "OTHER": "其他"
+  },
+  "panels": {
+    "title": "设备面板",
+    "devicePanels": "设备面板",
+    "noPanels": "该设备暂无面板",
+    "templateBound": "模板",
+    "customized": "已自定义",
+    "templateAlert": "此面板使用模板",
+    "templateAlertDesc": "该面板基于模板创建，端口布局由模板定义。解绑后可以自定义端口布局。",
+    "unbindConfirmTitle": "确认解绑模板？",
+    "unbindConfirmDesc": "解绑后可以自定义端口布局，但将失去模板更新。",
+    "portNumber": "端口",
+    "portStatus": "状态"
+  },
+  "transfer": {
+    "title": "设备移动",
+    "description": "设备 {deviceName} 将从当前位置移动到目标位置，原位置将被释放。"
+  },
+  "copy": {
+    "title": "设备复制",
+    "description": "将创建设备 {deviceName} 的副本，包含基本配置信息。"
+  },
+  "views": {
+    "2dFrontPanel": "2D前面板视图",
+    "3dView": "3D立体视图",
+    "selectCabinet": "选择机柜"
+  },
+  "descriptions": {
+    "deviceType": "设备类型",
+    "model": "型号",
+    "serialNo": "序列号",
+    "uPosition": "U位"
+  },
+  "special": {
+    "visualize": "可视化"
+  }
+}

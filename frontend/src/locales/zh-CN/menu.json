@@ -1,0 +1,19 @@
+{
+  "dashboard": "仪表板",
+  "infrastructure": "基础设施",
+  "dataCenter": "数据中心",
+  "room": "机房",
+  "cabinet": "机柜",
+  "device": "设备",
+  "connectionManagement": "连接管理",
+  "panel": "面板",
+  "port": "端口",
+  "cable": "线缆",
+  "opticalModule": "光模块管理",
+  "opticalModuleList": "光模块列表",
+  "cableTopology": "线缆拓扑",
+  "cableManualInventory": "线缆手动入库",
+  "shortIdPool": "shortID池管理",
+  "bulkDeployment": "批量上架",
+  "panelTemplate": "面板模板"
+}

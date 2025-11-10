@@ -1,0 +1,157 @@
+{
+  "title": "Cabinet List",
+  "description": "Manage all cabinets and U positions in the room, support 2D/3D visualization view",
+  "createTitle": "Create Cabinet",
+  "editTitle": "Edit Cabinet",
+  "fields": {
+    "id": "ID",
+    "shortId": "ID",
+    "name": "Cabinet Name",
+    "position": "Position",
+    "height": "U Height",
+    "room": "Room",
+    "deviceCount": "Device Count",
+    "portUtilization": "Port Utilization",
+    "createdAt": "Created At",
+    "actions": "Actions"
+  },
+  "placeholders": {
+    "name": "e.g.: A-01",
+    "position": "e.g.: First row, third column",
+    "height": "Enter U height",
+    "room": "Select room",
+    "search": "Search cabinet name"
+  },
+  "messages": {
+    "deleteConfirm": "Are you sure to delete this cabinet?",
+    "deleteWarning": "All devices under it will be deleted",
+    "createSuccess": "Cabinet created successfully",
+    "updateSuccess": "Cabinet updated successfully",
+    "deleteSuccess": "Cabinet deleted successfully",
+    "loadFailed": "Failed to load cabinet list",
+    "updateFailed": "Update failed",
+    "createFailed": "Create failed",
+    "deleteFailed": "Delete failed",
+    "selectCabinet": "Please select a cabinet",
+    "selectCabinetVisual": "Please select a cabinet from the left to visualize",
+    "noCabinets": "No cabinets",
+    "panelLoadFailed": "Failed to load device panels",
+    "panelUnbindSuccess": "Panel unbound from template, you can now customize port layout",
+    "panelUnbindFailed": "Unbind failed",
+    "deviceDeleteConfirm": "Are you sure to delete this device?",
+    "deviceCreated": "Device created successfully",
+    "deviceUpdated": "Device updated successfully",
+    "deviceDeleted": "Device deleted successfully",
+    "deviceTransferSuccess": "Device moved to new location",
+    "deviceTransferFailed": "Device transfer failed",
+    "deviceCopySuccess": "Device copied successfully",
+    "deviceCopyFailed": "Device copy failed",
+    "positionOccupied": "Target position U{uPosition} is occupied",
+    "portPositionUpdated": "Port position updated",
+    "portPositionUpdateFailed": "Failed to update port position",
+    "deviceTypeError": "Please select device type"
+  },
+  "validation": {
+    "nameRequired": "Please enter cabinet name",
+    "heightRequired": "Please enter U height",
+    "roomRequired": "Please select room",
+    "deviceNameRequired": "Please enter device name",
+    "deviceTypeRequired": "Please select device type",
+    "deviceCabinetRequired": "Please select cabinet",
+    "cabinetRequired": "Please select target cabinet",
+    "uPositionRequired": "Please enter target U position"
+  },
+  "table": {
+    "total": "Total {total} items"
+  },
+  "tabs": {
+    "cabinetList": "Cabinet List",
+    "visualization": "Visualization View"
+  },
+  "buttons": {
+    "create": "Create Cabinet",
+    "addDevice": "Add Device",
+    "editCabinet": "Edit Cabinet",
+    "editDevice": "Edit Device",
+    "editPanel": "Edit Panel Information",
+    "visualize": "Visualize",
+    "edit": "Edit",
+    "delete": "Delete",
+    "selectRoom": "Select Room",
+    "search": "Search",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "addPanel": "Add Panel",
+    "unbindTemplate": "Unbind Template",
+    "deviceTransfer": "Transfer",
+    "deviceCopy": "Copy",
+    "confirmTransfer": "Confirm Transfer",
+    "confirmCopy": "Confirm Copy",
+    "editDeviceButton": "Edit Device"
+  },
+  "labels": {
+    "cabinetName": "Cabinet Name",
+    "position": "Position",
+    "uHeight": "U Height",
+    "selectRoom": "Room",
+    "deviceName": "Device Name",
+    "deviceType": "Device Type",
+    "deviceModel": "Model",
+    "serialNo": "Serial Number",
+    "selectCabinet": "Cabinet",
+    "uPosition": "Start U Position",
+    "uHeight": "U Height",
+    "targetCabinet": "Target Cabinet",
+    "targetUPosition": "Target U Position",
+    "deviceType": "Device Type",
+    "cabinetOverview": "Cabinet Overview",
+    "selectCabinetPlaceholder": "Select or search cabinet",
+    "cabinetStats": "Cabinet Stats",
+    "devices": "devices"
+  },
+  "deviceTypes": {
+    "SERVER": "Server",
+    "SWITCH": "Switch",
+    "ROUTER": "Router",
+    "FIREWALL": "Firewall",
+    "STORAGE": "Storage",
+    "PDU": "PDU",
+    "OTHER": "Other"
+  },
+  "panels": {
+    "title": "Device Panels",
+    "devicePanels": "Device Panels",
+    "noPanels": "No panels for this device",
+    "templateBound": "Template",
+    "customized": "Customized",
+    "templateAlert": "This panel uses template",
+    "templateAlertDesc": "This panel is created based on template, port layout is defined by template. You can customize port layout after unbinding.",
+    "unbindConfirmTitle": "Confirm unbind template?",
+    "unbindConfirmDesc": "You can customize port layout after unbinding, but will lose template updates.",
+    "portNumber": "Port",
+    "portStatus": "Status"
+  },
+  "transfer": {
+    "title": "Transfer Device",
+    "description": "Device {deviceName} will be moved from current location to target location, and the original position will be released."
+  },
+  "copy": {
+    "title": "Copy Device",
+    "description": "Create a copy of device {deviceName}, including basic configuration information."
+  },
+  "views": {
+    "2dFrontPanel": "2D Front Panel View",
+    "3dView": "3D View",
+    "selectCabinet": "Select Cabinet"
+  },
+  "descriptions": {
+    "deviceType": "Device Type",
+    "model": "Model",
+    "serialNo": "Serial Number",
+    "uPosition": "U Position"
+  },
+  "special": {
+    "visualize": "Visualize"
+  }
+}

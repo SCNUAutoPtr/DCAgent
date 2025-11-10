@@ -1,0 +1,69 @@
+{
+  "title": "Device Management",
+  "description": "Manage all devices in the cabinet, including servers, switches, routers, etc.",
+  "createTitle": "Create Device",
+  "editTitle": "Edit Device",
+  "fields": {
+    "id": "ID",
+    "name": "Device Name",
+    "type": "Type",
+    "model": "Model",
+    "serialNo": "Serial Number",
+    "uPosition": "U Position",
+    "uHeight": "U Height",
+    "cabinet": "Location",
+    "createdAt": "Created At",
+    "actions": "Actions"
+  },
+  "deviceTypes": {
+    "SERVER": "Server",
+    "SWITCH": "Switch",
+    "ROUTER": "Router",
+    "FIREWALL": "Firewall",
+    "STORAGE": "Storage",
+    "PDU": "PDU",
+    "OTHER": "Other"
+  },
+  "placeholders": {
+    "name": "e.g.: WEB-Server-01",
+    "type": "Select device type",
+    "model": "e.g.: Dell PowerEdge R740",
+    "serialNo": "e.g.: SN123456789",
+    "uPosition": "1",
+    "uHeight": "1",
+    "cabinet": "Select cabinet",
+    "search": "Search device name or model"
+  },
+  "messages": {
+    "deleteConfirm": "Are you sure to delete this device?",
+    "deleteWarning": "All panels and ports under it will be deleted",
+    "createSuccess": "Device created successfully",
+    "updateSuccess": "Device updated successfully",
+    "deleteSuccess": "Device deleted successfully",
+    "loadFailed": "Failed to load device list",
+    "updateFailed": "Update failed",
+    "createFailed": "Create failed",
+    "deleteFailed": "Delete failed"
+  },
+  "validation": {
+    "nameRequired": "Please enter device name",
+    "typeRequired": "Please select device type",
+    "cabinetRequired": "Please select cabinet",
+    "uHeightRequired": "U height is required"
+  },
+  "table": {
+    "total": "Total {total} items"
+  },
+  "buttons": {
+    "create": "Create Device",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "filters": {
+    "selectCabinet": "Select Cabinet",
+    "selectType": "Select Type"
+  }
+}
