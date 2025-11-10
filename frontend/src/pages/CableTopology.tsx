@@ -833,14 +833,14 @@ function CableTopologyContent() {
             </Button>
           </Tooltip>
 
-          <Tooltip title="单端连接">
+          {/* <Tooltip title="单端连接">
             <Button
               icon={<LinkOutlined />}
               onClick={handleOpenConnectSingleCableModal}
             >
               单端连接
             </Button>
-          </Tooltip>
+          </Tooltip> */}
 
           <Tooltip title={t('buttons.refresh')}>
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
