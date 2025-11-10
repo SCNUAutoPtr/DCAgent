@@ -12,6 +12,7 @@ import { panelTemplateService } from '@/services/panelTemplateService';
 import { deviceService } from '@/services/deviceService';
 import { cabinetService } from '@/services/cabinetService';
 import BulkImportModal, { BulkImportColumn } from '@/components/BulkImportModal';
+import PanelCanvasEditor from '@/components/PanelCanvasEditor';
 
 const { Title, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -28,6 +29,7 @@ export default function BulkDeploymentPage() {
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
   const [deviceImportVisible, setDeviceImportVisible] = useState(false);
   const [cableImportVisible, setCableImportVisible] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<PanelTemplate | null>(null);
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -65,7 +67,13 @@ export default function BulkDeploymentPage() {
 
   const handleCreateFromTemplate = () => {
     form.resetFields();
+    setSelectedTemplate(null);
     setTemplateModalVisible(true);
+  };
+
+  const handleTemplateChange = (templateId: string) => {
+    const template = templates.find(t => t.id === templateId);
+    setSelectedTemplate(template || null);
   };
 
   const handleTemplateSubmit = async () => {
@@ -404,8 +412,11 @@ export default function BulkDeploymentPage() {
         title={t('bulkDeployment.modals.createFromTemplate')}
         open={templateModalVisible}
         onOk={handleTemplateSubmit}
-        onCancel={() => setTemplateModalVisible(false)}
-        width={600}
+        onCancel={() => {
+          setTemplateModalVisible(false);
+          setSelectedTemplate(null);
+        }}
+        width={800}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -413,7 +424,10 @@ export default function BulkDeploymentPage() {
             label={t('bulkDeployment.formLabels.selectTemplate')}
             rules={[{ required: true, message: t('bulkDeployment.formLabels.selectTemplate') }]}
           >
-            <Select placeholder={t('bulkDeployment.formPlaceholders.selectTemplate')}>
+            <Select
+              placeholder={t('bulkDeployment.formPlaceholders.selectTemplate')}
+              onChange={handleTemplateChange}
+            >
               {templates.map((template) => (
                 <Select.Option key={template.id} value={template.id}>
                   {template.name} ({template.type} - {template.portCount}口)
@@ -435,6 +449,37 @@ export default function BulkDeploymentPage() {
               ))}
             </Select>
           </Form.Item>
+
+          {/* 模板预览 */}
+          {selectedTemplate && (
+            <Card title="模板预览" size="small" style={{ marginTop: 16 }}>
+              <Alert
+                message={`${selectedTemplate.name} - ${selectedTemplate.portCount}口`}
+                description={selectedTemplate.description || '无描述'}
+                type="info"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+              <PanelCanvasEditor
+                width={selectedTemplate.width || 482.6}
+                height={selectedTemplate.height || 44.45}
+                backgroundColor={selectedTemplate.backgroundColor || '#FFFFFF'}
+                initialPorts={
+                  selectedTemplate.portDefinitions?.map((portDef) => ({
+                    id: `preview-${portDef.number}`,
+                    number: portDef.number,
+                    portType: portDef.portType || 'RJ45',
+                    position: portDef.position || { x: 0, y: 0 },
+                    size: portDef.size || { width: 15, height: 12 },
+                    label: portDef.label,
+                    rotation: 0,
+                  })) || []
+                }
+                onPortsChange={() => {}}
+                readOnly={true}
+              />
+            </Card>
+          )}
         </Form>
       </Modal>
 

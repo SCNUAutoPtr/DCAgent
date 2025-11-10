@@ -404,14 +404,21 @@ export default function CabinetList() {
         panels.map(async (panel) => {
           let ports = await portService.getByPanel(panel.id);
 
+          // 调试：输出原始端口数据
+          console.log('Original ports from API:', ports);
+          console.log('First port example:', ports[0]);
+
           // 按端口编号排序
           ports = sortPortsByNumber(ports);
 
           // 检查端口是否已有布局位置，如果没有则自动生成
           const hasLayout = ports.some(p => p.position);
+          console.log('Has layout:', hasLayout, 'Ports count:', ports.length);
           if (!hasLayout && ports.length > 0) {
             // 自动生成端口布局
+            console.log('Generating port layout...');
             ports = generatePortLayout(ports, panel);
+            console.log('After layout generation:', ports[0]);
           }
 
           portsMap.set(panel.id, ports);
@@ -504,15 +511,44 @@ export default function CabinetList() {
   const handleSavePanel = async (panelData: Partial<Panel>) => {
     try {
       if (editingPanel) {
+        // 编辑模式：直接更新面板
         await panelService.update(editingPanel.id, panelData);
       } else {
-        await panelService.create(panelData);
+        // 新建模式：检查是否使用模板
+        if (panelData.templateId && !panelData.isCustomized) {
+          // 使用模板创建：调用特殊的创建接口，会自动创建端口
+          console.log('Creating panel from template:', panelData.templateId);
+          await panelTemplateService.createPanelFromTemplate(
+            panelData.templateId,
+            panelData.deviceId!,
+            panelData.name
+          );
+        } else {
+          // 自定义创建：普通创建面板（不含端口）
+          console.log('Creating custom panel');
+          await panelService.create(panelData);
+        }
       }
 
       // 重新加载设备面板信息
       if (viewingDevice) {
         const panels = await panelService.getByDevice(viewingDevice.id);
         setDevicePanels(panels);
+
+        // 重新加载端口数据
+        const portsMap = new Map<string, Port[]>();
+        await Promise.all(
+          panels.map(async (panel) => {
+            let ports = await portService.getByPanel(panel.id);
+            ports = sortPortsByNumber(ports);
+            const hasLayout = ports.some(p => p.position);
+            if (!hasLayout && ports.length > 0) {
+              ports = generatePortLayout(ports, panel);
+            }
+            portsMap.set(panel.id, ports);
+          })
+        );
+        setPanelPorts(portsMap);
       }
 
       await loadAllData();

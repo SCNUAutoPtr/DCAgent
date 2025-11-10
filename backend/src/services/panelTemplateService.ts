@@ -154,8 +154,10 @@ export class PanelTemplateService {
         type: template.type,
         deviceId,
         templateId,
-        width: template.width,
-        height: template.height,
+        size: {
+          width: template.width,
+          height: template.height,
+        },
         backgroundColor: template.backgroundColor,
         image: template.image,
         svgPath: template.svgPath,
@@ -179,10 +181,8 @@ export class PanelTemplateService {
             panelId: panel.id,
             portType: portDef.portType, // 保存端口类型
             label: portDef.label, // 保存端口标签
-            positionX: portDef.position.x,
-            positionY: portDef.position.y,
-            width: portDef.size.width,
-            height: portDef.size.height,
+            position: portDef.position, // JSON 对象 {x, y}
+            size: portDef.size, // JSON 对象 {width, height}
           },
         })
       )

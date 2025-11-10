@@ -542,20 +542,44 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
           )}
 
           {selectedTemplate && (
-            <Alert
-              message="模板信息"
-              description={
-                <div>
-                  <p>模板: {selectedTemplate.name}</p>
-                  <p>端口数量: {selectedTemplate.portCount}</p>
-                  <p>模板类型: {getPanelTypeLabel(selectedTemplate.type)}</p>
-                  <p>描述: {selectedTemplate.description || '无'}</p>
-                </div>
-              }
-              type="info"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
+            <>
+              <Alert
+                message="模板信息"
+                description={
+                  <div>
+                    <p>模板: {selectedTemplate.name}</p>
+                    <p>端口数量: {selectedTemplate.portCount}</p>
+                    <p>模板类型: {getPanelTypeLabel(selectedTemplate.type)}</p>
+                    <p>描述: {selectedTemplate.description || '无'}</p>
+                  </div>
+                }
+                type="info"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+
+              {/* 模板预览 */}
+              <Card title="模板预览" size="small" style={{ marginBottom: 16 }}>
+                <PanelCanvasEditor
+                  width={selectedTemplate.width || 482.6}
+                  height={selectedTemplate.height || 44.45}
+                  backgroundColor={selectedTemplate.backgroundColor || '#FFFFFF'}
+                  initialPorts={
+                    selectedTemplate.portDefinitions?.map((portDef) => ({
+                      id: `preview-${portDef.number}`,
+                      number: portDef.number,
+                      portType: portDef.portType || 'RJ45',
+                      position: portDef.position || { x: 0, y: 0 },
+                      size: portDef.size || { width: 15, height: 12 },
+                      label: portDef.label,
+                      rotation: 0,
+                    })) || []
+                  }
+                  onPortsChange={() => {}}
+                  readOnly={true}
+                />
+              </Card>
+            </>
           )}
 
           {/* 尺寸预览 */}
