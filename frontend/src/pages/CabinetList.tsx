@@ -1299,8 +1299,18 @@ export default function CabinetList() {
                 </Button>
               </div>
             ) : (
-              <Tabs defaultActiveKey="0">
-                {devicePanels.map((panel, index) => {
+              <>
+                <div style={{ marginBottom: 16 }}>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => handleOpenPanelEditor()}
+                  >
+                    {t('buttons.addPanel')}
+                  </Button>
+                </div>
+                <Tabs defaultActiveKey="0">
+                  {devicePanels.map((panel, index) => {
                   const ports = panelPorts.get(panel.id) || [];
                   const hasTemplate = panel.templateId && !panel.isCustomized;
 
@@ -1396,6 +1406,7 @@ export default function CabinetList() {
                   );
                 })}
               </Tabs>
+              </>
             )}
           </div>
         )}

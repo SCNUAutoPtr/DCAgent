@@ -10,7 +10,6 @@ import RoomList from './pages/RoomList';
 import CabinetList from './pages/CabinetList';
 import DeviceList from './pages/DeviceList';
 import PanelList from './pages/PanelList';
-import PortManagementPage from './pages/PortManagementPage';
 import CableTopology from './pages/CableTopology';
 import CableManualInventory from './pages/CableManualInventory';
 import ShortIdPoolManagement from './pages/ShortIdPoolManagement';
@@ -52,8 +51,6 @@ function App() {
               <Route path="/cabinets" element={<CabinetList />} />
               <Route path="/devices" element={<DeviceList />} />
               <Route path="/panels" element={<PanelList />} />
-              {/* 接口管理页面已废弃 */}
-              {/* <Route path="/ports" element={<PortManagementPage />} /> */}
               <Route path="/port-detail" element={<PortDetailView />} />
               <Route path="/topology" element={<CableTopology />} />
               <Route path="/cable-manual-inventory" element={<CableManualInventory />} />

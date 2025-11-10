@@ -61,17 +61,6 @@ export default function AppSidebar() {
       icon: <ApartmentOutlined />,
       label: t('connectionManagement'),
       children: [
-        // 面板和端口菜单已隐藏 - 通过设备可视化管理
-        // {
-        //   key: '/panels',
-        //   icon: <ApartmentOutlined />,
-        //   label: t('panel'),
-        // },
-        // {
-        //   key: '/ports',
-        //   icon: <ApiOutlined />,
-        //   label: t('port'),
-        // },
         {
           key: '/optical-modules',
           icon: <ToolOutlined />,

@@ -505,6 +505,49 @@ export default function PanelCanvasEditor({
     }
   };
 
+  // 查找空白位置（避免重叠）
+  const findEmptyPosition = (
+    newPortSize: { width: number; height: number },
+    existingPorts: PortDefinition[]
+  ): { x: number; y: number } => {
+    const margin = 5; // 端口之间的最小间距
+    const gridSize = 5; // 网格大小，用于搜索步进
+
+    // 检查两个矩形是否重叠
+    const isOverlapping = (
+      pos: { x: number; y: number },
+      size: { width: number; height: number },
+      port: PortDefinition
+    ): boolean => {
+      return !(
+        pos.x + size.width + margin < port.position.x ||
+        pos.x > port.position.x + port.size.width + margin ||
+        pos.y + size.height + margin < port.position.y ||
+        pos.y > port.position.y + port.size.height + margin
+      );
+    };
+
+    // 从左上角开始，按网格搜索空白位置
+    for (let y = 10; y < height - newPortSize.height - 10; y += gridSize) {
+      for (let x = 10; x < width - newPortSize.width - 10; x += gridSize) {
+        const pos = { x, y };
+        const hasOverlap = existingPorts.some((port) =>
+          isOverlapping(pos, newPortSize, port)
+        );
+
+        if (!hasOverlap) {
+          return pos;
+        }
+      }
+    }
+
+    // 如果找不到空位，就放在右下角
+    return {
+      x: Math.max(10, width - newPortSize.width - 10),
+      y: Math.max(10, height - newPortSize.height - 10),
+    };
+  };
+
   // 添加端口
   const handleAddPort = () => {
     setAddPortModalVisible(true);
@@ -531,11 +574,14 @@ export default function PanelCanvasEditor({
       const { portType, label } = values;
       const portSize = getPortSize(portType);
 
+      // 使用智能算法找到空白位置
+      const emptyPosition = findEmptyPosition(portSize, ports);
+
       const newPortNumber = String(ports.length + 1);
       const newPort: PortDefinition = {
         number: newPortNumber,
         portType,
-        position: { x: 20, y: 20 },
+        position: emptyPosition, // 使用智能位置
         size: { width: portSize.width, height: portSize.height },
         label: label || undefined,
       };
@@ -545,7 +591,7 @@ export default function PanelCanvasEditor({
       if (onPortsChange) {
         onPortsChange(newPorts);
       }
-      message.success(`已添加 ${portSize.label} 端口 ${newPortNumber}`);
+      message.success(`已添加 ${portSize.label} 端口 ${newPortNumber} 到位置 (${Math.round(emptyPosition.x)}, ${Math.round(emptyPosition.y)})`);
 
       setAddPortModalVisible(false);
       addPortForm.resetFields();
