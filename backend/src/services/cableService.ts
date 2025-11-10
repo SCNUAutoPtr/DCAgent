@@ -607,12 +607,29 @@ class CableService {
         });
 
         // 同步到图数据库
-        const portA = existingEndpoint.endType === 'A' ? port : await prisma.port.findUnique({ where: { id: otherEndpoint.portId! } });
-        const portB = existingEndpoint.endType === 'B' ? port : await prisma.port.findUnique({ where: { id: otherEndpoint.portId! } });
+        const portA = existingEndpoint.endType === 'A' ? port : await prisma.port.findUnique({
+          where: { id: otherEndpoint.portId! },
+          include: { panel: true }
+        });
+        const portB = existingEndpoint.endType === 'B' ? port : await prisma.port.findUnique({
+          where: { id: otherEndpoint.portId! },
+          include: { panel: true }
+        });
 
         if (portA && portB) {
+          // 同步面板节点
+          if (portA.panel) {
+            await cableGraphService.syncPanelNode(portA.panel.id, portA.panel);
+          }
+          if (portB.panel) {
+            await cableGraphService.syncPanelNode(portB.panel.id, portB.panel);
+          }
+
+          // 同步端口节点
           await cableGraphService.syncPortNode(portA.id, { ...portA, panelId: portA.panelId });
           await cableGraphService.syncPortNode(portB.id, { ...portB, panelId: portB.panelId });
+
+          // 创建连接
           await cableGraphService.createConnection({
             cableId: cable.id,
             portAId: portA.id,

@@ -28,6 +28,7 @@ CLAUDE.md
 # IDE
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 *~

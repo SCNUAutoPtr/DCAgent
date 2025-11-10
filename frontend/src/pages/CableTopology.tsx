@@ -745,6 +745,7 @@ function CableTopologyContent() {
             value={scanInput}
             onChange={(e) => setScanInput(e.target.value)}
             onPressEnter={(e) => handleScanInput((e.target as HTMLInputElement).value)}
+            onBlur={(e) => handleScanInput(e.target.value)}
             style={{ width: 300 }}
             size="large"
             allowClear
