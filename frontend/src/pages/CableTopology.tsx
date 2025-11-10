@@ -17,6 +17,7 @@ import {
   Input,
   Form,
   InputNumber,
+  Dropdown,
 } from 'antd';
 import {
   ZoomInOutlined,
@@ -29,6 +30,7 @@ import {
   InfoCircleOutlined,
   LinkOutlined,
   EditOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import ReactFlow, {
   Node,
@@ -271,17 +273,20 @@ function CableTopologyContent() {
       loadTopology(state.focusPanel, depth);
 
       // 延迟设置高亮和聚焦，确保图已经加载完成
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         // 只有当存在 highlightCable 时才高亮线缆
         if (state.highlightCable) {
           const cableEdge = edges.find(e => e.data?.cable?.id === state.highlightCable);
           if (cableEdge) {
             setHighlightedEdgeIds([cableEdge.id]);
-          }
 
-          // 显示线缆信息提示
-          if (state.cableInfo) {
-            message.success(`已定位到线缆: ${state.cableInfo.label || state.cableInfo.type}`);
+            // 显示线缆信息提示
+            if (state.cableInfo) {
+              message.success(`已定位到线缆: ${state.cableInfo.label || state.cableInfo.type}`);
+            }
+          } else {
+            // 未找到线缆边，可能未在当前视图中
+            message.warning('该线缆未在当前拓扑视图中，可能端子未连接或超出显示范围');
           }
         }
 
@@ -300,7 +305,14 @@ function CableTopologyContent() {
           });
         }
       }, 1000); // 增加延迟以等待拓扑加载完成
+
+      // 清理定时器
+      return () => clearTimeout(timer);
+    } else if (state?.highlightCable) {
+      // 没有focusPanel但有highlightCable（浮动端子场景）
+      message.info('该线缆端子尚未连接，无法在拓扑图中定位');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
 
   // 根据高亮状态动态生成边和节点样式
@@ -1333,6 +1345,10 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
   const [time, setTime] = useState(0);
   const [clickedPortInfo, setClickedPortInfo] = useState<any>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [contextMenuVisible, setContextMenuVisible] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+  const [selectedPort, setSelectedPort] = useState<PortDefinition | null>(null);
+  const [portConnections, setPortConnections] = useState<Map<string, any>>(new Map());
 
   // 动画循环
   useEffect(() => {
@@ -1351,6 +1367,34 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
       }
     };
   }, []);
+
+  // 预加载所有已连接端口的连接信息（包含shortID）
+  useEffect(() => {
+    const loadPortConnections = async () => {
+      const connections = new Map<string, any>();
+
+      // 过滤出已连接的端口
+      const connectedPorts = ports.filter(p => p.portType?.includes('_CONNECTED'));
+
+      for (const port of connectedPorts) {
+        try {
+          // 通过端口ID获取连接信息
+          const connection = await cableService.getPortConnection(port.id);
+          if (connection && connection.thisEndpoint) {
+            connections.set(port.id, connection);
+          }
+        } catch (error) {
+          console.error(`Failed to load connection for port ${port.id}:`, error);
+        }
+      }
+
+      setPortConnections(connections);
+    };
+
+    if (ports.length > 0) {
+      loadPortConnections();
+    }
+  }, [ports]);
 
   // 处理端口点击 - 显示对端设备信息
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1386,6 +1430,84 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
       });
       setDetailModalVisible(true);
     }
+  };
+
+  // 处理端口右键 - 断开连接
+  const handleCanvasContextMenu = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / zoom;
+    const y = (e.clientY - rect.top) / zoom;
+
+    // 查找右键点击的端口
+    const clickedPort = ports.find(
+      (port) =>
+        x >= port.position.x &&
+        x <= port.position.x + port.size.width &&
+        y >= port.position.y &&
+        y <= port.position.y + port.size.height
+    );
+
+    // 只有已连接的端口才能断开
+    if (!clickedPort || !clickedPort.portType?.includes('_CONNECTED')) {
+      return;
+    }
+
+    // 获取连接信息
+    const connection = portConnections.get(clickedPort.id);
+    if (!connection || !connection.thisEndpoint || !connection.thisEndpoint.shortId) {
+      message.warning('未找到连接信息，请刷新页面重试');
+      return;
+    }
+
+    setSelectedPort(clickedPort);
+    setContextMenuPosition({ x: e.clientX, y: e.clientY });
+    setContextMenuVisible(true);
+  };
+
+  // 断开连接处理函数
+  const handleDisconnect = async () => {
+    if (!selectedPort) return;
+
+    const connection = portConnections.get(selectedPort.id);
+    if (!connection || !connection.thisEndpoint) {
+      message.error('无法获取连接信息');
+      return;
+    }
+
+    const shortId = connection.thisEndpoint.shortId;
+
+    Modal.confirm({
+      title: '确认断开连接',
+      content: `确定要断开端口 ${selectedPort.number} 的连接吗？(线缆端子 shortID: ${shortId})`,
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await cableService.disconnectEndpoint(shortId);
+          message.success('连接已断开');
+          setContextMenuVisible(false);
+
+          // 刷新连接信息
+          const updatedConnections = new Map(portConnections);
+          updatedConnections.delete(selectedPort.id);
+          setPortConnections(updatedConnections);
+
+          // 可以选择性地刷新整个拓扑图
+          window.location.reload();
+        } catch (error: any) {
+          console.error('Failed to disconnect endpoint:', error);
+          message.error(error.message || '断开连接失败');
+        }
+      }
+    });
+
+    setContextMenuVisible(false);
   };
 
   // 绘制端口
@@ -1517,6 +1639,18 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
 
   }, [ports, zoom, width, height, backgroundColor, time]);
 
+  // 右键菜单
+  const menu = {
+    items: [
+      {
+        key: 'disconnect',
+        label: '断开连接',
+        danger: true,
+        onClick: handleDisconnect,
+      }
+    ]
+  };
+
   return (
     <div
       style={{
@@ -1528,11 +1662,26 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
         padding: '20px',
       }}
     >
+      <Dropdown
+        menu={menu}
+        open={contextMenuVisible}
+        onOpenChange={(visible) => {
+          if (!visible) {
+            setContextMenuVisible(false);
+            setSelectedPort(null);
+          }
+        }}
+        trigger={[]}
+      >
+        <div style={{ position: 'absolute', left: contextMenuPosition.x, top: contextMenuPosition.y }} />
+      </Dropdown>
+
       <canvas
         ref={canvasRef}
         width={width * zoom}
         height={height * zoom}
         onClick={handleCanvasClick}
+        onContextMenu={handleCanvasContextMenu}
         style={{
           cursor: 'pointer',
           boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
@@ -1553,15 +1702,40 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
           </Button>,
           clickedPortInfo?.targetPort && (
             <Button
-              key="navigate"
+              key="disconnect"
               type="primary"
-              icon={<LinkOutlined />}
+              danger
+              icon={<DeleteOutlined />}
               onClick={() => {
-                // 这里可以添加导航到对端设备的逻辑
-                message.info(t('messages.exportFunctionDeveloping'));
+                const connection = portConnections.get(clickedPortInfo.port.id);
+                if (!connection || !connection.thisEndpoint) {
+                  message.error('无法获取连接信息');
+                  return;
+                }
+
+                const shortId = connection.thisEndpoint.shortId;
+
+                Modal.confirm({
+                  title: '确认断开连接',
+                  content: `确定要断开端口 ${clickedPortInfo.portNumber} 的连接吗？(线缆端子 shortID: ${shortId})`,
+                  okText: '确定',
+                  okButtonProps: { danger: true },
+                  cancelText: '取消',
+                  onOk: async () => {
+                    try {
+                      await cableService.disconnectEndpoint(shortId);
+                      message.success('连接已断开');
+                      setDetailModalVisible(false);
+                      window.location.reload();
+                    } catch (error: any) {
+                      console.error('Failed to disconnect endpoint:', error);
+                      message.error(error.message || '断开连接失败');
+                    }
+                  }
+                });
               }}
             >
-              {t('buttons.createConnection')}
+              删除连接
             </Button>
           )
         ]}

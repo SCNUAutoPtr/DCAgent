@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import {
   Card,
   Form,
@@ -59,6 +60,7 @@ interface CableRecord {
 
 const CableManualInventory: React.FC = () => {
   const { t } = useTranslation('cable');
+  const location = useLocation();
   const [form] = Form.useForm();
   const [cableBaseInfo, setCableBaseInfo] = useState<CableBaseInfo | null>(null);
   const [baseInfoConfirmed, setBaseInfoConfirmed] = useState(false);
@@ -73,6 +75,7 @@ const CableManualInventory: React.FC = () => {
   // 已录入的线缆记录
   const [cableRecords, setCableRecords] = useState<CableRecord[]>([]);
   const [recordCounter, setRecordCounter] = useState(0);
+  const [highlightCableId, setHighlightCableId] = useState<string | null>(null);
 
   const inputRef = useRef<any>(null);
 
@@ -82,6 +85,20 @@ const CableManualInventory: React.FC = () => {
       inputRef.current.focus();
     }
   }, [baseInfoConfirmed, currentSide, portA, portB]);
+
+  // 处理从搜索跳转的高亮
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.highlightCableId) {
+      setHighlightCableId(state.highlightCableId);
+      message.info('该线缆尚未完成连接，请在此页面查看或继续操作');
+
+      // 3秒后清除高亮
+      setTimeout(() => {
+        setHighlightCableId(null);
+      }, 3000);
+    }
+  }, [location.state]);
 
   // 检查 shortId 是否可用于线缆入库
   // 未分配的 shortID 是合法的（将用于新线缆），已分配的必须是可用端口
@@ -592,6 +609,9 @@ const CableManualInventory: React.FC = () => {
                   pagination={false}
                   size="small"
                   scroll={{ y: 400 }}
+                  rowClassName={(record: CableRecord) =>
+                    record.key === highlightCableId ? 'highlight-row' : ''
+                  }
                 />
               </div>
             )}

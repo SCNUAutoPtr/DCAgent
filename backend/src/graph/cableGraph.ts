@@ -169,6 +169,7 @@ class CableGraphService {
   /**
    * 查询面板的所有连接关系（双向）
    * 返回完整的连接信息，包括对端面板信息
+   * 支持同面板内的连接（loopback）
    */
   async findPanelConnections(panelId: string): Promise<ConnectionQueryResult[]> {
     const session = neo4jConnection.getSession();
@@ -178,7 +179,7 @@ class CableGraphService {
         MATCH (panel1:Panel {id: $panelId})-[:HAS_PORT]->(port1:Port)
               -[:CONNECTED_BY]-(cable:Cable)-[:CONNECTED_BY]-(port2:Port)
               <-[:HAS_PORT]-(panel2:Panel)
-        WHERE panel1 <> panel2
+        WHERE port1.id < port2.id
         RETURN DISTINCT cable, port1, port2, panel2
         `,
         { panelId }

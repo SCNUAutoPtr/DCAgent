@@ -220,11 +220,40 @@ class SearchService {
           };
         }
 
+        case 'CABLE_ENDPOINT':
         case 'CableEndpoint': {
           const endpoint = await prisma.cableEndpoint.findUnique({
             where: { id: entityId },
             include: {
-              cable: true,
+              cable: {
+                include: {
+                  endpoints: {
+                    include: {
+                      port: {
+                        include: {
+                          panel: {
+                            include: {
+                              device: {
+                                include: {
+                                  cabinet: {
+                                    include: {
+                                      room: {
+                                        include: {
+                                          dataCenter: true,
+                                        },
+                                      },
+                                    },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
               port: {
                 include: {
                   panel: {
@@ -249,6 +278,19 @@ class SearchService {
             },
           });
           if (!endpoint) return null;
+
+          // 获取对端信息
+          const otherEndpoints = endpoint.cable.endpoints
+            .filter((ep) => ep.id !== endpoint.id)
+            .map((ep) => ({
+              id: ep.id,
+              endType: ep.endType,
+              shortId: ep.shortId,
+              isConnected: !!ep.portId,
+              port: ep.port || null,
+              panel: ep.port?.panel || null,
+            }));
+
           return {
             type: 'Cable',
             id: endpoint.cable.id,
@@ -260,7 +302,10 @@ class SearchService {
               endpointId: endpoint.id,
               endpointShortId: endpoint.shortId,
               endType: endpoint.endType,
-              port: endpoint.port,
+              isConnected: !!endpoint.portId,
+              port: endpoint.port || null,
+              panel: endpoint.port?.panel || null,
+              otherEndpoints,
             },
           };
         }
@@ -275,11 +320,72 @@ class SearchService {
       const endpoint = await prisma.cableEndpoint.findUnique({
         where: { shortId },
         include: {
-          cable: true,
+          cable: {
+            include: {
+              endpoints: {
+                include: {
+                  port: {
+                    include: {
+                      panel: {
+                        include: {
+                          device: {
+                            include: {
+                              cabinet: {
+                                include: {
+                                  room: {
+                                    include: {
+                                      dataCenter: true,
+                                    },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          port: {
+            include: {
+              panel: {
+                include: {
+                  device: {
+                    include: {
+                      cabinet: {
+                        include: {
+                          room: {
+                            include: {
+                              dataCenter: true,
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       });
 
       if (endpoint && endpoint.shortId !== null) {
+        // 获取对端信息
+        const otherEndpoints = endpoint.cable.endpoints
+          .filter((ep) => ep.id !== endpoint.id)
+          .map((ep) => ({
+            id: ep.id,
+            endType: ep.endType,
+            shortId: ep.shortId,
+            isConnected: !!ep.portId,
+            port: ep.port || null,
+            panel: ep.port?.panel || null,
+          }));
+
         return {
           type: 'Cable',
           id: endpoint.cable.id,
@@ -291,6 +397,10 @@ class SearchService {
             endpointId: endpoint.id,
             endpointShortId: endpoint.shortId,
             endType: endpoint.endType,
+            isConnected: !!endpoint.portId,
+            port: endpoint.port || null,
+            panel: endpoint.port?.panel || null,
+            otherEndpoints,
           },
         };
       }

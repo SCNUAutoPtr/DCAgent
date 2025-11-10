@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Layout, Typography, AutoComplete, Input, message } from 'antd';
+import { Layout, Typography, AutoComplete, Input, message, Modal } from 'antd';
 import { DatabaseOutlined, SearchOutlined, BarcodeOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -133,16 +133,98 @@ export default function AppHeader() {
       if (result.type === 'Cable') {
         try {
           const endpoints = await searchService.getCableEndpointsByShortId(result.shortId);
-          if (endpoints) {
-            // 根据搜索结果的端点类型，决定聚焦哪一端
-            const scannedEndType = result.metadata?.endType as 'A' | 'B' | undefined;
-            navigateToCableEndpoint(endpoints, navigate, scannedEndType);
 
-            const targetPort = scannedEndType === 'A' ? endpoints.portA : endpoints.portB;
-            message.success(`跳转到线缆端点${scannedEndType || 'A'}: ${targetPort?.label || targetPort?.number}`);
-          } else {
+          if (!endpoints) {
             message.warning('未找到线缆连接信息');
+            return;
           }
+
+          const { cable, endpointA, endpointB, portA, portB } = endpoints;
+
+          // 判断连接状态
+          const aConnected = !!portA;
+          const bConnected = !!portB;
+          const scannedEndType = result.metadata?.endType as 'A' | 'B' | undefined;
+          const scannedEnd = scannedEndType || 'A';
+          const scannedConnected = scannedEnd === 'A' ? aConnected : bConnected;
+          const otherEnd = scannedEnd === 'A' ? 'B' : 'A';
+          const otherConnected = scannedEnd === 'A' ? bConnected : aConnected;
+
+          // 场景1: 双端都已连接 - 正常导航
+          if (aConnected && bConnected) {
+            navigateToCableEndpoint(endpoints, navigate, scannedEnd);
+            const targetPort = scannedEnd === 'A' ? portA : portB;
+            message.success(`跳转到线缆端点${scannedEnd}: ${targetPort?.label || targetPort?.number}`);
+            return;
+          }
+
+          // 场景2: 扫描端未连接，但对端已连接 - 提供选项
+          if (!scannedConnected && otherConnected) {
+            const otherPort = scannedEnd === 'A' ? portB : portA;
+            const otherEndpoint = scannedEnd === 'A' ? endpointB : endpointA;
+
+            Modal.confirm({
+              title: '线缆单端连接',
+              content: (
+                <div>
+                  <p>扫描的{scannedEnd}端（ID={result.shortId}）尚未连接</p>
+                  <p>但该线缆的{otherEnd}端{otherEndpoint?.shortId ? `（ID=${otherEndpoint.shortId}）` : ''}已连接到：</p>
+                  <p style={{ marginLeft: 16, color: '#1890ff' }}>
+                    {otherPort?.panel?.device?.label || '设备'} /
+                    {otherPort?.panel?.label || '面板'} /
+                    {otherPort?.number}
+                  </p>
+                  <p style={{ marginTop: 12 }}>是否查看{otherEnd}端的拓扑图？</p>
+                </div>
+              ),
+              okText: `查看${otherEnd}端拓扑`,
+              cancelText: '查看线缆详情',
+              onOk: () => {
+                // 跳转到对端
+                navigateToCableEndpoint(endpoints, navigate, otherEnd);
+              },
+              onCancel: () => {
+                // 跳转到线缆管理页面
+                navigate('/cable-manual-inventory', {
+                  state: {
+                    highlightCableId: cable.id
+                  }
+                });
+              }
+            });
+            return;
+          }
+
+          // 场景3: 双端都未连接 - 显示线缆信息
+          if (!aConnected && !bConnected) {
+            Modal.info({
+              title: '线缆未连接',
+              content: (
+                <div>
+                  <p>该线缆（{cable.label || cable.type}）的两端都尚未连接</p>
+                  <p>A端 ID: {endpointA?.shortId || '无'}</p>
+                  <p>B端 ID: {endpointB?.shortId || '无'}</p>
+                  <p style={{ marginTop: 12 }}>点击确定查看线缆详情</p>
+                </div>
+              ),
+              okText: '查看详情',
+              onOk: () => {
+                navigate('/cable-manual-inventory', {
+                  state: { highlightCableId: cable.id }
+                });
+              }
+            });
+            return;
+          }
+
+          // 场景4: 扫描端已连接，对端未连接 - 正常导航并提示
+          if (scannedConnected && !otherConnected) {
+            navigateToCableEndpoint(endpoints, navigate, scannedEnd);
+            const targetPort = scannedEnd === 'A' ? portA : portB;
+            message.info(`跳转到${scannedEnd}端（${otherEnd}端尚未连接）: ${targetPort?.label || targetPort?.number}`);
+            return;
+          }
+
         } catch (error) {
           console.error('Error fetching cable endpoints:', error);
           message.error('获取线缆连接信息失败');

@@ -14,3 +14,18 @@ body {
 #root {
   min-height: 100vh;
 }
+
+/* 高亮行样式 */
+.highlight-row {
+  background-color: #fffbe6 !important;
+  animation: highlight-fade 3s ease-out;
+}
+
+@keyframes highlight-fade {
+  0% {
+    background-color: #ffec3d;
+  }
+  100% {
+    background-color: #fffbe6;
+  }
+}

@@ -138,4 +138,14 @@ export const cableService = {
     const response = await api.post('/cables/connect-single-port', data);
     return response.data;
   },
+
+  // 断开端点连接
+  async disconnectEndpoint(shortId: number): Promise<{
+    message: string;
+    endpoint: any;
+    disconnectedPort: any;
+  }> {
+    const response = await api.post('/cables/disconnect-endpoint', { shortId });
+    return response.data;
+  },
 };

@@ -738,6 +738,81 @@ class CableService {
   }
 
   /**
+   * 断开端点连接：将某个端点从端口上断开
+   * 端点的shortID保留，可以重新连接到其他端口
+   */
+  async disconnectEndpoint(shortId: number) {
+    // 1. 查找端点
+    const endpoint = await prisma.cableEndpoint.findUnique({
+      where: { shortId },
+      include: {
+        cable: {
+          include: {
+            endpoints: true,
+          },
+        },
+        port: true,
+      },
+    });
+
+    if (!endpoint) {
+      throw new Error(`未找到shortID=${shortId}的端点`);
+    }
+
+    if (!endpoint.portId) {
+      throw new Error('该端点未连接到任何端口');
+    }
+
+    const portId = endpoint.portId;
+
+    // 2. 断开端点连接
+    await prisma.cableEndpoint.update({
+      where: { id: endpoint.id },
+      data: { portId: null },
+    });
+
+    // 3. 更新端口状态
+    // 检查端口是否有光模块
+    const port = await prisma.port.findUnique({
+      where: { id: portId },
+      include: { opticalModule: true },
+    });
+
+    await prisma.port.update({
+      where: { id: portId },
+      data: {
+        status: 'AVAILABLE',
+        physicalStatus: port?.opticalModule ? 'MODULE_ONLY' : 'EMPTY',
+      },
+    });
+
+    // 4. 检查线缆的另一端是否还连接着
+    const otherEndpoint = endpoint.cable.endpoints.find(e => e.id !== endpoint.id);
+    const anyConnected = otherEndpoint && otherEndpoint.portId;
+
+    // 5. 更新线缆状态
+    // 根据连接情况更新线缆状态
+    const newStatus = anyConnected ? 'INVENTORIED' : 'INVENTORIED';  // 只要有一端断开，就改为已入库
+    await prisma.cable.update({
+      where: { id: endpoint.cable.id },
+      data: { inventoryStatus: newStatus },
+    });
+
+    // 6. 从Neo4j删除连接关系
+    // 只要断开任何一端，就删除neo4j中的完整连接
+    await cableGraphService.deleteConnection(endpoint.cable.id);
+
+    return {
+      message: '端点已断开',
+      endpoint: await prisma.cableEndpoint.findUnique({
+        where: { id: endpoint.id },
+        include: { cable: true },
+      }),
+      disconnectedPort: endpoint.port,
+    };
+  }
+
+  /**
    * 手动入库：通过扫描线缆两端标签的shortID来创建线缆记录
    * shortIdA 和 shortIdB 是线缆端点的标签（从ShortIdPool预分配的shortID）
    * 线缆本身通过两端端口可以唯一确定，不需要独立的shortID

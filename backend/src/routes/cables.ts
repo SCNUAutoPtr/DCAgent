@@ -71,6 +71,11 @@ const connectSinglePortSchema = z.object({
   notes: z.string().optional(),
 });
 
+const disconnectEndpointSchema = z.object({
+  shortId: z.number().int().positive('ShortID must be a positive integer'),
+});
+
+
 // GET /api/v1/cables - 获取列表
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -321,6 +326,24 @@ router.post('/connect-single-port', async (req: Request, res: Response) => {
     }
     console.error('Error connecting single port:', error);
     res.status(500).json({ error: 'Failed to connect single port' });
+  }
+});
+
+// POST /api/v1/cables/disconnect-endpoint - 断开端点连接
+router.post('/disconnect-endpoint', async (req: Request, res: Response) => {
+  try {
+    const { shortId } = disconnectEndpointSchema.parse(req.body);
+    const result = await cableService.disconnectEndpoint(shortId);
+    res.json(result);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation error', details: error.errors });
+    }
+    if (error instanceof Error) {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Error disconnecting endpoint:', error);
+    res.status(500).json({ error: 'Failed to disconnect endpoint' });
   }
 });
 

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Panel, Port, PortStatus } from '@/types';
-import { Tooltip, Button, Space, message } from 'antd';
-import { EditOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
+import { Tooltip, Button, Space, message, Dropdown, Modal } from 'antd';
+import type { MenuProps } from 'antd';
+import { EditOutlined, LockOutlined, UnlockOutlined, DisconnectOutlined } from '@ant-design/icons';
 import { PortType, getPortSize } from '@/constants/portSizes';
 import { getPortIcon } from '@/constants/portIcons';
 import PanelCanvasEditor, { PortDefinition } from './PanelCanvasEditor';
 import { portService } from '@/services/portService';
+import { cableService } from '@/services/cableService';
 import './PanelVisualizer.css';
 
 interface PanelVisualizerProps {
@@ -53,10 +55,115 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
   const [isEditMode, setIsEditMode] = useState(false); // 编辑模式状态
   const [draggingPort, setDraggingPort] = useState<{ port: Port; startX: number; startY: number } | null>(null);
   const [editablePorts, setEditablePorts] = useState<PortDefinition[]>([]); // 编辑器使用的端口数据
+  const [contextMenuVisible, setContextMenuVisible] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+  const [selectedPort, setSelectedPort] = useState<Port | null>(null);
+  const [portConnections, setPortConnections] = useState<Map<string, any>>(new Map()); // 存储端口的连接信息
 
   // 默认使用标准 1U 尺寸（19 英寸机架）
   const panelWidth = (panel.size?.width || (panel as any).width) || 482.6;
   const panelHeight = (panel.size?.height || (panel as any).height) || 44.45;
+
+  // 加载所有已占用端口的连接信息
+  React.useEffect(() => {
+    const loadPortConnections = async () => {
+      const occupiedPorts = ports.filter(p => p.status === 'OCCUPIED');
+      const connections = new Map<string, any>();
+
+      for (const port of occupiedPorts) {
+        try {
+          const connection = await cableService.getPortConnection(port.id);
+          if (connection && connection.thisEndpoint) {
+            connections.set(port.id, connection);
+          }
+        } catch (error) {
+          console.error(`Failed to load connection for port ${port.id}:`, error);
+        }
+      }
+
+      setPortConnections(connections);
+    };
+
+    if (ports.length > 0) {
+      loadPortConnections();
+    }
+  }, [ports]);
+
+  // 处理端口右键点击
+  const handlePortContextMenu = (port: Port, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // 只有OCCUPIED状态的端口才显示断开选项
+    if (port.status !== 'OCCUPIED') {
+      return;
+    }
+
+    // 检查是否有连接信息
+    const connection = portConnections.get(port.id);
+    if (!connection || !connection.thisEndpoint || !connection.thisEndpoint.shortId) {
+      message.warning('未找到连接信息，请刷新页面重试');
+      return;
+    }
+
+    setSelectedPort(port);
+    setContextMenuVisible(true);
+  };
+
+  // 断开连接
+  const handleDisconnect = async () => {
+    if (!selectedPort) return;
+
+    const connection = portConnections.get(selectedPort.id);
+    if (!connection || !connection.thisEndpoint || !connection.thisEndpoint.shortId) {
+      message.warning('未找到连接信息');
+      return;
+    }
+
+    const shortId = connection.thisEndpoint.shortId;
+
+    Modal.confirm({
+      title: '确认断开连接',
+      content: (
+        <div>
+          <p>确定要断开端口 <strong>{selectedPort.number}</strong> 的连接吗？</p>
+          {connection.connectedPort && (
+            <p>对端端口: <strong>{connection.connectedPort.number}</strong></p>
+          )}
+          <p>端点 shortID: <strong>{shortId}</strong></p>
+        </div>
+      ),
+      onOk: async () => {
+        try {
+          await cableService.disconnectEndpoint(shortId);
+          message.success('连接已断开');
+          setContextMenuVisible(false);
+          setSelectedPort(null);
+          // 刷新数据
+          if (onPortsUpdated) {
+            onPortsUpdated();
+          }
+        } catch (error: any) {
+          console.error('断开连接失败:', error);
+          message.error(error.message || '断开连接失败');
+        }
+      },
+      onCancel: () => {
+        setContextMenuVisible(false);
+        setSelectedPort(null);
+      },
+    });
+  };
+
+  // 右键菜单项
+  const menuItems: MenuProps['items'] = [
+    {
+      key: 'disconnect',
+      label: '断开连接',
+      icon: <DisconnectOutlined />,
+      onClick: handleDisconnect,
+    },
+  ];
 
   // 当进入编辑模式时，将 Port[] 转换为 PortDefinition[]
   const handleEditModeToggle = () => {
@@ -254,6 +361,10 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
     const centerX = x + width / 2;
     const centerY = y + height / 2;
 
+    // 获取连接信息
+    const connection = portConnections.get(port.id);
+    const shortId = connection?.thisEndpoint?.shortId;
+
     return (
       <Tooltip
         key={port.id}
@@ -264,6 +375,10 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
             {portTypeInfo && <div>类型: {portTypeInfo.label}</div>}
             {portTypeInfo && <div>描述: {portTypeInfo.description}</div>}
             <div>状态: {portStatusLabels[port.status]}</div>
+            {shortId && <div>线缆端子 shortID: <strong>{shortId}</strong></div>}
+            {connection?.connectedPort && (
+              <div>对端: {connection.connectedPort.number}</div>
+            )}
             {port.ipAddress && <div>IP: {port.ipAddress}</div>}
             {port.vlan && <div>VLAN: {port.vlan}</div>}
             {port.speed && <div>速率: {port.speed}</div>}
@@ -287,6 +402,7 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
             onMouseDown={(e) => handlePortMouseDown(port, e)}
             onMouseEnter={() => setHoveredPortId(port.id)}
             onMouseLeave={() => setHoveredPortId(null)}
+            onContextMenu={(e) => !isEditMode && handlePortContextMenu(port, e)}
           />
 
           {/* 如果有端口类型图标，使用SVG图标 */}
@@ -456,17 +572,33 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
       ) : (
         /* 查看模式：使用原有的 SVG 渲染，去掉 padding，与编辑器保持一致 */
         <>
-          <svg
-            viewBox={`0 0 ${panelWidth} ${panelHeight}`}
-            width={panelWidth * scale}
-            height={panelHeight * scale}
-            className="panel-svg"
-            style={{
-              cursor: draggingPort ? 'move' : 'default',
-              border: '1px solid #d9d9d9',
-              display: 'block'
+          <Dropdown
+            menu={{ items: menuItems }}
+            trigger={[]}
+            open={contextMenuVisible}
+            onOpenChange={(visible) => {
+              if (!visible) {
+                setContextMenuVisible(false);
+                setSelectedPort(null);
+              }
             }}
           >
+            <div style={{ display: 'inline-block' }}>
+              <svg
+                viewBox={`0 0 ${panelWidth} ${panelHeight}`}
+                width={panelWidth * scale}
+                height={panelHeight * scale}
+                className="panel-svg"
+                style={{
+                  cursor: draggingPort ? 'move' : 'default',
+                  border: '1px solid #d9d9d9',
+                  display: 'block'
+                }}
+                onClick={() => {
+                  setContextMenuVisible(false);
+                  setSelectedPort(null);
+                }}
+              >
             {/* 面板背景 */}
             <rect
               x={0}
@@ -499,6 +631,8 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
             {/* 渲染所有端口 */}
             {ports.map(renderPort)}
           </svg>
+            </div>
+          </Dropdown>
 
           {/* 图例 */}
           <div className="panel-legend">
