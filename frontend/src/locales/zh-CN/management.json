@@ -30,7 +30,8 @@
       "DEVICE": "设备",
       "PANEL": "面板",
       "PORT": "端口",
-      "CABLE": "线缆"
+      "CABLE": "线缆",
+      "CABLE_ENDPOINT": "线缆端点"
     },
     "statuses": {
       "GENERATED": "已生成",

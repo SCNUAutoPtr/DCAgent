@@ -236,6 +236,7 @@ const ShortIdPoolManagement: React.FC = () => {
     PANEL: t('shortIdPool.entityTypes.PANEL'),
     PORT: t('shortIdPool.entityTypes.PORT'),
     CABLE: t('shortIdPool.entityTypes.CABLE'),
+    CABLE_ENDPOINT: t('shortIdPool.entityTypes.CABLE_ENDPOINT'),
   };
 
   // Status tag color mapping

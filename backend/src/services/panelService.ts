@@ -183,18 +183,9 @@ class PanelService {
       where: { id },
     });
 
-    // 将shortID标记为可重新使用（从池中移除绑定）
+    // 释放shortID回池中
     if (panel?.shortId) {
-      // 解除绑定，将状态改回GENERATED，允许重新使用
-      await prisma.shortIdPool.updateMany({
-        where: { shortId: panel.shortId },
-        data: {
-          status: 'GENERATED',
-          entityType: null,
-          entityId: null,
-          boundAt: null,
-        },
-      });
+      await shortIdPoolService.releaseShortId(panel.shortId);
     }
 
     return deleted;

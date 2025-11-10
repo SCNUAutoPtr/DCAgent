@@ -30,7 +30,8 @@
       "DEVICE": "Device",
       "PANEL": "Panel",
       "PORT": "Port",
-      "CABLE": "Cable"
+      "CABLE": "Cable",
+      "CABLE_ENDPOINT": "Cable Endpoint"
     },
     "statuses": {
       "GENERATED": "Generated",

@@ -143,17 +143,9 @@ class CabinetService {
       where: { id },
     });
 
-    // 将shortID标记为可重新使用
+    // 将shortID释放回池中
     if (cabinet?.shortId) {
-      await prisma.shortIdPool.updateMany({
-        where: { shortId: cabinet.shortId },
-        data: {
-          status: 'GENERATED',
-          entityType: null,
-          entityId: null,
-          boundAt: null,
-        },
-      });
+      await shortIdPoolService.releaseShortId(cabinet.shortId);
     }
 
     return deleted;

@@ -77,23 +77,26 @@ class RoomService {
   }
 
   async createRoom(data: CreateRoomInput): Promise<Room> {
-    // 验证shortId是否可用
-    const existingCheck = await shortIdPoolService.checkShortIdExists(data.shortId);
-    if (existingCheck.exists) {
-      throw new Error(`ShortID ${data.shortId} 已被占用: ${existingCheck.usedBy === 'pool' ? '在标签池中' : '已绑定到实体'}`);
-    }
+    // 使用 shortIdPoolService 分配 shortId
+    const allocatedShortId = await shortIdPoolService.allocateShortId('ROOM', '', data.shortId);
 
     // 创建机房
     const room = await prisma.room.create({
-      data,
+      data: {
+        ...data,
+        shortId: allocatedShortId,
+      },
       include: {
         dataCenter: true,
         cabinets: true,
       },
     });
 
-    // 绑定shortID到池中
-    await shortIdPoolService.bindShortIdToEntity(data.shortId, 'ROOM', room.id);
+    // 更新 shortIdPool 中的 entityId
+    await prisma.shortIdPool.updateMany({
+      where: { shortId: allocatedShortId },
+      data: { entityId: room.id },
+    });
 
     return room;
   }
@@ -121,17 +124,9 @@ class RoomService {
       where: { id },
     });
 
-    // 将shortID标记为可重新使用
+    // 使用 shortIdPoolService 释放 shortId
     if (room?.shortId) {
-      await prisma.shortIdPool.updateMany({
-        where: { shortId: room.shortId },
-        data: {
-          status: 'GENERATED',
-          entityType: null,
-          entityId: null,
-          boundAt: null,
-        },
-      });
+      await shortIdPoolService.releaseShortId(room.shortId);
     }
 
     return deleted;

@@ -1,6 +1,6 @@
 import api from './api';
 
-export type EntityType = 'DATA_CENTER' | 'ROOM' | 'CABINET' | 'DEVICE' | 'PANEL' | 'PORT' | 'CABLE';
+export type EntityType = 'DATA_CENTER' | 'ROOM' | 'CABINET' | 'DEVICE' | 'PANEL' | 'PORT' | 'CABLE' | 'CABLE_ENDPOINT';
 export type ShortIdPoolStatus = 'GENERATED' | 'PRINTED' | 'BOUND' | 'CANCELLED';
 
 export interface ShortIdPoolRecord {

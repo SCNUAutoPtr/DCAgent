@@ -1,6 +1,7 @@
 import prisma from '../utils/prisma';
 import { EntityType, ShortIdPoolStatus } from '@prisma/client';
 import { ShortIdFormatter } from '../utils/shortIdFormatter';
+import globalShortIdService from './globalShortIdService';
 
 export class ShortIdPoolService {
   /**
@@ -24,23 +25,21 @@ export class ShortIdPoolService {
       select: { shortId: true },
     });
 
-    // 从所有实体表查找最大shortID（因为shortId是全局唯一的）
-    const [cable, port, device, cabinet, room, dataCenter] = await Promise.all([
-      prisma.cable.findFirst({ orderBy: { shortId: 'desc' }, select: { shortId: true } }),
-      prisma.port.findFirst({ orderBy: { shortId: 'desc' }, select: { shortId: true } }),
-      prisma.device.findFirst({ orderBy: { shortId: 'desc' }, select: { shortId: true } }),
+    // 从所有有shortId字段的实体表查找最大shortID（因为shortId是全局唯一的）
+    const [cabinet, room, panel, cableEndpoint, globalAllocation] = await Promise.all([
       prisma.cabinet.findFirst({ orderBy: { shortId: 'desc' }, select: { shortId: true } }),
       prisma.room.findFirst({ orderBy: { shortId: 'desc' }, select: { shortId: true } }),
-      prisma.dataCenter.findFirst({ orderBy: { shortId: 'desc' }, select: { shortId: true } }),
+      prisma.panel.findFirst({ orderBy: { shortId: 'desc' }, select: { shortId: true } }),
+      prisma.cableEndpoint.findFirst({ orderBy: { shortId: 'desc' }, select: { shortId: true } }),
+      prisma.globalShortIdAllocation.findFirst({ orderBy: { shortId: 'desc' }, select: { shortId: true } }),
     ]);
 
     const maxEntityShortId = Math.max(
-      cable?.shortId || 0,
-      port?.shortId || 0,
-      device?.shortId || 0,
       cabinet?.shortId || 0,
       room?.shortId || 0,
-      dataCenter?.shortId || 0
+      panel?.shortId || 0,
+      cableEndpoint?.shortId || 0,
+      globalAllocation?.shortId || 0
     );
 
     const currentMax = Math.max(maxPoolShortId?.shortId || 0, maxEntityShortId);
@@ -282,12 +281,178 @@ export class ShortIdPoolService {
       });
 
       result.byType = byTypeRecords.reduce((acc, r) => {
-        acc[r.entityType] = r._count._all;
+        if (r.entityType) {
+          acc[r.entityType] = r._count._all;
+        }
         return acc;
       }, {} as Record<string, number>);
     }
 
     return result;
+  }
+
+  /**
+   * 分配shortID给实体（统一入口）
+   * 同时更新GlobalShortIdAllocation和ShortIdPool
+   * @param entityType 实体类型
+   * @param entityId 实体ID
+   * @param specifiedShortId 指定的shortID（可选，如果不指定则从池中分配或自动生成）
+   * @returns 分配的shortID
+   */
+  async allocateShortId(
+    entityType: EntityType,
+    entityId: string,
+    specifiedShortId?: number
+  ): Promise<number> {
+    return await prisma.$transaction(async (tx) => {
+      let shortId: number;
+
+      if (specifiedShortId !== undefined) {
+        // 使用指定的shortID
+        // 1. 检查ShortIdPool中是否存在且可用
+        const poolRecord = await tx.shortIdPool.findFirst({
+          where: { shortId: specifiedShortId },
+        });
+
+        if (poolRecord) {
+          // 池中存在，检查状态
+          if (poolRecord.status === ShortIdPoolStatus.BOUND) {
+            throw new Error(`ShortID ${specifiedShortId} 已被占用（状态：${poolRecord.status}）`);
+          }
+          if (poolRecord.status === ShortIdPoolStatus.CANCELLED) {
+            throw new Error(`ShortID ${specifiedShortId} 已报废，不可使用`);
+          }
+        } else {
+          // 池中不存在，创建记录
+          await tx.shortIdPool.create({
+            data: {
+              shortId: specifiedShortId,
+              status: ShortIdPoolStatus.GENERATED,
+              batchNo: `manual_${new Date().toISOString().split('T')[0]}`,
+            },
+          });
+        }
+
+        shortId = specifiedShortId;
+      } else {
+        // 自动分配：从池中找一个GENERATED或PRINTED状态的shortID
+        const availableRecord = await tx.shortIdPool.findFirst({
+          where: {
+            status: {
+              in: [ShortIdPoolStatus.GENERATED, ShortIdPoolStatus.PRINTED],
+            },
+          },
+          orderBy: { shortId: 'asc' },
+        });
+
+        if (availableRecord) {
+          shortId = availableRecord.shortId;
+        } else {
+          // 池中没有可用的，自动生成一个新的
+          const maxPoolShortId = await tx.shortIdPool.findFirst({
+            orderBy: { shortId: 'desc' },
+            select: { shortId: true },
+          });
+
+          const [cabinet, room, panel, cableEndpoint, globalAllocation] = await Promise.all([
+            tx.cabinet.findFirst({ orderBy: { shortId: 'desc' }, select: { shortId: true } }),
+            tx.room.findFirst({ orderBy: { shortId: 'desc' }, select: { shortId: true } }),
+            tx.panel.findFirst({ orderBy: { shortId: 'desc' }, select: { shortId: true } }),
+            tx.cableEndpoint.findFirst({ orderBy: { shortId: 'desc' }, select: { shortId: true } }),
+            tx.globalShortIdAllocation.findFirst({ orderBy: { shortId: 'desc' }, select: { shortId: true } }),
+          ]);
+
+          const currentMax = Math.max(
+            maxPoolShortId?.shortId || 0,
+            cabinet?.shortId || 0,
+            room?.shortId || 0,
+            panel?.shortId || 0,
+            cableEndpoint?.shortId || 0,
+            globalAllocation?.shortId || 0
+          );
+
+          shortId = currentMax + 1;
+
+          // 创建池记录
+          await tx.shortIdPool.create({
+            data: {
+              shortId,
+              status: ShortIdPoolStatus.GENERATED,
+              batchNo: `auto_${new Date().toISOString().split('T')[0]}`,
+            },
+          });
+        }
+      }
+
+      // 更新ShortIdPool状态为BOUND
+      await tx.shortIdPool.updateMany({
+        where: { shortId },
+        data: {
+          entityType,
+          entityId,
+          status: ShortIdPoolStatus.BOUND,
+          boundAt: new Date(),
+        },
+      });
+
+      // 同时更新GlobalShortIdAllocation
+      // 先检查是否已存在
+      const existingAllocation = await tx.globalShortIdAllocation.findUnique({
+        where: { shortId },
+      });
+
+      if (!existingAllocation) {
+        // 转换EntityType到globalShortIdService的类型
+        const globalEntityType = entityType as any;
+        await tx.globalShortIdAllocation.create({
+          data: {
+            shortId,
+            entityType: globalEntityType,
+            entityId,
+          },
+        });
+
+        // 更新全局序列
+        const sequence = await tx.globalShortIdSequence.findFirst();
+        if (sequence && shortId >= sequence.currentValue) {
+          await tx.globalShortIdSequence.update({
+            where: { id: sequence.id },
+            data: { currentValue: shortId + 1 },
+          });
+        } else if (!sequence) {
+          await tx.globalShortIdSequence.create({
+            data: { currentValue: shortId + 1 },
+          });
+        }
+      }
+
+      return shortId;
+    });
+  }
+
+  /**
+   * 释放shortID（删除实体时调用）
+   * 同时清理GlobalShortIdAllocation和重置ShortIdPool状态
+   * @param shortId 要释放的shortID
+   */
+  async releaseShortId(shortId: number): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      // 1. 从GlobalShortIdAllocation中删除
+      await tx.globalShortIdAllocation.deleteMany({
+        where: { shortId },
+      });
+
+      // 2. 重置ShortIdPool状态为GENERATED（可重新使用）
+      await tx.shortIdPool.updateMany({
+        where: { shortId },
+        data: {
+          status: ShortIdPoolStatus.GENERATED,
+          entityType: null,
+          entityId: null,
+          boundAt: null,
+        },
+      });
+    });
   }
 
   /**

@@ -30,7 +30,8 @@
       "DEVICE": "デバイス",
       "PANEL": "パネル",
       "PORT": "ポート",
-      "CABLE": "ケーブル"
+      "CABLE": "ケーブル",
+      "CABLE_ENDPOINT": "ケーブルエンドポイント"
     },
     "statuses": {
       "GENERATED": "生成済み",
