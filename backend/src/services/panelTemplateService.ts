@@ -1,6 +1,7 @@
 import { PrismaClient, PanelType } from '@prisma/client';
 import { generatePortLayout } from '../utils/panelLayoutGenerator';
 import { PortType as PortTypeEnum } from '../constants/portSizes';
+import { shortIdPoolService } from './shortIdPoolService';
 
 const prisma = new PrismaClient();
 
@@ -140,11 +141,18 @@ export class PanelTemplateService {
   async createPanelFromTemplate(
     templateId: string,
     deviceId: string,
-    panelName?: string
+    panelName?: string,
+    shortId?: number
   ) {
     const template = await this.getTemplateById(templateId);
     if (!template) {
       throw new Error('模板不存在');
+    }
+
+    // 如果提供了shortId，分配并验证
+    let allocatedShortId: number | undefined = undefined;
+    if (shortId) {
+      allocatedShortId = await shortIdPoolService.allocateShortId('PANEL', '', shortId);
     }
 
     // 创建面板
@@ -154,6 +162,7 @@ export class PanelTemplateService {
         type: template.type,
         deviceId,
         templateId,
+        shortId: allocatedShortId,
         size: {
           width: template.width,
           height: template.height,
@@ -163,6 +172,14 @@ export class PanelTemplateService {
         svgPath: template.svgPath,
       },
     });
+
+    // 如果分配了shortId，更新shortIdPool的entityId
+    if (allocatedShortId) {
+      await prisma.shortIdPool.updateMany({
+        where: { shortId: allocatedShortId },
+        data: { entityId: panel.id },
+      });
+    }
 
     // 根据模板的端口定义创建端口
     const portDefinitions = template.portDefinitions as Array<{

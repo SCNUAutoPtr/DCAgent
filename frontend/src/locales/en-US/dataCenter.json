@@ -30,6 +30,6 @@
     "nameRequired": "Please enter data center name"
   },
   "table": {
-    "total": "Total {total} items"
+    "total": "Total {{total}} items"
   }
 }

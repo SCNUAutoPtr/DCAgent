@@ -570,7 +570,8 @@ export default function CabinetList() {
           await panelTemplateService.createPanelFromTemplate(
             panelData.templateId,
             panelData.deviceId!,
-            panelData.name
+            panelData.name,
+            panelData.shortId
           );
         } else {
           // 自定义创建：普通创建面板（不含端口）

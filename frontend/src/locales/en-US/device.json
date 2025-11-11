@@ -52,7 +52,7 @@
     "uHeightRequired": "U height is required"
   },
   "table": {
-    "total": "Total {total} items"
+    "total": "Total {{total}} items"
   },
   "buttons": {
     "create": "Create Device",

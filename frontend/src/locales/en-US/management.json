@@ -106,7 +106,7 @@
       "reasonRequired": "Please enter reason"
     },
     "pagination": {
-      "total": "Total {total} records"
+      "total": "Total {{total}} records"
     }
   },
   "bulkDeployment": {
@@ -223,18 +223,18 @@
     "table": {
       "success": "Success",
       "failed": "Failed",
-      "successCount": "Success: {count} records",
-      "failedCount": "Failed: {count} records",
-      "rowError": "Row {row}: {error}"
+      "successCount": "Success: {{count}} records",
+      "failedCount": "Failed: {{count}} records",
+      "rowError": "Row {{row}}: {{error}}"
     },
     "validation": {
       "deviceNameRequired": "Device name cannot be empty",
-      "deviceTypeRequired": "Device type must be: {types}",
+      "deviceTypeRequired": "Device type must be: {{types}}",
       "cabinetIdRequired": "Cabinet ID does not exist",
       "uPositionInvalid": "U position must be a number between 1-42",
       "uHeightInvalid": "U height must be a positive integer",
       "cableLengthInvalid": "Length must be a positive number",
-      "cableTypeRequired": "Cable type must be: {types}"
+      "cableTypeRequired": "Cable type must be: {{types}}"
     }
   },
   "panelTemplate": {
@@ -309,7 +309,7 @@
       "saveFailed": "Failed to save",
       "initSuccess": "System preset templates initialized successfully",
       "initFailed": "Initialization failed",
-      "portInfo": "Port {number}"
+      "portInfo": "Port {{number}}"
     },
     "validation": {
       "nameRequired": "Please enter template name",
@@ -319,8 +319,8 @@
     "table": {
       "systemTag": "System Preset",
       "noData": "No data",
-      "total": "Total {total} records",
-      "panelCount": "{count} panels use this template"
+      "total": "Total {{total}} records",
+      "panelCount": "{{count}} panels use this template"
     },
     "buttons": {
       "close": "Close",

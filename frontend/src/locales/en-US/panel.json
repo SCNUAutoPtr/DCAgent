@@ -47,7 +47,7 @@
     "deviceRequired": "Please select device"
   },
   "table": {
-    "total": "Total {total} items"
+    "total": "Total {{total}} items"
   },
   "labels": {
     "customized": "Customized",

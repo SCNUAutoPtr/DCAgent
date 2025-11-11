@@ -263,10 +263,69 @@ function CableTopologyContent() {
   const [cableDetailModalVisible, setCableDetailModalVisible] = useState(false);
   const [selectedCableEdge, setSelectedCableEdge] = useState<any>(null);
 
-  const { fitView, zoomIn, zoomOut } = useReactFlow();
+  const { fitView, zoomIn, zoomOut, getEdges, getNodes } = useReactFlow();
 
-  // 处理初始高亮（从路由状态）
+  // 处理初始高亮（从路由状态或 URL 参数）
   useEffect(() => {
+    // 优先从 URL query 参数读取
+    const searchParams = new URLSearchParams(location.search);
+    const queryPanelId = searchParams.get('panelId');
+    const queryShortId = searchParams.get('shortId');
+    const queryCableId = searchParams.get('cableId');
+
+    // 如果 URL 有参数，使用 URL 参数
+    if (queryPanelId || queryShortId) {
+      const handleUrlParams = async () => {
+        try {
+          // 优先处理 shortId（可能是面板或端子）
+          if (queryShortId) {
+            await handleScanInput(queryShortId);
+            return;
+          }
+
+          // 处理 panelId
+          if (queryPanelId) {
+            await loadTopology(queryPanelId, depth);
+
+            // 延迟聚焦到面板节点和高亮线缆，确保拓扑图已加载完成
+            setTimeout(() => {
+              // 使用 getNodes() 和 getEdges() 获取最新状态，避免闭包问题
+              const currentNodes = getNodes();
+              const currentEdges = getEdges();
+
+              // 聚焦到指定面板
+              const focusNode = currentNodes.find(n => n.id === queryPanelId);
+              if (focusNode) {
+                fitView({
+                  nodes: [focusNode],
+                  duration: 800,
+                  padding: 0.3,
+                });
+              }
+
+              // 如果有 cableId，高亮线缆
+              if (queryCableId) {
+                const cableEdge = currentEdges.find(e => e.data?.cable?.id === queryCableId);
+                if (cableEdge) {
+                  setHighlightedEdgeIds([cableEdge.id]);
+                  message.success('已定位到指定线缆');
+                } else {
+                  console.warn('未找到线缆边，cableId:', queryCableId, '当前edges数量:', currentEdges.length);
+                }
+              }
+            }, 1000);
+          }
+        } catch (error) {
+          console.error('Failed to handle URL params:', error);
+          message.error('加载 URL 参数失败');
+        }
+      };
+
+      handleUrlParams();
+      return;
+    }
+
+    // 否则从 location.state 读取（兼容旧的跳转方式）
     const state = location.state as any;
     if (state?.focusPanel) {
       // 首先加载拓扑图
@@ -274,9 +333,13 @@ function CableTopologyContent() {
 
       // 延迟设置高亮和聚焦，确保图已经加载完成
       const timer = setTimeout(() => {
+        // 使用 getNodes() 和 getEdges() 获取最新状态，避免闭包问题
+        const currentNodes = getNodes();
+        const currentEdges = getEdges();
+
         // 只有当存在 highlightCable 时才高亮线缆
         if (state.highlightCable) {
-          const cableEdge = edges.find(e => e.data?.cable?.id === state.highlightCable);
+          const cableEdge = currentEdges.find(e => e.data?.cable?.id === state.highlightCable);
           if (cableEdge) {
             setHighlightedEdgeIds([cableEdge.id]);
 
@@ -285,8 +348,9 @@ function CableTopologyContent() {
               message.success(`已定位到线缆: ${state.cableInfo.label || state.cableInfo.type}`);
             }
           } else {
-            // 未找到线缆边，可能未在当前视图中
-            message.warning('该线缆未在当前拓扑视图中，可能端子未连接或超出显示范围');
+            // 未找到线缆边，可能是深度不够或加载未完成
+            console.warn('未找到线缆边，cableId:', state.highlightCable, '当前edges数量:', currentEdges.length);
+            message.warning('未找到指定线缆，尝试增加拓扑深度或稍后重试');
           }
         }
 
@@ -296,7 +360,7 @@ function CableTopologyContent() {
         }
 
         // 聚焦到指定面板
-        const focusNode = nodes.find(n => n.id === state.focusPanel);
+        const focusNode = currentNodes.find(n => n.id === state.focusPanel);
         if (focusNode) {
           fitView({
             nodes: [focusNode],
@@ -313,7 +377,7 @@ function CableTopologyContent() {
       message.info('该线缆端子尚未连接，无法在拓扑图中定位');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state]);
+  }, [location.search, location.state]);
 
   // 根据高亮状态动态生成边和节点样式
   const styledEdges = edges.map(edge => ({
@@ -722,6 +786,106 @@ function CableTopologyContent() {
       // 使用 ShortIdFormatter 解析输入（支持 E-00001 或纯数字）
       const shortId = ShortIdFormatter.toNumericFormat(value.trim());
 
+      // 1. 先尝试查询线缆端子
+      try {
+        const endpointData = await cableService.getCableEndpointsByShortId(shortId);
+
+        if (endpointData && endpointData.cable) {
+          const { cable, portA, portB, endpointA, endpointB } = endpointData;
+
+          // 检查是否有已连接的端口
+          const hasPortA = portA && portA.panelId;
+          const hasPortB = portB && portB.panelId;
+
+          // 确定用户扫描的是哪个端子（A还是B）
+          const scannedEndpointType = endpointA?.shortId === shortId ? 'A' :
+                                      endpointB?.shortId === shortId ? 'B' : null;
+
+          // 优先聚焦到用户扫描的端子所在的面板
+          let focusPanelId;
+          if (scannedEndpointType === 'A' && hasPortA) {
+            focusPanelId = portA.panelId;
+          } else if (scannedEndpointType === 'B' && hasPortB) {
+            focusPanelId = portB.panelId;
+          } else {
+            // 如果扫描的端子未连接，则选择另一个端子的面板
+            focusPanelId = hasPortA ? portA.panelId : (hasPortB ? portB.panelId : null);
+          }
+
+          console.log('端子查询结果:', JSON.stringify({
+            shortId,
+            scannedEndpointType,
+            cableId: cable?.id,
+            endpointA: { shortId: endpointA?.shortId, portId: portA?.id },
+            endpointB: { shortId: endpointB?.shortId, portId: portB?.id },
+            portA: { id: portA?.id, panelId: portA?.panelId, label: portA?.label },
+            portB: { id: portB?.id, panelId: portB?.panelId, label: portB?.label },
+            hasPortA,
+            hasPortB,
+            focusPanelId
+          }, null, 2));
+
+          if (!hasPortA && !hasPortB) {
+            message.warning('该线缆端子尚未连接到任何端口，无法在拓扑图中定位');
+            setScanInput('');
+            return;
+          }
+
+          if (!focusPanelId) {
+            message.warning('无法确定面板位置');
+            setScanInput('');
+            return;
+          }
+
+          // 加载拓扑图
+          await loadTopology(focusPanelId, depth);
+
+          // 延迟设置高亮，确保拓扑图已加载完成
+          setTimeout(() => {
+            // 使用 getNodes() 和 getEdges() 获取最新状态，避免闭包问题
+            const currentNodes = getNodes();
+            const currentEdges = getEdges();
+
+            // 高亮线缆边
+            const cableEdge = currentEdges.find(e => e.data?.cable?.id === cable.id);
+            if (cableEdge) {
+              setHighlightedEdgeIds([cableEdge.id]);
+              message.success(`已定位到线缆端子 ${ShortIdFormatter.toDisplayFormat(shortId)}`);
+
+              // 高亮相关的面板节点
+              const relatedPanelIds = [];
+              if (hasPortA) relatedPanelIds.push(portA.panelId);
+              if (hasPortB) relatedPanelIds.push(portB.panelId);
+              setHighlightedNodeIds(relatedPanelIds);
+
+              // 聚焦到面板
+              const focusNode = currentNodes.find(n => n.id === focusPanelId);
+              if (focusNode) {
+                fitView({
+                  nodes: [focusNode],
+                  duration: 800,
+                  padding: 0.3,
+                });
+              }
+            } else {
+              console.warn('未找到线缆边，cableId:', cable.id, '当前edges数量:', currentEdges.length, 'focusPanelId:', focusPanelId);
+              message.warning('未找到指定线缆，尝试增加拓扑深度或稍后重试');
+            }
+          }, 1000);
+
+          // 清空输入框
+          setScanInput('');
+          return;
+        }
+      } catch (endpointError: any) {
+        // 如果不是404错误（未找到端子），则抛出错误
+        if (endpointError.response?.status !== 404) {
+          throw endpointError;
+        }
+        // 404错误表示不是端子ID，继续尝试面板查询
+      }
+
+      // 2. 尝试查询面板
       const panel = await panelService.getByShortId(shortId);
       if (panel) {
         message.success(t('messages.panelLoadSuccess', { name: panel.name }));
@@ -740,7 +904,7 @@ function CableTopologyContent() {
         setScanInput('');
       }
     } catch (error) {
-      console.error('Failed to load panel by shortId:', error);
+      console.error('Failed to load by shortId:', error);
       message.error(t('messages.panelNotFound'));
     }
   };

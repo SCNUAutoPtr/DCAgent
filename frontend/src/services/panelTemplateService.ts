@@ -37,11 +37,13 @@ export const panelTemplateService = {
   async createPanelFromTemplate(
     templateId: string,
     deviceId: string,
-    panelName?: string
+    panelName?: string,
+    shortId?: number
   ): Promise<{ panel: any; ports: any[] }> {
     const response = await api.post(`/panel-templates/${templateId}/create-panel`, {
       deviceId,
       panelName,
+      shortId,
     });
     return response.data;
   },

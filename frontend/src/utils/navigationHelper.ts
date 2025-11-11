@@ -53,12 +53,15 @@ export function navigateToEntity(
       break;
 
     case 'Panel':
-      // 跳转到拓扑图页面，加载该面板的网络拓扑
-      path = '/topology';
-      state = {
-        focusPanel: id, // 聚焦并加载该面板的拓扑
-        // 不设置 highlightCable，因为不需要高亮任何线缆
-      };
+      // 跳转到拓扑图页面，使用 URL 参数加载该面板的网络拓扑
+      // 优先使用 shortId（如果有），否则使用 panelId
+      if (metadata?.shortId) {
+        path = `/cable-topology?shortId=${metadata.shortId}`;
+      } else {
+        path = `/cable-topology?panelId=${id}`;
+      }
+      // 使用 URL 参数不需要 state
+      state = {};
       break;
 
     case 'Port':
@@ -128,20 +131,41 @@ export function navigateToCableEndpoint(
     return null;
   }
 
-  // 收集需要高亮的信息
-  const panelIdA = endpoints.portA?.panel?.id;
-  const panelIdB = endpoints.portB?.panel?.id;
-  const highlightPanels = [panelIdA, panelIdB].filter(Boolean);
+  // 使用 URL 参数跳转到线缆拓扑图页面
+  // 优先使用 shortId 参数（更简洁且支持自动识别）
+  const endpointA = endpoints.endpointA;
+  const endpointB = endpoints.endpointB;
 
-  // 跳转到拓扑图页面，高亮显示线缆
-  navigate('/topology', {
-    state: {
-      highlightCable: endpoints.cable?.id, // 高亮的线缆ID
-      highlightPanels, // 高亮的面板节点
-      focusPanel: panelId, // 聚焦的面板（用于居中视图和加载拓扑）
-      cableInfo: endpoints.cable, // 传递线缆信息用于显示
-    },
-  });
+  // 根据 preferredEnd 选择要传递的 shortId
+  let shortId: number | null = null;
+  if (preferredEnd === 'A' && endpointA?.shortId) {
+    shortId = endpointA.shortId;
+  } else if (preferredEnd === 'B' && endpointB?.shortId) {
+    shortId = endpointB.shortId;
+  } else if (endpointA?.shortId) {
+    // 默认使用 A 端
+    shortId = endpointA.shortId;
+  } else if (endpointB?.shortId) {
+    // A 端没有则使用 B 端
+    shortId = endpointB.shortId;
+  }
+
+  // 构建 URL 参数
+  const searchParams = new URLSearchParams();
+
+  if (shortId !== null) {
+    // 优先使用 shortId 参数（自动查询和定位）
+    searchParams.set('shortId', shortId.toString());
+  } else {
+    // 降级到 panelId + cableId 参数
+    searchParams.set('panelId', panelId);
+    if (endpoints.cable?.id) {
+      searchParams.set('cableId', endpoints.cable.id);
+    }
+  }
+
+  // 使用 URL 参数跳转
+  navigate(`/cable-topology?${searchParams.toString()}`);
 
   return targetPort;
 }

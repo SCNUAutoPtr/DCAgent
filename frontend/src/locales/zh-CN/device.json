@@ -52,7 +52,7 @@
     "uHeightRequired": "占用U数为必填项"
   },
   "table": {
-    "total": "共 {total} 条"
+    "total": "共 {{total}} 条"
   },
   "buttons": {
     "create": "新建设备",

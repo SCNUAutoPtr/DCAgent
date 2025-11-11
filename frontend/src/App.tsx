@@ -54,6 +54,7 @@ function App() {
               <Route path="/panels" element={<PanelList />} />
               <Route path="/port-detail" element={<PortDetailView />} />
               <Route path="/topology" element={<CableTopology />} />
+              <Route path="/cable-topology" element={<CableTopology />} />
               <Route path="/cable-manual-inventory" element={<CableManualInventory />} />
               <Route path="/cable-scrap" element={<CableScrap />} />
               <Route path="/shortid-pool" element={<ShortIdPoolManagement />} />

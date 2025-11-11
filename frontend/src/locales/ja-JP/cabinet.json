@@ -46,7 +46,7 @@
     "deviceTransferFailed": "デバイスの移動に失敗しました",
     "deviceCopySuccess": "デバイスの複製に成功しました",
     "deviceCopyFailed": "デバイスの複製に失敗しました",
-    "positionOccupied": "ターゲット位置 U{uPosition} は既に使用されています",
+    "positionOccupied": "ターゲット位置 U{{uPosition}} は既に使用されています",
     "portPositionUpdated": "ポート位置が更新されました",
     "portPositionUpdateFailed": "ポート位置の更新に失敗しました",
     "deviceTypeError": "デバイスタイプを選択してください"
@@ -62,7 +62,7 @@
     "uPositionRequired": "ターゲットU位置を入力してください"
   },
   "table": {
-    "total": "合計 {total} 件"
+    "total": "合計 {{total}} 件"
   },
   "tabs": {
     "cabinetList": "ラック一覧",
@@ -134,11 +134,11 @@
   },
   "transfer": {
     "title": "デバイス移動",
-    "description": "デバイス {deviceName} は現在の位置からターゲット位置に移動します。元の位置は解放されます。"
+    "description": "デバイス {{deviceName}} は現在の位置からターゲット位置に移動します。元の位置は解放されます。"
   },
   "copy": {
     "title": "デバイス複製",
-    "description": "デバイス {deviceName} のコピーを作成します。基本設定情報が含まれます。"
+    "description": "デバイス {{deviceName}} のコピーを作成します。基本設定情報が含まれます。"
   },
   "views": {
     "2dFrontPanel": "2Dフロントパネルビュー",

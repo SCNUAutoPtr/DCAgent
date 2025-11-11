@@ -30,6 +30,6 @@
     "nameRequired": "请输入数据中心名称"
   },
   "table": {
-    "total": "共 {total} 条"
+    "total": "共 {{total}} 条"
   }
 }

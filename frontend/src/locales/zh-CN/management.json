@@ -107,8 +107,8 @@
       "batchScrapSuccess": "批量报废成功",
       "batchScrapFailed": "批量报废失败",
       "batchScrapPartialSuccess": "批量报废部分成功",
-      "batchScrapSuccessCount": "成功报废 {count} 个shortID",
-      "batchScrapFailedCount": "失败 {count} 个",
+      "batchScrapSuccessCount": "成功报废 {{count}} 个shortID",
+      "batchScrapFailedCount": "失败 {{count}} 个",
       "failedDetails": "失败详情"
     },
     "filters": {
@@ -122,7 +122,7 @@
       "rangeExprRequired": "请输入shortID范围表达式"
     },
     "pagination": {
-      "total": "共 {total} 条"
+      "total": "共 {{total}} 条"
     }
   },
   "bulkDeployment": {
@@ -239,18 +239,18 @@
     "table": {
       "success": "成功",
       "failed": "失败",
-      "successCount": "成功: {count} 条",
-      "failedCount": "失败: {count} 条",
-      "rowError": "第 {row} 行: {error}"
+      "successCount": "成功: {{count}} 条",
+      "failedCount": "失败: {{count}} 条",
+      "rowError": "第 {{row}} 行: {{error}}"
     },
     "validation": {
       "deviceNameRequired": "设备名称不能为空",
-      "deviceTypeRequired": "设备类型必须是: {types}",
+      "deviceTypeRequired": "设备类型必须是: {{types}}",
       "cabinetIdRequired": "机柜ID不存在",
       "uPositionInvalid": "U位位置必须是1-42之间的数字",
       "uHeightInvalid": "U高度必须是正整数",
       "cableLengthInvalid": "长度必须是正数",
-      "cableTypeRequired": "线缆类型必须是: {types}"
+      "cableTypeRequired": "线缆类型必须是: {{types}}"
     }
   },
   "panelTemplate": {
@@ -325,7 +325,7 @@
       "saveFailed": "保存失败",
       "initSuccess": "系统预设模板初始化成功",
       "initFailed": "初始化失败",
-      "portInfo": "端口 {number}"
+      "portInfo": "端口 {{number}}"
     },
     "validation": {
       "nameRequired": "请输入模板名称",
@@ -335,8 +335,8 @@
     "table": {
       "systemTag": "系统预设",
       "noData": "暂无数据",
-      "total": "共 {total} 条",
-      "panelCount": "共 {count} 个面板使用此模板"
+      "total": "共 {{total}} 条",
+      "panelCount": "共 {{count}} 个面板使用此模板"
     },
     "buttons": {
       "close": "关闭",

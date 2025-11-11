@@ -47,7 +47,7 @@
     "deviceRequired": "请选择设备"
   },
   "table": {
-    "total": "共 {total} 条"
+    "total": "共 {{total}} 条"
   },
   "labels": {
     "customized": "自定义",

@@ -112,6 +112,7 @@ class SearchService {
           name: panel.name,
           description: panel.type,
           metadata: {
+            shortId: panel.shortId ?? undefined,
             type: panel.type,
             deviceId: panel.deviceId,
             cabinetId: (panel as any).device?.cabinetId,

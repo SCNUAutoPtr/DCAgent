@@ -84,7 +84,7 @@ router.delete('/:id', async (req, res) => {
 router.post('/:id/create-panel', async (req, res) => {
   try {
     const { id } = req.params;
-    const { deviceId, panelName } = req.body;
+    const { deviceId, panelName, shortId } = req.body;
 
     if (!deviceId) {
       return res.status(400).json({ error: '缺少 deviceId 参数' });
@@ -93,7 +93,8 @@ router.post('/:id/create-panel', async (req, res) => {
     const result = await panelTemplateService.createPanelFromTemplate(
       id,
       deviceId,
-      panelName
+      panelName,
+      shortId
     );
     return res.status(201).json(result);
   } catch (error: any) {

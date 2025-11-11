@@ -52,7 +52,7 @@
     "uHeightRequired": "占有U数は必須項目です"
   },
   "table": {
-    "total": "全 {total} 件"
+    "total": "全 {{total}} 件"
   },
   "buttons": {
     "create": "新しいデバイスを作成",

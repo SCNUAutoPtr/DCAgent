@@ -35,6 +35,6 @@
     "dataCenterRequired": "データセンターを選択してください"
   },
   "table": {
-    "total": "合計 {total} 件"
+    "total": "合計 {{total}} 件"
   }
 }

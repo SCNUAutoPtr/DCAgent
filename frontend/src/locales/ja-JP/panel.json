@@ -47,7 +47,7 @@
     "deviceRequired": "デバイスを選択してください"
   },
   "table": {
-    "total": "全 {total} 件"
+    "total": "全 {{total}} 件"
   },
   "labels": {
     "customized": "カスタマイズ",

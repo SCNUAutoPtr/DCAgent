@@ -35,6 +35,6 @@
     "dataCenterRequired": "Please select data center"
   },
   "table": {
-    "total": "Total {total} items"
+    "total": "Total {{total}} items"
   }
 }

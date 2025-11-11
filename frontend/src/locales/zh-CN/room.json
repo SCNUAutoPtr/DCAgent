@@ -35,6 +35,6 @@
     "dataCenterRequired": "请选择数据中心"
   },
   "table": {
-    "total": "共 {total} 条"
+    "total": "共 {{total}} 条"
   }
 }

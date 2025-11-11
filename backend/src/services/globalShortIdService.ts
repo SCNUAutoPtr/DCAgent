@@ -96,23 +96,38 @@ class GlobalShortIdService {
 
   /**
    * 查询 shortId 对应的实体信息
+   * 先查 GlobalShortIdAllocation，如果没有或 entityId 为空则查 ShortIdPool（兼容旧数据）
    */
   async getEntityByShortId(shortId: number): Promise<{
     entityType: EntityType;
     entityId: string;
   } | null> {
+    // 1. 优先查询新的全局分配表
     const allocation = await prisma.globalShortIdAllocation.findUnique({
       where: { shortId },
     });
 
-    if (!allocation) {
-      return null;
+    // 如果找到且 entityId 不为空，返回结果
+    if (allocation && allocation.entityId) {
+      return {
+        entityType: allocation.entityType as EntityType,
+        entityId: allocation.entityId,
+      };
     }
 
-    return {
-      entityType: allocation.entityType as EntityType,
-      entityId: allocation.entityId,
-    };
+    // 2. 如果新表没有或 entityId 为空，查询旧的 ShortIdPool 表（主要用于线缆端子）
+    const poolRecord = await prisma.shortIdPool.findUnique({
+      where: { shortId },
+    });
+
+    if (poolRecord && poolRecord.status === 'BOUND' && poolRecord.entityId) {
+      return {
+        entityType: poolRecord.entityType as EntityType,
+        entityId: poolRecord.entityId,
+      };
+    }
+
+    return null;
   }
 
   /**

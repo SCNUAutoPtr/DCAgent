@@ -852,6 +852,56 @@ Content-Type: application/json
 
 **说明：** 查询多跳网络拓扑（用于 ReactFlow 可视化）
 
+### 线缆拓扑图 URL 传参
+
+**前端路由：** `/cable-topology`
+
+**支持的 URL 参数：**
+
+1. **通过面板 ID 跳转**
+   ```
+   /cable-topology?panelId=<panel-uuid>
+   ```
+   - 自动加载以该面板为起点的拓扑图
+   - 示例：`/cable-topology?panelId=550e8400-e29b-41d4-a716-446655440000`
+
+2. **通过面板 shortID 跳转**
+   ```
+   /cable-topology?shortId=<panel-shortid>
+   ```
+   - 自动查询面板并加载拓扑图
+   - 支持格式：数字格式（如 `300`）或显示格式（如 `P-00300`）
+   - 示例：`/cable-topology?shortId=300` 或 `/cable-topology?shortId=P-00300`
+
+3. **通过线缆端子 shortID 跳转**
+   ```
+   /cable-topology?shortId=<endpoint-shortid>
+   ```
+   - 自动查询线缆端子，定位到所连接的面板，并高亮该线缆
+   - 支持格式：数字格式（如 `10001`）或显示格式（如 `E-10001`）
+   - 示例：`/cable-topology?shortId=10001` 或 `/cable-topology?shortId=E-10001`
+
+4. **通过面板 ID + 线缆 ID 跳转并高亮**
+   ```
+   /cable-topology?panelId=<panel-uuid>&cableId=<cable-uuid>
+   ```
+   - 加载拓扑图并高亮指定线缆
+   - 示例：`/cable-topology?panelId=550e8400-e29b-41d4-a716-446655440000&cableId=660e8400-e29b-41d4-a716-446655440001`
+
+**使用场景：**
+
+- 从搜索结果页面跳转到拓扑图
+- 从机柜详情页面查看特定面板的连接
+- 扫描线缆端子标签后直接定位到拓扑图
+- 从其他页面链接到特定的网络拓扑视图
+
+**注意事项：**
+
+- URL 参数优先级高于路由状态（`location.state`）
+- 如果线缆端子未连接到任何端口，会提示无法定位
+- shortID 会自动识别是面板还是线缆端子
+- 所有 URL 参数都会被自动处理，无需手动解析
+
 ### 获取线缆端点信息
 
 ```http

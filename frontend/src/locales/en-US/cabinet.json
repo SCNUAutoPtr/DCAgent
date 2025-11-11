@@ -46,7 +46,7 @@
     "deviceTransferFailed": "Device transfer failed",
     "deviceCopySuccess": "Device copied successfully",
     "deviceCopyFailed": "Device copy failed",
-    "positionOccupied": "Target position U{uPosition} is occupied",
+    "positionOccupied": "Target position U{{uPosition}} is occupied",
     "portPositionUpdated": "Port position updated",
     "portPositionUpdateFailed": "Failed to update port position",
     "deviceTypeError": "Please select device type"
@@ -62,7 +62,7 @@
     "uPositionRequired": "Please enter target U position"
   },
   "table": {
-    "total": "Total {total} items"
+    "total": "Total {{total}} items"
   },
   "tabs": {
     "cabinetList": "Cabinet List",
@@ -134,11 +134,11 @@
   },
   "transfer": {
     "title": "Transfer Device",
-    "description": "Device {deviceName} will be moved from current location to target location, and the original position will be released."
+    "description": "Device {{deviceName}} will be moved from current location to target location, and the original position will be released."
   },
   "copy": {
     "title": "Copy Device",
-    "description": "Create a copy of device {deviceName}, including basic configuration information."
+    "description": "Create a copy of device {{deviceName}}, including basic configuration information."
   },
   "views": {
     "2dFrontPanel": "2D Front Panel View",

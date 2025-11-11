@@ -106,7 +106,7 @@
       "reasonRequired": "廃棄理由を入力してください"
     },
     "pagination": {
-      "total": "合計 {total} 件"
+      "total": "合計 {{total}} 件"
     }
   },
   "bulkDeployment": {
@@ -223,18 +223,18 @@
     "table": {
       "success": "成功",
       "failed": "失敗",
-      "successCount": "成功: {count} 件",
-      "failedCount": "失敗: {count} 件",
-      "rowError": "行 {row}: {error}"
+      "successCount": "成功: {{count}} 件",
+      "failedCount": "失敗: {{count}} 件",
+      "rowError": "行 {{row}}: {{error}}"
     },
     "validation": {
       "deviceNameRequired": "デバイス名が空でないこと",
-      "deviceTypeRequired": "デバイスタイプは必須: {types}",
+      "deviceTypeRequired": "デバイスタイプは必須: {{types}}",
       "cabinetIdRequired": "キャビネット ID が存在しません",
       "uPositionInvalid": "U 位は 1-42 の数字である必要があります",
       "uHeightInvalid": "U 高は正の整数である必要があります",
       "cableLengthInvalid": "長さは正の数である必要があります",
-      "cableTypeRequired": "ケーブルタイプは必須: {types}"
+      "cableTypeRequired": "ケーブルタイプは必須: {{types}}"
     }
   },
   "panelTemplate": {
@@ -309,7 +309,7 @@
       "saveFailed": "保存失敗",
       "initSuccess": "システムプリセットテンプレート初期化成功",
       "initFailed": "初期化失敗",
-      "portInfo": "ポート {number}"
+      "portInfo": "ポート {{number}}"
     },
     "validation": {
       "nameRequired": "テンプレート名を入力してください",
@@ -319,8 +319,8 @@
     "table": {
       "systemTag": "システムプリセット",
       "noData": "データなし",
-      "total": "合計 {total} 件",
-      "panelCount": "このテンプレートを使用する {count} 個のパネル"
+      "total": "合計 {{total}} 件",
+      "panelCount": "このテンプレートを使用する {{count}} 個のパネル"
     },
     "buttons": {
       "close": "閉じる",

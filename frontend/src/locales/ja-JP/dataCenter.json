@@ -30,6 +30,6 @@
     "nameRequired": "データセンター名を入力してください"
   },
   "table": {
-    "total": "合計 {total} 件"
+    "total": "合計 {{total}} 件"
   }
 }

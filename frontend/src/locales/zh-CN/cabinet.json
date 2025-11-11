@@ -46,7 +46,7 @@
     "deviceTransferFailed": "设备移动失败",
     "deviceCopySuccess": "设备复制成功",
     "deviceCopyFailed": "设备复制失败",
-    "positionOccupied": "目标位置 U{uPosition} 已被占用",
+    "positionOccupied": "目标位置 U{{uPosition}} 已被占用",
     "portPositionUpdated": "端口位置已更新",
     "portPositionUpdateFailed": "更新端口位置失败",
     "deviceTypeError": "请选择设备类型"
@@ -62,7 +62,7 @@
     "uPositionRequired": "请输入目标U位"
   },
   "table": {
-    "total": "共 {total} 条"
+    "total": "共 {{total}} 条"
   },
   "tabs": {
     "cabinetList": "机柜列表",
@@ -134,11 +134,11 @@
   },
   "transfer": {
     "title": "设备移动",
-    "description": "设备 {deviceName} 将从当前位置移动到目标位置，原位置将被释放。"
+    "description": "设备 {{deviceName}} 将从当前位置移动到目标位置，原位置将被释放。"
   },
   "copy": {
     "title": "设备复制",
-    "description": "将创建设备 {deviceName} 的副本，包含基本配置信息。"
+    "description": "将创建设备 {{deviceName}} 的副本，包含基本配置信息。"
   },
   "views": {
     "2dFrontPanel": "2D前面板视图",
