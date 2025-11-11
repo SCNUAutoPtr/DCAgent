@@ -69,6 +69,7 @@
       "scrapShortId": "报废shortID",
       "batchScrapShortId": "批量报废shortID",
       "confirmScrap": "确认报废",
+      "confirmComplete": "确认完成",
       "batchScrapTips": "使用范围表达式批量报废shortID",
       "batchScrapExample1": "单个：1 或 E-00001",
       "batchScrapExample2": "范围：1-5 或 E-00001-E-00005",

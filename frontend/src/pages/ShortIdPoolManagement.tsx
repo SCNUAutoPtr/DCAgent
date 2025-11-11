@@ -89,6 +89,9 @@ const ShortIdPoolManagement: React.FC = () => {
   useEffect(() => {
     if (activeTab === 'tasks') {
       loadPrintTasks();
+    } else if (activeTab === 'pool') {
+      loadPoolRecords();
+      loadStats();
     }
   }, [activeTab, printTasksPage, printTasksPageSize]);
 
@@ -202,6 +205,7 @@ const ShortIdPoolManagement: React.FC = () => {
       await shortIdPoolService.completePrintTask(taskId);
       message.success(t('shortIdPool.messages.completePrintTaskSuccess'));
       loadPrintTasks();
+      loadStats();
     } catch (error) {
       console.error('Error completing print task:', error);
       message.error(t('shortIdPool.messages.completePrintTaskFailed'));
@@ -485,7 +489,7 @@ const ShortIdPoolManagement: React.FC = () => {
           </Button>
           {record.status === 'PENDING' && (
             <Popconfirm
-              title={t('shortIdPool.modals.confirmScrap')}
+              title={t('shortIdPool.modals.confirmComplete')}
               onConfirm={() => handleCompletePrintTask(record.id)}
             >
               <Button type="link" icon={<CheckCircleOutlined />}>

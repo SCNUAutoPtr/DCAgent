@@ -187,15 +187,23 @@ class CableService {
   async getCableById(id: string) {
     const cable = await prisma.cable.findUnique({
       where: { id },
+      include: {
+        endpoints: {
+          include: {
+            port: {
+              include: {
+                panel: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!cable) {
       return null;
     }
 
-    // 从图数据库查询连接关系
-    // 这里需要实现一个查询特定线缆的连接端口的方法
-    // 简化处理，返回基本信息
     return cable;
   }
 
@@ -445,6 +453,8 @@ class CableService {
    * 用于扫码跳转
    */
   async getCableEndpointsByShortId(shortId: number) {
+    console.log('[DEBUG] getCableEndpointsByShortId - 查询shortId:', shortId);
+
     // 查找该 shortId 对应的端点
     const endpoint = await prisma.cableEndpoint.findUnique({
       where: { shortId },
@@ -481,6 +491,8 @@ class CableService {
       },
     });
 
+    console.log('[DEBUG] getCableEndpointsByShortId - 查询结果:', endpoint ? '找到' : '未找到');
+
     if (!endpoint) {
       return null;
     }
@@ -490,6 +502,7 @@ class CableService {
     const endpointB = endpoint.cable.endpoints.find(e => e.endType === 'B');
 
     return {
+      cableId: endpoint.cable.id, // 添加 cableId 字段
       cable: endpoint.cable,
       endpointA: endpointA || null,
       endpointB: endpointB || null,
