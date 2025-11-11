@@ -507,18 +507,20 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
                 className="port-rect"
                 style={{ pointerEvents: 'none' }}
               />
-              <text
-                x={x + width / 2}
-                y={y + height / 2}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill="#fff"
-                fontSize="12"
-                fontWeight="bold"
-                style={{ pointerEvents: 'none', userSelect: 'none' }}
-              >
-                {port.number}
-              </text>
+              {/* 端口编号 - 根据labelMode控制显示 */}
+              {showLabel && (
+                <text
+                  x={x + width / 2}
+                  y={labelY}
+                  textAnchor="middle"
+                  fill="#333"
+                  fontSize="10"
+                  fontWeight="bold"
+                  style={{ pointerEvents: 'none', userSelect: 'none' }}
+                >
+                  {port.number}
+                </text>
+              )}
             </>
           )}
         </g>

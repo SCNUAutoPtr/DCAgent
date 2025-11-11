@@ -12,6 +12,7 @@ export interface CreateRoomInput {
 
 export interface UpdateRoomInput {
   name?: string;
+  shortId?: number;
   floor?: string;
 }
 
@@ -105,6 +106,33 @@ class RoomService {
   }
 
   async updateRoom(id: string, data: UpdateRoomInput): Promise<Room> {
+    // 如果要更新 shortId，需要处理 shortId 的分配和释放
+    if (data.shortId !== undefined) {
+      // 获取当前机房的 shortId
+      const currentRoom = await prisma.room.findUnique({
+        where: { id },
+        select: { shortId: true },
+      });
+
+      if (!currentRoom) {
+        throw new Error('Room not found');
+      }
+
+      const oldShortId = currentRoom.shortId;
+      const newShortId = data.shortId;
+
+      // 如果 shortId 发生了变化
+      if (oldShortId !== newShortId) {
+        // 分配新的 shortId
+        await shortIdPoolService.allocateShortId('ROOM', id, newShortId);
+
+        // 释放旧的 shortId
+        if (oldShortId) {
+          await shortIdPoolService.releaseShortId(oldShortId);
+        }
+      }
+    }
+
     return prisma.room.update({
       where: { id },
       data,

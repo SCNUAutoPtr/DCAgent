@@ -403,6 +403,7 @@ export default function ConnectSingleCableModal({
                 <PanelVisualizer
                   panel={selectedPanel}
                   ports={ports}
+                  labelMode="hover"
                   onPortClick={handlePortClick}
                   selectedPorts={selectedPort ? [selectedPort.id] : []}
                   highlightAvailable={true}

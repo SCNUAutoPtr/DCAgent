@@ -411,6 +411,7 @@ export default function PanelTemplateManagementPage() {
                     <PanelVisualizer
                       panel={previewPanel}
                       ports={previewPorts}
+                      labelMode="hover"
                       onPortClick={(port) => {
                         message.info(t('panelTemplate.messages.portInfo', { number: port.number }));
                       }}

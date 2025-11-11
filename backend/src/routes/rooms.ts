@@ -15,6 +15,7 @@ const createRoomSchema = z.object({
 const updateRoomSchema = z.object({
   id: z.string().uuid('Invalid ID'),
   name: z.string().min(1).optional(),
+  shortId: z.number().int().positive('ShortID must be a positive integer').optional(),
   floor: z.string().optional(),
 });
 

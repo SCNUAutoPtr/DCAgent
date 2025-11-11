@@ -1482,6 +1482,7 @@ export default function CabinetList() {
                       <PanelVisualizer
                         panel={panel}
                         ports={ports}
+                        labelMode="hover"
                         onPortClick={(port) => {
                           message.info(`${t('panels.portNumber')}: ${port.number} - ${t('panels.portStatus')}: ${port.status}`);
                         }}

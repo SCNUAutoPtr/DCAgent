@@ -26,6 +26,7 @@ import { Room, DataCenter } from '@/types';
 import { roomService } from '@/services/roomService';
 import { dataCenterService } from '@/services/dataCenterService';
 import { shortIdPoolService } from '@/services/shortIdPoolService';
+import { ShortIdFormatter } from '@/utils/shortIdFormatter';
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -82,7 +83,11 @@ export default function RoomList() {
   const handleOpenModal = (room?: Room) => {
     if (room) {
       setEditingRoom(room);
-      form.setFieldsValue(room);
+      // 编辑模式：将数字shortID转换为显示格式
+      form.setFieldsValue({
+        ...room,
+        shortId: room.shortId ? ShortIdFormatter.toDisplayFormat(room.shortId) : undefined,
+      });
     } else {
       setEditingRoom(null);
       form.resetFields();
@@ -101,11 +106,30 @@ export default function RoomList() {
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
+
+      // 处理shortID：转换为数字格式
+      let numericShortId: number | undefined = undefined;
+      if (values.shortId && typeof values.shortId === 'string' && values.shortId.trim()) {
+        try {
+          numericShortId = ShortIdFormatter.toNumericFormat(values.shortId.trim());
+        } catch (error) {
+          message.error('shortID格式无效，请使用 E-XXXXX 格式或纯数字');
+          return;
+        }
+      } else if (typeof values.shortId === 'number') {
+        numericShortId = values.shortId;
+      }
+
+      const saveData = {
+        ...values,
+        shortId: numericShortId,
+      };
+
       if (editingRoom) {
-        await roomService.update(editingRoom.id, values);
+        await roomService.update(editingRoom.id, saveData);
         message.success(t('room:messages.updateSuccess'));
       } else {
-        await roomService.create(values);
+        await roomService.create(saveData);
         message.success(t('room:messages.createSuccess'));
       }
       handleCloseModal();
@@ -120,24 +144,45 @@ export default function RoomList() {
   };
 
   // 验证shortID是否可用
-  const validateShortId = async (_: any, value: number) => {
-    if (!value) {
+  const validateShortId = async (_: any, value: string) => {
+    if (!value || !value.trim()) {
       return Promise.reject('请输入shortID');
-    }
-
-    // 如果是编辑模式且shortID未改变，跳过验证
-    if (editingRoom && editingRoom.shortId === value) {
-      return Promise.resolve();
     }
 
     setShortIdChecking(true);
     try {
-      const result = await shortIdPoolService.checkShortIdExists(value);
+      // 转换为数字格式
+      const numericShortId = ShortIdFormatter.toNumericFormat(value.trim());
+
+      // 如果是编辑模式且shortID未改变，跳过验证
+      if (editingRoom && editingRoom.shortId === numericShortId) {
+        return Promise.resolve();
+      }
+
+      const result = await shortIdPoolService.checkShortIdExists(numericShortId);
       if (result.exists) {
-        return Promise.reject(`shortID已被占用: ${result.usedBy === 'pool' ? '在标签池中' : '已绑定到实体'}`);
+        // 如果是在Pool中
+        if (result.usedBy === 'pool') {
+          // 检查是否已经分配给其他实体（entityId 不为空且不是当前机房）
+          if (result.details?.entityId) {
+            // 如果是编辑模式，且这个shortID已经分配给当前机房，允许使用
+            if (editingRoom && result.details.entityId === editingRoom.id && result.details.entityType === 'ROOM') {
+              return Promise.resolve();
+            }
+            // 否则说明已经分配给其他实体了
+            return Promise.reject(`shortID已分配给其他${result.details.entityType || '实体'}`);
+          }
+          // entityId 为空，说明只是在池中，状态是GENERATED或PRINTED，可以使用
+          return Promise.resolve();
+        }
+        // 如果已经绑定到其他实体（在实体表中找到）
+        return Promise.reject(`shortID已被占用: ${result.entityType || '实体'}`);
       }
       return Promise.resolve();
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message && error.message.includes('无效的shortID格式')) {
+        return Promise.reject('shortID格式无效，请使用 E-XXXXX 格式或纯数字');
+      }
       return Promise.reject('验证失败');
     } finally {
       setShortIdChecking(false);
@@ -302,13 +347,9 @@ export default function RoomList() {
               { validator: validateShortId },
             ]}
             validateTrigger="onBlur"
-            help={editingRoom ? '编辑时不可修改shortID' : '请扫码或手动输入shortID'}
           >
-            <InputNumber
-              style={{ width: '100%' }}
-              placeholder="扫码或输入shortID（例如：1, 12345）"
-              disabled={!!editingRoom}
-              min={1}
+            <Input
+              placeholder="扫码或输入shortID（例如：E-00001 或 12345）"
             />
           </Form.Item>
           <Form.Item
