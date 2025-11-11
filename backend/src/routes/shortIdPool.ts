@@ -43,6 +43,11 @@ const cancelShortIdSchema = z.object({
   reason: z.string().optional(),
 });
 
+const batchCancelShortIdsSchema = z.object({
+  rangeExpr: z.string().min(1),  // 范围表达式
+  reason: z.string().optional(),
+});
+
 const getPoolRecordsSchema = z.object({
   page: z.number().int().positive().optional().default(1),
   pageSize: z.number().int().positive().max(200).optional().default(50),
@@ -225,6 +230,36 @@ router.post('/cancel', async (req: Request, res: Response) => {
     }
     console.error('Error cancelling shortId:', error);
     res.status(500).json({ error: 'Failed to cancel shortId' });
+  }
+});
+
+// POST /api/v1/shortid-pool/batch-cancel - 批量报废shortID（范围表达式）
+router.post('/batch-cancel', async (req: Request, res: Response) => {
+  try {
+    const { rangeExpr, reason } = batchCancelShortIdsSchema.parse(req.body);
+    const result = await shortIdPoolService.cancelShortIdsByRange(rangeExpr, reason);
+
+    res.json({
+      success: true,
+      message: `成功报废 ${result.success.length} 个shortID`,
+      totalRequested: result.totalRequested,
+      successCount: result.success.length,
+      failedCount: result.failed.length,
+      successIds: result.success.map(id => ShortIdFormatter.toDisplayFormat(id)),
+      failedDetails: result.failed.map(f => ({
+        shortId: ShortIdFormatter.toDisplayFormat(f.shortId),
+        reason: f.reason,
+      })),
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation error', details: error.errors });
+    }
+    if (error instanceof Error) {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Error batch cancelling shortIds:', error);
+    res.status(500).json({ error: 'Failed to batch cancel shortIds' });
   }
 });
 

@@ -8,6 +8,7 @@ import {
   CloudUploadOutlined,
   FileTextOutlined,
   ScanOutlined,
+  DeleteOutlined,
   TagsOutlined,
   ToolOutlined,
   // MonitorOutlined, // SNMP 监控模块已隐藏
@@ -75,6 +76,11 @@ export default function AppSidebar() {
           key: '/cable-manual-inventory',
           icon: <ScanOutlined />,
           label: t('cableManualInventory'),
+        },
+        {
+          key: '/cable-scrap',
+          icon: <DeleteOutlined />,
+          label: t('cableScrap'),
         },
       ],
     },

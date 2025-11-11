@@ -152,6 +152,26 @@ export const shortIdPoolService = {
     return response.data;
   },
 
+  // 批量报废shortID（范围表达式）
+  async batchCancelShortIds(
+    rangeExpr: string,
+    reason?: string
+  ): Promise<{
+    success: boolean;
+    message: string;
+    totalRequested: number;
+    successCount: number;
+    failedCount: number;
+    successIds: string[];
+    failedDetails: Array<{ shortId: string; reason: string }>;
+  }> {
+    const response = await api.post('/shortid-pool/batch-cancel', {
+      rangeExpr,
+      reason,
+    });
+    return response.data;
+  },
+
   // 获取池统计信息
   async getPoolStats(entityType?: EntityType): Promise<PoolStats> {
     const response = await api.get('/shortid-pool/stats', {

@@ -70,6 +70,65 @@ export class ShortIdFormatter {
   static batchToNumericFormat(displayIds: string[]): number[] {
     return displayIds.map(id => this.toNumericFormat(id));
   }
+
+  /**
+   * 解析shortID范围表达式
+   * 支持格式：
+   * - 单个：1 或 E-00001
+   * - 范围：1-5 或 E-00001-E-00005
+   * - 多个：1, 3, 5 或 E-00001, E-00003, E-00005
+   * - 组合：1-5, 8, 10-12 或 E-00001-E-00005, E-00008, E-00010-E-00012
+   *
+   * @param rangeExpr 范围表达式（例如 "1-5, 8, 10-12"）
+   * @returns 解析后的shortID数组（去重并排序）
+   */
+  static parseRangeExpression(rangeExpr: string): number[] {
+    const result = new Set<number>();
+
+    // 按逗号分割各个部分
+    const parts = rangeExpr.split(',').map(p => p.trim()).filter(p => p.length > 0);
+
+    for (const part of parts) {
+      // 检查是否是范围（包含 "-"）
+      if (part.includes('-')) {
+        // 分割起止值
+        const [startStr, endStr] = part.split('-').map(s => s.trim());
+
+        // 转换为数字格式
+        const start = this.toNumericFormat(startStr);
+        const end = this.toNumericFormat(endStr);
+
+        if (start > end) {
+          throw new Error(`无效的范围: ${part} (起始值必须小于等于结束值)`);
+        }
+
+        // 添加范围内的所有数字
+        for (let i = start; i <= end; i++) {
+          result.add(i);
+        }
+      } else {
+        // 单个值
+        result.add(this.toNumericFormat(part));
+      }
+    }
+
+    // 转换为数组并排序
+    return Array.from(result).sort((a, b) => a - b);
+  }
+
+  /**
+   * 验证范围表达式格式
+   * @param rangeExpr 范围表达式
+   * @returns 是否有效
+   */
+  static isValidRangeExpression(rangeExpr: string): boolean {
+    try {
+      this.parseRangeExpression(rangeExpr);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }
 
 // 便捷导出

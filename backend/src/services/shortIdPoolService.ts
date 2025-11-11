@@ -249,6 +249,117 @@ export class ShortIdPoolService {
   }
 
   /**
+   * 批量标记shortID为报废
+   * @param shortIds shortID数组
+   * @param reason 报废原因
+   * @returns 报废结果
+   */
+  async cancelShortIds(
+    shortIds: number[],
+    reason?: string
+  ): Promise<{
+    success: number[];
+    failed: Array<{ shortId: number; reason: string }>;
+  }> {
+    const result = {
+      success: [] as number[],
+      failed: [] as Array<{ shortId: number; reason: string }>,
+    };
+
+    // 批量查询所有shortID的状态
+    const poolRecords = await prisma.shortIdPool.findMany({
+      where: {
+        shortId: { in: shortIds },
+      },
+    });
+
+    const recordMap = new Map(poolRecords.map(r => [r.shortId, r]));
+
+    // 检查每个shortID的状态
+    for (const shortId of shortIds) {
+      const record = recordMap.get(shortId);
+
+      // 如果不存在或已经是报废状态，记录失败
+      if (!record) {
+        result.failed.push({
+          shortId,
+          reason: 'shortID不存在',
+        });
+        continue;
+      }
+
+      if (record.status === ShortIdPoolStatus.CANCELLED) {
+        result.failed.push({
+          shortId,
+          reason: '已经是报废状态',
+        });
+        continue;
+      }
+
+      if (record.status === ShortIdPoolStatus.BOUND) {
+        result.failed.push({
+          shortId,
+          reason: '已绑定到实体，无法直接报废',
+        });
+        continue;
+      }
+
+      result.success.push(shortId);
+    }
+
+    // 批量更新成功的shortID
+    if (result.success.length > 0) {
+      await prisma.shortIdPool.updateMany({
+        where: {
+          shortId: { in: result.success },
+        },
+        data: {
+          status: ShortIdPoolStatus.CANCELLED,
+          notes: reason || '批量报废',
+        },
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * 使用范围表达式批量报废shortID
+   * @param rangeExpr 范围表达式（例如 "1-5, 8, 10-12" 或 "E-00001-E-00005, E-00008"）
+   * @param reason 报废原因
+   * @returns 报废结果
+   */
+  async cancelShortIdsByRange(
+    rangeExpr: string,
+    reason?: string
+  ): Promise<{
+    totalRequested: number;
+    success: number[];
+    failed: Array<{ shortId: number; reason: string }>;
+    parsedIds: number[];
+  }> {
+    // 解析范围表达式
+    const parsedIds = ShortIdFormatter.parseRangeExpression(rangeExpr);
+
+    if (parsedIds.length === 0) {
+      throw new Error('没有解析到有效的shortID');
+    }
+
+    if (parsedIds.length > 1000) {
+      throw new Error('一次最多报废1000个shortID');
+    }
+
+    // 批量报废
+    const result = await this.cancelShortIds(parsedIds, reason);
+
+    return {
+      totalRequested: parsedIds.length,
+      parsedIds,
+      ...result,
+    };
+  }
+
+  /**
    * 获取池统计信息
    */
   async getPoolStats(entityType?: EntityType): Promise<{

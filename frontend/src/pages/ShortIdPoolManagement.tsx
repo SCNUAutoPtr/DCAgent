@@ -19,6 +19,7 @@ import {
   Popconfirm,
   Typography,
   Descriptions,
+  Alert,
 } from 'antd';
 import {
   PlusOutlined,
@@ -73,10 +74,12 @@ const ShortIdPoolManagement: React.FC = () => {
   const [createTaskModalVisible, setCreateTaskModalVisible] = useState(false);
   const [generateModalVisible, setGenerateModalVisible] = useState(false);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [batchCancelModalVisible, setBatchCancelModalVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<ShortIdPoolRecord | null>(null);
 
   const [form] = Form.useForm();
   const [cancelForm] = Form.useForm();
+  const [batchCancelForm] = Form.useForm();
 
   useEffect(() => {
     loadPoolRecords();
@@ -224,6 +227,55 @@ const ShortIdPoolManagement: React.FC = () => {
     } catch (error: any) {
       console.error('Error cancelling shortId:', error);
       message.error(error.response?.data?.error || t('shortIdPool.messages.scrapShortIdFailed'));
+    }
+  };
+
+  // Batch cancel shortIds
+  const handleBatchCancelShortIds = async () => {
+    try {
+      const values = await batchCancelForm.validateFields();
+      const result = await shortIdPoolService.batchCancelShortIds(
+        values.rangeExpr,
+        values.reason
+      );
+
+      // 显示结果
+      if (result.failedCount > 0) {
+        Modal.warning({
+          title: t('shortIdPool.messages.batchScrapPartialSuccess'),
+          content: (
+            <div>
+              <p>
+                {t('shortIdPool.messages.batchScrapSuccessCount', { count: result.successCount })}
+              </p>
+              <p>
+                {t('shortIdPool.messages.batchScrapFailedCount', { count: result.failedCount })}
+              </p>
+              <div style={{ marginTop: 16, maxHeight: 300, overflow: 'auto' }}>
+                <Text strong>{t('shortIdPool.messages.failedDetails')}:</Text>
+                <ul>
+                  {result.failedDetails.map((detail, index) => (
+                    <li key={index}>
+                      <Text code>{detail.shortId}</Text> - {detail.reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ),
+          width: 600,
+        });
+      } else {
+        message.success(result.message);
+      }
+
+      setBatchCancelModalVisible(false);
+      batchCancelForm.resetFields();
+      loadPoolRecords();
+      loadStats();
+    } catch (error: any) {
+      console.error('Error batch cancelling shortIds:', error);
+      message.error(error.response?.data?.error || t('shortIdPool.messages.batchScrapFailed'));
     }
   };
 
@@ -523,6 +575,13 @@ const ShortIdPoolManagement: React.FC = () => {
               >
                 {t('shortIdPool.actions.createPrintTask')}
               </Button>
+              <Button
+                danger
+                icon={<CloseCircleOutlined />}
+                onClick={() => setBatchCancelModalVisible(true)}
+              >
+                {t('shortIdPool.actions.batchScrap')}
+              </Button>
               <Select
                 placeholder={t('shortIdPool.filters.entityType')}
                 allowClear
@@ -727,6 +786,55 @@ const ShortIdPoolManagement: React.FC = () => {
         )}
 
         <Form form={cancelForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item
+            label={t('shortIdPool.formLabels.reason')}
+            name="reason"
+            rules={[{ required: true, message: t('shortIdPool.validation.reasonRequired') }]}
+          >
+            <Input.TextArea rows={3} placeholder={t('shortIdPool.formPlaceholders.reason')} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 批量报废shortID模态框 */}
+      <Modal
+        title={t('shortIdPool.modals.batchScrapShortId')}
+        open={batchCancelModalVisible}
+        onCancel={() => {
+          setBatchCancelModalVisible(false);
+          batchCancelForm.resetFields();
+        }}
+        onOk={handleBatchCancelShortIds}
+        okButtonProps={{ danger: true }}
+        okText={t('shortIdPool.modals.confirmScrap')}
+        width={700}
+      >
+        <Alert
+          message={t('shortIdPool.modals.batchScrapTips')}
+          description={
+            <div>
+              <p>{t('shortIdPool.modals.batchScrapExample1')}</p>
+              <p>{t('shortIdPool.modals.batchScrapExample2')}</p>
+              <p>{t('shortIdPool.modals.batchScrapExample3')}</p>
+            </div>
+          }
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+
+        <Form form={batchCancelForm} layout="vertical">
+          <Form.Item
+            label={t('shortIdPool.formLabels.rangeExpr')}
+            name="rangeExpr"
+            rules={[{ required: true, message: t('shortIdPool.validation.rangeExprRequired') }]}
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder={t('shortIdPool.formPlaceholders.rangeExpr')}
+            />
+          </Form.Item>
+
           <Form.Item
             label={t('shortIdPool.formLabels.reason')}
             name="reason"

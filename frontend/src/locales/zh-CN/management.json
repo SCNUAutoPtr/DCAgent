@@ -52,6 +52,7 @@
       "exportCSV": "导出CSV",
       "complete": "完成",
       "scrap": "报废",
+      "batchScrap": "批量报废",
       "search": "搜索shortID",
       "refresh": "刷新"
     },
@@ -66,21 +67,28 @@
       "createPrintTask": "创建打印任务",
       "directGenerate": "直接生成shortID",
       "scrapShortId": "报废shortID",
-      "confirmScrap": "确认报废"
+      "batchScrapShortId": "批量报废shortID",
+      "confirmScrap": "确认报废",
+      "batchScrapTips": "使用范围表达式批量报废shortID",
+      "batchScrapExample1": "单个：1 或 E-00001",
+      "batchScrapExample2": "范围：1-5 或 E-00001-E-00005",
+      "batchScrapExample3": "组合：1-5, 8, 10-12 或 E-00001-E-00005, E-00008, E-00010-E-00012"
     },
     "formLabels": {
       "taskName": "任务名称",
       "generateCount": "生成数量",
       "createdBy": "创建人",
       "batchNo": "批次号",
-      "reason": "报废原因"
+      "reason": "报废原因",
+      "rangeExpr": "shortID范围"
     },
     "formPlaceholders": {
       "taskName": "如：2025年第一批标签",
       "generateCount": "1-10000",
       "createdBy": "可选",
       "batchNo": "可选，如：2025年第一批",
-      "reason": "如：标签损坏、丢失等"
+      "reason": "如：标签损坏、丢失等",
+      "rangeExpr": "如：1-5, 8, 10-12 或 E-00001-E-00005, E-00008"
     },
     "messages": {
       "loadPoolRecordsFailed": "加载池记录失败",
@@ -94,7 +102,13 @@
       "completePrintTaskSuccess": "打印任务已标记为完成",
       "completePrintTaskFailed": "操作失败",
       "scrapShortIdSuccess": "shortID已报废",
-      "scrapShortIdFailed": "操作失败"
+      "scrapShortIdFailed": "操作失败",
+      "batchScrapSuccess": "批量报废成功",
+      "batchScrapFailed": "批量报废失败",
+      "batchScrapPartialSuccess": "批量报废部分成功",
+      "batchScrapSuccessCount": "成功报废 {count} 个shortID",
+      "batchScrapFailedCount": "失败 {count} 个",
+      "failedDetails": "失败详情"
     },
     "filters": {
       "entityType": "实体类型",
@@ -103,7 +117,8 @@
     "validation": {
       "taskNameRequired": "请输入任务名称",
       "generateCountRequired": "请输入生成数量",
-      "reasonRequired": "请输入报废原因"
+      "reasonRequired": "请输入报废原因",
+      "rangeExprRequired": "请输入shortID范围表达式"
     },
     "pagination": {
       "total": "共 {total} 条"

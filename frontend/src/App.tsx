@@ -12,6 +12,7 @@ import DeviceList from './pages/DeviceList';
 import PanelList from './pages/PanelList';
 import CableTopology from './pages/CableTopology';
 import CableManualInventory from './pages/CableManualInventory';
+import CableScrap from './pages/CableScrap';
 import ShortIdPoolManagement from './pages/ShortIdPoolManagement';
 import PortDetailView from './pages/PortDetailView';
 import BulkDeploymentPage from './pages/BulkDeploymentPage';
@@ -54,6 +55,7 @@ function App() {
               <Route path="/port-detail" element={<PortDetailView />} />
               <Route path="/topology" element={<CableTopology />} />
               <Route path="/cable-manual-inventory" element={<CableManualInventory />} />
+              <Route path="/cable-scrap" element={<CableScrap />} />
               <Route path="/shortid-pool" element={<ShortIdPoolManagement />} />
               <Route path="/bulk-deployment" element={<BulkDeploymentPage />} />
               <Route path="/panel-templates" element={<PanelTemplateManagementPage />} />
