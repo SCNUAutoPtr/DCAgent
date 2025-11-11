@@ -179,7 +179,7 @@ class CableGraphService {
         MATCH (panel1:Panel {id: $panelId})-[:HAS_PORT]->(port1:Port)
               -[:CONNECTED_BY]-(cable:Cable)-[:CONNECTED_BY]-(port2:Port)
               <-[:HAS_PORT]-(panel2:Panel)
-        WHERE port1.id < port2.id
+        WHERE panel1.id <> panel2.id
         RETURN DISTINCT cable, port1, port2, panel2
         `,
         { panelId }

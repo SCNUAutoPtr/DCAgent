@@ -1123,7 +1123,12 @@ export default function CabinetList() {
       </Tabs>
 
       <Modal
-        title={editingCabinet ? t('editTitle') : t('createTitle')}
+        title={
+          <Space>
+            <InboxOutlined />
+            {editingCabinet ? t('editTitle') : t('createTitle')}
+          </Space>
+        }
         open={modalVisible}
         onOk={handleSave}
         onCancel={handleCloseModal}
@@ -1192,7 +1197,12 @@ export default function CabinetList() {
 
       {/* 设备编辑对话框 */}
       <Modal
-        title={editingDevice ? t('buttons.editDevice') : t('buttons.addDevice')}
+        title={
+          <Space>
+            <BlockOutlined />
+            {editingDevice ? t('buttons.editDevice') : t('buttons.addDevice')}
+          </Space>
+        }
         open={deviceModalVisible}
         onOk={handleSaveDevice}
         onCancel={() => {
@@ -1372,6 +1382,31 @@ export default function CabinetList() {
                           >
                             {t('buttons.editPanel')}
                           </Button>
+                          <Popconfirm
+                            title="确认删除面板"
+                            description={`确定要删除面板"${panel.name}"吗？此操作不可恢复，该面板下的所有端口也将被删除。`}
+                            onConfirm={async () => {
+                              try {
+                                await panelService.delete(panel.id);
+                                message.success('面板删除成功');
+                                // 刷新面板列表
+                                if (viewingDevice?.id) {
+                                  const panels = await panelService.getByDevice(viewingDevice.id);
+                                  setDevicePanels(panels);
+                                }
+                              } catch (error: any) {
+                                console.error('Failed to delete panel:', error);
+                                message.error(error.response?.data?.error || '删除面板失败');
+                              }
+                            }}
+                            okText="确定删除"
+                            okButtonProps={{ danger: true }}
+                            cancelText="取消"
+                          >
+                            <Button danger icon={<DeleteOutlined />}>
+                              删除面板
+                            </Button>
+                          </Popconfirm>
                           {hasTemplate && (
                             <Popconfirm
                               title={t('panels.unbindConfirmTitle')}
@@ -1464,7 +1499,12 @@ export default function CabinetList() {
 
       {/* 设备发送对话框 */}
       <Modal
-        title={t('transfer.title')}
+        title={
+          <Space>
+            <SendOutlined />
+            {t('transfer.title')}
+          </Space>
+        }
         open={deviceTransferVisible}
         onCancel={() => {
           setDeviceTransferVisible(false);
@@ -1535,7 +1575,12 @@ export default function CabinetList() {
 
       {/* 设备复制对话框 */}
       <Modal
-        title={t('copy.title')}
+        title={
+          <Space>
+            <CopyOutlined />
+            {t('copy.title')}
+          </Space>
+        }
         open={deviceCopyVisible}
         onCancel={() => {
           setDeviceCopyVisible(false);

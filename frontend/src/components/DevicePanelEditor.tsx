@@ -22,9 +22,11 @@ import {
   EditOutlined,
   SaveOutlined,
   InfoCircleOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { Panel, PanelType, PanelTemplate, Device, DeviceType, Port } from '@/types';
 import { panelTemplateService } from '@/services/panelTemplateService';
+import { panelService } from '@/services/panelService';
 import { portService } from '@/services/portService';
 import { shortIdPoolService } from '@/services/shortIdPoolService';
 import { ShortIdFormatter } from '@/utils/shortIdFormatter';
@@ -290,6 +292,34 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
     }
   };
 
+  const handleDelete = async () => {
+    if (!panel?.id) {
+      message.warning('无法删除：面板ID不存在');
+      return;
+    }
+
+    Modal.confirm({
+      title: '确认删除面板',
+      content: `确定要删除面板"${panel.name}"吗？此操作不可恢复，该面板下的所有端口也将被删除。`,
+      okText: '确定删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          setLoading(true);
+          await panelService.delete(panel.id);
+          message.success('面板删除成功');
+          onCancel(); // 关闭对话框
+        } catch (error: any) {
+          console.error('Failed to delete panel:', error);
+          message.error(error.response?.data?.error || '删除面板失败');
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
+  };
+
   const getPanelTypeLabel = (type: PanelType) => {
     switch (type) {
       case PanelType.NETWORK:
@@ -345,6 +375,18 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
       onCancel={onCancel}
       width={isEditMode ? 1200 : 800}
       footer={[
+        // 删除按钮放在左边，只在编辑模式显示
+        panel && (
+          <Button
+            key="delete"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={handleDelete}
+            style={{ float: 'left' }}
+          >
+            删除面板
+          </Button>
+        ),
         <Button key="cancel" onClick={onCancel}>
           取消
         </Button>,
