@@ -1534,6 +1534,7 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedPort, setSelectedPort] = useState<PortDefinition | null>(null);
   const [portConnections, setPortConnections] = useState<Map<string, any>>(new Map());
+  const [hoveredPort, setHoveredPort] = useState<PortDefinition | null>(null); // 悬停的端口
 
   // 动画循环
   useEffect(() => {
@@ -1782,18 +1783,20 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
         ctx.setLineDash([]);
       }
 
-      // 绘制端口编号
-      ctx.fillStyle = isConnected ? '#fff' : '#666';
-      ctx.font = `${10 * zoom}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(port.number.replace(/[●○]/, ''), 0, 0); // 移除连接状态符号
+      // 绘制端口编号 - 只在悬停时显示
+      if (hoveredPort?.id === port.id) {
+        ctx.fillStyle = isConnected ? '#fff' : '#666';
+        ctx.font = `${10 * zoom}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(port.number.replace(/[●○]/, ''), 0, 0); // 移除连接状态符号
+      }
 
       // 恢复画布状态
       ctx.restore();
 
-      // 如果有端口类型标签，在端口下方显示（不旋转）
-      if (port.portType && !isConnected) {
+      // 如果有端口类型标签，在端口下方显示（不旋转）- 只在悬停时显示
+      if (port.portType && !isConnected && hoveredPort?.id === port.id) {
         ctx.fillStyle = '#595959';
         ctx.font = `${8 * zoom}px Arial`;
         ctx.textAlign = 'center';
@@ -1807,10 +1810,10 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
       }
     });
 
-    // 绘制连接状态的端口标签
+    // 绘制连接状态的端口标签 - 只在悬停时显示
     ports.forEach((port) => {
       const isConnected = port.portType?.includes('_CONNECTED');
-      if (isConnected && port.label) {
+      if (isConnected && port.label && hoveredPort?.id === port.id) {
         const centerX = (port.position.x + port.size.width / 2) * zoom;
         const centerY = (port.position.y + port.size.height + 15) * zoom;
 
@@ -1822,7 +1825,7 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
       }
     });
 
-  }, [ports, zoom, width, height, backgroundColor, time]);
+  }, [ports, zoom, width, height, backgroundColor, time, hoveredPort]);
 
   // 右键菜单
   const menu = {
@@ -1867,6 +1870,22 @@ function CustomPortVisualization({ width, height, backgroundColor, ports, cabine
         height={height * zoom}
         onClick={handleCanvasClick}
         onContextMenu={handleCanvasContextMenu}
+        onMouseMove={(e) => {
+          const canvas = canvasRef.current;
+          if (!canvas) return;
+          const rect = canvas.getBoundingClientRect();
+          const x = (e.clientX - rect.left) / zoom;
+          const y = (e.clientY - rect.top) / zoom;
+          const hovered = ports.find(
+            (port) =>
+              x >= port.position.x &&
+              x <= port.position.x + port.size.width &&
+              y >= port.position.y &&
+              y <= port.position.y + port.size.height
+          );
+          setHoveredPort(hovered || null);
+        }}
+        onMouseLeave={() => setHoveredPort(null)}
         style={{
           cursor: 'pointer',
           boxShadow: '0 2px 8px rgba(0,0,0,0.15)',

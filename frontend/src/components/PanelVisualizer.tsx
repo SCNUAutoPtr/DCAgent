@@ -46,7 +46,7 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
   onPortPositionChange,
   onPortsUpdated,
   scale = 1,
-  labelMode = 'always', // 默认始终显示标签
+  labelMode = 'hover', // 默认悬浮显示标签
   showPortNumber = true, // 默认显示端口编号
   allowEdit = false, // 默认不允许编辑
   highlightedPortIds = [], // 默认无高亮
