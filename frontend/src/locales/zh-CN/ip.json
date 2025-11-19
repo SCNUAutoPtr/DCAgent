@@ -1,0 +1,199 @@
+{
+  "title": "IP地址管理",
+  "description": "管理IP子网和地址分配",
+  "subnetManagement": "子网管理",
+  "ipAddressManagement": "IP地址管理",
+  "subnet": {
+    "title": "子网管理",
+    "createTitle": "创建子网",
+    "editTitle": "编辑子网",
+    "detailTitle": "子网详情",
+    "list": "子网列表",
+    "fields": {
+      "name": "子网名称",
+      "network": "网络地址",
+      "cidr": "CIDR前缀",
+      "subnetMask": "子网掩码",
+      "gateway": "网关",
+      "vlan": "VLAN",
+      "dnsServers": "DNS服务器",
+      "description": "描述",
+      "room": "关联机房",
+      "totalIps": "总IP数",
+      "freeIps": "空闲IP",
+      "allocatedIps": "已分配",
+      "reservedIps": "保留",
+      "blockedIps": "禁用",
+      "usableIps": "可用IP",
+      "utilizationRate": "使用率",
+      "autoGenerateIps": "自动生成IP地址池",
+      "reservedIps": "保留IP地址",
+      "createdAt": "创建时间"
+    },
+    "placeholders": {
+      "name": "例如：机房A管理网段",
+      "network": "例如：192.168.1.0",
+      "cidr": "例如：24",
+      "gateway": "例如：192.168.1.1",
+      "vlan": "例如：VLAN100",
+      "dnsServers": "例如：8.8.8.8, 8.8.4.4",
+      "description": "子网用途说明",
+      "search": "搜索子网名称、网络地址"
+    },
+    "messages": {
+      "createSuccess": "子网创建成功",
+      "updateSuccess": "子网更新成功",
+      "deleteSuccess": "子网删除成功",
+      "deleteConfirm": "确定删除该子网吗？",
+      "deleteWarning": "删除子网将同时删除所有IP地址",
+      "allocatedIpsWarning": "子网中有已分配的IP，无法删除",
+      "loadFailed": "加载子网列表失败",
+      "loadDetailFailed": "加载子网详情失败",
+      "createFailed": "创建子网失败",
+      "updateFailed": "更新子网失败",
+      "deleteFailed": "删除子网失败"
+    },
+    "validation": {
+      "nameRequired": "请输入子网名称",
+      "networkRequired": "请输入网络地址",
+      "cidrRequired": "请输入CIDR前缀",
+      "invalidNetwork": "无效的网络地址格式",
+      "invalidCidr": "CIDR必须在0-32之间",
+      "invalidGateway": "无效的网关地址格式"
+    },
+    "calculation": {
+      "title": "子网计算",
+      "calculate": "计算",
+      "networkAddress": "网络地址",
+      "broadcastAddress": "广播地址",
+      "firstUsableIp": "第一个可用IP",
+      "lastUsableIp": "最后一个可用IP",
+      "totalHosts": "总主机数",
+      "usableHosts": "可用主机数",
+      "wildcardMask": "通配符掩码"
+    }
+  },
+  "ipAddress": {
+    "title": "IP地址",
+    "allocate": "分配IP",
+    "release": "释放IP",
+    "batchAllocate": "批量分配",
+    "fields": {
+      "address": "IP地址",
+      "status": "状态",
+      "subnet": "所属子网",
+      "hostname": "主机名",
+      "macAddress": "MAC地址",
+      "description": "描述",
+      "bindingType": "绑定类型",
+      "bindingTarget": "绑定对象",
+      "port": "端口",
+      "device": "设备",
+      "createdAt": "创建时间"
+    },
+    "status": {
+      "FREE": "空闲",
+      "ALLOCATED": "已分配",
+      "RESERVED": "保留",
+      "BLOCKED": "禁用"
+    },
+    "bindingTypes": {
+      "port": "端口",
+      "device": "设备"
+    },
+    "placeholders": {
+      "address": "例如：192.168.1.100",
+      "hostname": "例如：server-01",
+      "macAddress": "例如：00:11:22:33:44:55",
+      "description": "IP用途说明",
+      "search": "搜索IP地址、主机名、MAC地址",
+      "selectPort": "选择端口",
+      "selectDevice": "选择设备"
+    },
+    "messages": {
+      "allocateSuccess": "IP分配成功",
+      "releaseSuccess": "IP释放成功",
+      "updateSuccess": "IP更新成功",
+      "deleteSuccess": "IP删除成功",
+      "batchAllocateSuccess": "批量分配成功",
+      "allocateConfirm": "确定分配该IP地址吗？",
+      "releaseConfirm": "确定释放该IP地址吗？",
+      "deleteConfirm": "确定删除该IP地址吗？",
+      "selectBindingTarget": "请选择端口或设备",
+      "cannotBindBoth": "不能同时绑定端口和设备",
+      "noAvailableIp": "子网中没有可用的IP地址",
+      "loadFailed": "加载IP地址失败",
+      "allocateFailed": "分配IP失败",
+      "releaseFailed": "释放IP失败",
+      "updateFailed": "更新IP失败",
+      "deleteFailed": "删除IP失败"
+    },
+    "validation": {
+      "addressRequired": "请输入IP地址",
+      "invalidAddress": "无效的IP地址格式",
+      "invalidMacAddress": "无效的MAC地址格式",
+      "bindingTargetRequired": "请选择绑定的端口或设备"
+    },
+    "grid": {
+      "title": "IP地址网格视图",
+      "legend": {
+        "free": "空闲",
+        "allocated": "已分配",
+        "reserved": "保留",
+        "blocked": "禁用"
+      }
+    }
+  },
+  "conflicts": {
+    "title": "IP冲突检测",
+    "check": "检查冲突",
+    "noConflicts": "未发现冲突",
+    "foundConflicts": "发现 {count} 个MAC地址冲突",
+    "macAddress": "MAC地址",
+    "conflictingIps": "冲突的IP地址"
+  },
+  "statistics": {
+    "title": "统计信息",
+    "totalSubnets": "总子网数",
+    "totalIps": "总IP数",
+    "freeIps": "空闲",
+    "allocatedIps": "已分配",
+    "reservedIps": "保留",
+    "utilizationRate": "使用率"
+  },
+  "filters": {
+    "search": "搜索",
+    "subnet": "子网",
+    "status": "状态",
+    "room": "机房",
+    "vlan": "VLAN",
+    "applyFilter": "应用筛选",
+    "reset": "重置"
+  },
+  "buttons": {
+    "create": "创建",
+    "createSubnet": "创建子网",
+    "edit": "编辑",
+    "delete": "删除",
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确定",
+    "back": "返回",
+    "viewDetail": "查看详情",
+    "allocate": "分配",
+    "release": "释放",
+    "calculate": "计算",
+    "checkConflicts": "检查冲突",
+    "refresh": "刷新"
+  },
+  "tabs": {
+    "subnets": "子网列表",
+    "ipAddresses": "IP地址",
+    "statistics": "统计"
+  },
+  "noData": {
+    "noSubnets": "暂无子网",
+    "noIpAddresses": "暂无IP地址",
+    "createFirst": "点击上方按钮创建"
+  }
+}

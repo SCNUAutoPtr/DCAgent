@@ -50,6 +50,11 @@ class DeviceService {
             ports: true,
           },
         },
+        ipAddresses: {
+          include: {
+            subnet: true,
+          },
+        },
       },
     });
   }

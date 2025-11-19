@@ -16,6 +16,7 @@ import zhCN_panel from './locales/zh-CN/panel.json';
 import zhCN_cable from './locales/zh-CN/cable.json';
 import zhCN_opticalModule from './locales/zh-CN/opticalModule.json';
 import zhCN_management from './locales/zh-CN/management.json';
+import zhCN_ip from './locales/zh-CN/ip.json';
 
 import enUS_common from './locales/en-US/common.json';
 import enUS_menu from './locales/en-US/menu.json';
@@ -28,6 +29,7 @@ import enUS_panel from './locales/en-US/panel.json';
 import enUS_cable from './locales/en-US/cable.json';
 import enUS_opticalModule from './locales/en-US/opticalModule.json';
 import enUS_management from './locales/en-US/management.json';
+import enUS_ip from './locales/en-US/ip.json';
 
 import jaJP_common from './locales/ja-JP/common.json';
 import jaJP_menu from './locales/ja-JP/menu.json';
@@ -40,6 +42,7 @@ import jaJP_panel from './locales/ja-JP/panel.json';
 import jaJP_cable from './locales/ja-JP/cable.json';
 import jaJP_opticalModule from './locales/ja-JP/opticalModule.json';
 import jaJP_management from './locales/ja-JP/management.json';
+import jaJP_ip from './locales/ja-JP/ip.json';
 
 // 配置 i18n
 i18n
@@ -69,6 +72,7 @@ i18n
         cable: zhCN_cable,
         opticalModule: zhCN_opticalModule,
         management: zhCN_management,
+        ip: zhCN_ip,
       },
       'en-US': {
         common: enUS_common,
@@ -82,6 +86,7 @@ i18n
         cable: enUS_cable,
         opticalModule: enUS_opticalModule,
         management: enUS_management,
+        ip: enUS_ip,
       },
       'ja-JP': {
         common: jaJP_common,
@@ -95,6 +100,7 @@ i18n
         cable: jaJP_cable,
         opticalModule: jaJP_opticalModule,
         management: jaJP_management,
+        ip: jaJP_ip,
       },
     },
     // 默认命名空间

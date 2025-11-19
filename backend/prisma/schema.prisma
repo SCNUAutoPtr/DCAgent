@@ -29,6 +29,7 @@ model Room {
   dataCenterId String
   dataCenter   DataCenter @relation(fields: [dataCenterId], references: [id], onDelete: Cascade)
   cabinets     Cabinet[]
+  ipSubnets    IpSubnet[] // 关联的IP子网
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 }
@@ -60,18 +61,19 @@ enum DeviceType {
 
 // 设备（可以通过Cabinet唯一找到，不需要独立的shortID）
 model Device {
-  id          String     @id @default(uuid())
+  id          String      @id @default(uuid())
   name        String
   type        DeviceType
   model       String?
-  serialNo    String?    @unique
-  uPosition   Int?       // 在机柜中的U位
-  uHeight     Int?       // 占用几U
+  serialNo    String?     @unique
+  uPosition   Int?        // 在机柜中的U位
+  uHeight     Int?        // 占用几U
   cabinetId   String
-  cabinet     Cabinet    @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  cabinet     Cabinet     @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
   panels      Panel[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  ipAddresses IpAddress[] // 设备的管理IP地址
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
 // 面板类型枚举
@@ -166,6 +168,7 @@ model Port {
   // 连接信息
   cableEndpoints CableEndpoint[] // 该端口连接的线缆端点
   opticalModule  OpticalModule?  // 关联的光模块（如果有）
+  ipAddress      IpAddress?      // 关联的IP地址
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
@@ -386,4 +389,73 @@ model ModuleMovement {
 
   @@index([moduleId])
   @@index([createdAt])
+}
+
+// ============================================
+// IP地址管理系统
+// ============================================
+
+// IP状态枚举
+enum IpStatus {
+  FREE        // 空闲
+  ALLOCATED   // 已分配
+  RESERVED    // 保留（网关、广播等）
+  BLOCKED     // 禁用
+}
+
+// IP子网
+model IpSubnet {
+  id          String      @id @default(uuid())
+  name        String      // 子网名称，如 "机房A管理网段"
+  network     String      // 网络地址，如 "192.168.1.0"
+  cidr        Int         // CIDR前缀，如 24
+  gateway     String?     // 网关地址，如 "192.168.1.1"
+  vlan        String?     // VLAN标识
+  dnsServers  Json?       // DNS服务器列表 ["8.8.8.8", "8.8.4.4"]
+  description String?     // 描述信息
+
+  // 关联机房（可选）
+  roomId      String?
+  room        Room?       @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  // IP地址池
+  ipAddresses IpAddress[]
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([roomId])
+}
+
+// IP地址
+model IpAddress {
+  id          String    @id @default(uuid())
+  address     String    @unique  // IP地址，如 "192.168.1.100"
+
+  // 所属子网
+  subnetId    String
+  subnet      IpSubnet  @relation(fields: [subnetId], references: [id], onDelete: Cascade)
+
+  // IP状态
+  status      IpStatus  @default(FREE)
+
+  // 绑定关系（支持绑定到端口或设备）
+  portId      String?   @unique  // 绑定的端口ID（与端口一对一）
+  port        Port?     @relation(fields: [portId], references: [id], onDelete: SetNull)
+
+  deviceId    String?   // 绑定的设备ID（设备管理IP，一个设备可有多个IP）
+  device      Device?   @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+
+  // 网络信息
+  hostname    String?   // 主机名
+  macAddress  String?   // MAC地址
+  description String?   // 描述信息
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([subnetId])
+  @@index([status])
+  @@index([portId])
+  @@index([deviceId])
 }

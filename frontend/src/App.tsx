@@ -19,6 +19,8 @@ import BulkDeploymentPage from './pages/BulkDeploymentPage';
 import PanelTemplateManagementPage from './pages/PanelTemplateManagementPage';
 import OpticalModuleList from './pages/OpticalModuleList';
 import OpticalModuleDetail from './pages/OpticalModuleDetail';
+import IpManagement from './pages/IpManagement';
+import SubnetDetail from './pages/SubnetDetail';
 // import MonitoringPage from './pages/MonitoringPage'; // SNMP 监控模块已隐藏
 
 const { Content } = Layout;
@@ -62,6 +64,8 @@ function App() {
               <Route path="/panel-templates" element={<PanelTemplateManagementPage />} />
               <Route path="/optical-modules" element={<OpticalModuleList />} />
               <Route path="/optical-modules/:id" element={<OpticalModuleDetail />} />
+              <Route path="/ip-management" element={<IpManagement />} />
+              <Route path="/ip-management/subnet/:id" element={<SubnetDetail />} />
               {/* SNMP 监控路由已隐藏 */}
               {/* <Route path="/monitoring" element={<MonitoringPage />} /> */}
               </Routes>

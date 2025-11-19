@@ -1,0 +1,199 @@
+{
+  "title": "IPアドレス管理",
+  "description": "IPサブネットとアドレス割り当てを管理",
+  "subnetManagement": "サブネット管理",
+  "ipAddressManagement": "IPアドレス管理",
+  "subnet": {
+    "title": "サブネット管理",
+    "createTitle": "サブネット作成",
+    "editTitle": "サブネット編集",
+    "detailTitle": "サブネット詳細",
+    "list": "サブネットリスト",
+    "fields": {
+      "name": "サブネット名",
+      "network": "ネットワークアドレス",
+      "cidr": "CIDRプレフィックス",
+      "subnetMask": "サブネットマスク",
+      "gateway": "ゲートウェイ",
+      "vlan": "VLAN",
+      "dnsServers": "DNSサーバー",
+      "description": "説明",
+      "room": "関連ルーム",
+      "totalIps": "総IP数",
+      "freeIps": "空きIP",
+      "allocatedIps": "割当済",
+      "reservedIps": "予約済",
+      "blockedIps": "ブロック",
+      "usableIps": "使用可能IP",
+      "utilizationRate": "使用率",
+      "autoGenerateIps": "IPアドレスプール自動生成",
+      "reservedIps": "予約IPアドレス",
+      "createdAt": "作成日時"
+    },
+    "placeholders": {
+      "name": "例：ルームA管理ネットワーク",
+      "network": "例：192.168.1.0",
+      "cidr": "例：24",
+      "gateway": "例：192.168.1.1",
+      "vlan": "例：VLAN100",
+      "dnsServers": "例：8.8.8.8, 8.8.4.4",
+      "description": "サブネットの用途説明",
+      "search": "サブネット名、ネットワークアドレスを検索"
+    },
+    "messages": {
+      "createSuccess": "サブネットを作成しました",
+      "updateSuccess": "サブネットを更新しました",
+      "deleteSuccess": "サブネットを削除しました",
+      "deleteConfirm": "このサブネットを削除してもよろしいですか？",
+      "deleteWarning": "サブネット削除すると全IPアドレスも削除されます",
+      "allocatedIpsWarning": "割当済IPがあるため削除できません",
+      "loadFailed": "サブネットリストの読み込みに失敗しました",
+      "loadDetailFailed": "サブネット詳細の読み込みに失敗しました",
+      "createFailed": "サブネット作成に失敗しました",
+      "updateFailed": "サブネット更新に失敗しました",
+      "deleteFailed": "サブネット削除に失敗しました"
+    },
+    "validation": {
+      "nameRequired": "サブネット名を入力してください",
+      "networkRequired": "ネットワークアドレスを入力してください",
+      "cidrRequired": "CIDRプレフィックスを入力してください",
+      "invalidNetwork": "無効なネットワークアドレス形式",
+      "invalidCidr": "CIDRは0-32の範囲で指定してください",
+      "invalidGateway": "無効なゲートウェイアドレス形式"
+    },
+    "calculation": {
+      "title": "サブネット計算",
+      "calculate": "計算",
+      "networkAddress": "ネットワークアドレス",
+      "broadcastAddress": "ブロードキャストアドレス",
+      "firstUsableIp": "最初の使用可能IP",
+      "lastUsableIp": "最後の使用可能IP",
+      "totalHosts": "総ホスト数",
+      "usableHosts": "使用可能ホスト数",
+      "wildcardMask": "ワイルドカードマスク"
+    }
+  },
+  "ipAddress": {
+    "title": "IPアドレス",
+    "allocate": "IP割当",
+    "release": "IP解放",
+    "batchAllocate": "一括割当",
+    "fields": {
+      "address": "IPアドレス",
+      "status": "ステータス",
+      "subnet": "サブネット",
+      "hostname": "ホスト名",
+      "macAddress": "MACアドレス",
+      "description": "説明",
+      "bindingType": "バインドタイプ",
+      "bindingTarget": "バインド対象",
+      "port": "ポート",
+      "device": "デバイス",
+      "createdAt": "作成日時"
+    },
+    "status": {
+      "FREE": "空き",
+      "ALLOCATED": "割当済",
+      "RESERVED": "予約済",
+      "BLOCKED": "ブロック"
+    },
+    "bindingTypes": {
+      "port": "ポート",
+      "device": "デバイス"
+    },
+    "placeholders": {
+      "address": "例：192.168.1.100",
+      "hostname": "例：server-01",
+      "macAddress": "例：00:11:22:33:44:55",
+      "description": "IP用途説明",
+      "search": "IPアドレス、ホスト名、MACアドレスを検索",
+      "selectPort": "ポートを選択",
+      "selectDevice": "デバイスを選択"
+    },
+    "messages": {
+      "allocateSuccess": "IPを割当しました",
+      "releaseSuccess": "IPを解放しました",
+      "updateSuccess": "IPを更新しました",
+      "deleteSuccess": "IPを削除しました",
+      "batchAllocateSuccess": "一括割当に成功しました",
+      "allocateConfirm": "このIPアドレスを割当してもよろしいですか？",
+      "releaseConfirm": "このIPアドレスを解放してもよろしいですか？",
+      "deleteConfirm": "このIPアドレスを削除してもよろしいですか？",
+      "selectBindingTarget": "ポートまたはデバイスを選択してください",
+      "cannotBindBoth": "ポートとデバイスを同時にバインドできません",
+      "noAvailableIp": "サブネットに使用可能なIPアドレスがありません",
+      "loadFailed": "IPアドレスの読み込みに失敗しました",
+      "allocateFailed": "IP割当に失敗しました",
+      "releaseFailed": "IP解放に失敗しました",
+      "updateFailed": "IP更新に失敗しました",
+      "deleteFailed": "IP削除に失敗しました"
+    },
+    "validation": {
+      "addressRequired": "IPアドレスを入力してください",
+      "invalidAddress": "無効なIPアドレス形式",
+      "invalidMacAddress": "無効なMACアドレス形式",
+      "bindingTargetRequired": "バインドするポートまたはデバイスを選択してください"
+    },
+    "grid": {
+      "title": "IPアドレスグリッド表示",
+      "legend": {
+        "free": "空き",
+        "allocated": "割当済",
+        "reserved": "予約済",
+        "blocked": "ブロック"
+      }
+    }
+  },
+  "conflicts": {
+    "title": "IP競合検出",
+    "check": "競合チェック",
+    "noConflicts": "競合は見つかりませんでした",
+    "foundConflicts": "{count}件のMACアドレス競合が見つかりました",
+    "macAddress": "MACアドレス",
+    "conflictingIps": "競合するIPアドレス"
+  },
+  "statistics": {
+    "title": "統計情報",
+    "totalSubnets": "総サブネット数",
+    "totalIps": "総IP数",
+    "freeIps": "空き",
+    "allocatedIps": "割当済",
+    "reservedIps": "予約済",
+    "utilizationRate": "使用率"
+  },
+  "filters": {
+    "search": "検索",
+    "subnet": "サブネット",
+    "status": "ステータス",
+    "room": "ルーム",
+    "vlan": "VLAN",
+    "applyFilter": "フィルタ適用",
+    "reset": "リセット"
+  },
+  "buttons": {
+    "create": "作成",
+    "createSubnet": "サブネット作成",
+    "edit": "編集",
+    "delete": "削除",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "back": "戻る",
+    "viewDetail": "詳細表示",
+    "allocate": "割当",
+    "release": "解放",
+    "calculate": "計算",
+    "checkConflicts": "競合チェック",
+    "refresh": "更新"
+  },
+  "tabs": {
+    "subnets": "サブネットリスト",
+    "ipAddresses": "IPアドレス",
+    "statistics": "統計"
+  },
+  "noData": {
+    "noSubnets": "サブネットがありません",
+    "noIpAddresses": "IPアドレスがありません",
+    "createFirst": "上のボタンをクリックして作成"
+  }
+}

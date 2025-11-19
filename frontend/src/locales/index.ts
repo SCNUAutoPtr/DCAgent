@@ -22,6 +22,7 @@ export const NAMESPACES = [
   'cable',
   'opticalModule',
   'management',
+  'ip',
   // 添加新的命名空间...
 ] as const;
 

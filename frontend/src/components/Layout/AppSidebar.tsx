@@ -11,6 +11,7 @@ import {
   DeleteOutlined,
   TagsOutlined,
   ToolOutlined,
+  GlobalOutlined,
   // MonitorOutlined, // SNMP 监控模块已隐藏
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -88,6 +89,11 @@ export default function AppSidebar() {
       key: '/shortid-pool',
       icon: <TagsOutlined />,
       label: t('shortIdPool'),
+    },
+    {
+      key: '/ip-management',
+      icon: <GlobalOutlined />,
+      label: t('ipManagement'),
     },
     // SNMP 设备监控菜单已隐藏
     // {

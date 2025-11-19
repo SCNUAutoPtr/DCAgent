@@ -13,7 +13,9 @@
   "opticalModuleList": "Optical Modules",
   "cableTopology": "Cable Topology",
   "cableManualInventory": "Cable Manual Inventory",
+  "cableScrap": "Cable Scrap",
   "shortIdPool": "Short ID Pool",
+  "ipManagement": "IP Management",
   "bulkDeployment": "Bulk Deployment",
   "panelTemplate": "Panel Template"
 }

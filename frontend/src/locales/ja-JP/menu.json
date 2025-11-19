@@ -13,7 +13,9 @@
   "opticalModuleList": "光モジュールリスト",
   "cableTopology": "ケーブルトポロジー",
   "cableManualInventory": "ケーブル手動入庫",
+  "cableScrap": "ケーブル廃棄",
   "shortIdPool": "shortIDプール管理",
+  "ipManagement": "IPアドレス管理",
   "bulkDeployment": "一括配置",
   "panelTemplate": "パネルテンプレート"
 }

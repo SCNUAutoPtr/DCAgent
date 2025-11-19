@@ -103,6 +103,12 @@ class PortService {
             cable: true,
           },
         },
+        ipAddress: {
+          include: {
+            subnet: true,
+          },
+        },
+        opticalModule: true,
       },
     });
   }
@@ -132,6 +138,12 @@ class PortService {
             cable: true,
           },
         },
+        ipAddress: {
+          include: {
+            subnet: true,
+          },
+        },
+        opticalModule: true,
       },
       orderBy: {
         number: 'asc',
