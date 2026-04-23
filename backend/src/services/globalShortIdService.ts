@@ -7,7 +7,7 @@
  */
 
 import prisma from '../utils/prisma';
-import shortIdPoolService from './shortIdPoolService';
+import { shortIdPoolService } from './shortIdPoolService';
 
 export type EntityType =
   | 'Room'
@@ -67,8 +67,13 @@ class GlobalShortIdService {
         'CABLE_ENDPOINT': 'CableEndpoint'
       };
 
+      const mappedType = poolRecord.entityType ? reverseMap[poolRecord.entityType] : null;
+      if (!mappedType) {
+        return null;
+      }
+
       return {
-        entityType: reverseMap[poolRecord.entityType] || poolRecord.entityType as EntityType,
+        entityType: mappedType,
         entityId: poolRecord.entityId,
       };
     }

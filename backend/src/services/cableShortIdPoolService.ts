@@ -1,5 +1,4 @@
-import { prisma } from '../utils/prisma';
-import { PoolIdStatus } from '@prisma/client';
+import prisma from '../utils/prisma';
 
 export class CableShortIdPoolService {
   /**
@@ -13,21 +12,12 @@ export class CableShortIdPoolService {
       throw new Error('生成数量必须在 1-10000 之间');
     }
 
-    // 1. 查找当前最大的shortID（从Cable和Pool表中）
-    const maxCableShortId = await prisma.cable.findFirst({
-      orderBy: { shortId: 'desc' },
-      select: { shortId: true },
-    });
-
     const maxPoolShortId = await prisma.cableShortIdPool.findFirst({
       orderBy: { shortId: 'desc' },
       select: { shortId: true },
     });
 
-    const currentMax = Math.max(
-      maxCableShortId?.shortId || 0,
-      maxPoolShortId?.shortId || 0
-    );
+    const currentMax = maxPoolShortId?.shortId || 0;
 
     // 2. 从currentMax + 1开始生成连续的shortID
     const generatedIds: number[] = [];
@@ -38,7 +28,7 @@ export class CableShortIdPoolService {
       generatedIds.push(newShortId);
       poolRecords.push({
         shortId: newShortId,
-        status: PoolIdStatus.AVAILABLE,
+        status: 'AVAILABLE',
         notes: notes || `批次生成 ${new Date().toISOString()}`,
       });
     }
@@ -62,19 +52,6 @@ export class CableShortIdPoolService {
     details?: any;
   }> {
     // 检查Cable表
-    const cable = await prisma.cable.findUnique({
-      where: { shortId },
-      select: { id: true, label: true, type: true, inventoryStatus: true },
-    });
-
-    if (cable) {
-      return {
-        exists: true,
-        usedBy: 'cable',
-        details: cable,
-      };
-    }
-
     // 检查Pool表
     const poolRecord = await prisma.cableShortIdPool.findUnique({
       where: { shortId },
@@ -102,7 +79,7 @@ export class CableShortIdPoolService {
    */
   async getAvailableShortIds(limit?: number): Promise<number[]> {
     const records = await prisma.cableShortIdPool.findMany({
-      where: { status: PoolIdStatus.AVAILABLE },
+      where: { status: 'AVAILABLE' },
       orderBy: { shortId: 'asc' },
       take: limit,
       select: { shortId: true },
@@ -120,7 +97,7 @@ export class CableShortIdPoolService {
     await prisma.cableShortIdPool.update({
       where: { shortId },
       data: {
-        status: PoolIdStatus.IN_USE,
+        status: 'IN_USE',
         cableId,
         usedAt: new Date(),
       },
@@ -135,7 +112,7 @@ export class CableShortIdPoolService {
     await prisma.cableShortIdPool.update({
       where: { shortId },
       data: {
-        status: PoolIdStatus.AVAILABLE,
+        status: 'AVAILABLE',
         cableId: null,
         usedAt: null,
       },
@@ -151,7 +128,7 @@ export class CableShortIdPoolService {
     await prisma.cableShortIdPool.update({
       where: { shortId },
       data: {
-        status: PoolIdStatus.CANCELLED,
+        status: 'CANCELLED',
         notes: reason || '已作废',
       },
     });
@@ -169,10 +146,10 @@ export class CableShortIdPoolService {
   }> {
     const [total, available, inUse, reserved, cancelled] = await Promise.all([
       prisma.cableShortIdPool.count(),
-      prisma.cableShortIdPool.count({ where: { status: PoolIdStatus.AVAILABLE } }),
-      prisma.cableShortIdPool.count({ where: { status: PoolIdStatus.IN_USE } }),
-      prisma.cableShortIdPool.count({ where: { status: PoolIdStatus.RESERVED } }),
-      prisma.cableShortIdPool.count({ where: { status: PoolIdStatus.CANCELLED } }),
+      prisma.cableShortIdPool.count({ where: { status: 'AVAILABLE' } }),
+      prisma.cableShortIdPool.count({ where: { status: 'IN_USE' } }),
+      prisma.cableShortIdPool.count({ where: { status: 'RESERVED' } }),
+      prisma.cableShortIdPool.count({ where: { status: 'CANCELLED' } }),
     ]);
 
     return { total, available, inUse, reserved, cancelled };

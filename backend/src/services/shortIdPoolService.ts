@@ -1,7 +1,6 @@
 import prisma from '../utils/prisma';
 import { EntityType, ShortIdPoolStatus } from '@prisma/client';
 import { ShortIdFormatter } from '../utils/shortIdFormatter';
-import globalShortIdService from './globalShortIdService';
 
 export class ShortIdPoolService {
   /**
