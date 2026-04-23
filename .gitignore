@@ -8,6 +8,7 @@ coverage/
 playwright-report/
 test-results/
 test-data/
+backend/apifox-cases.postman.json
 
 # Production
 dist/
