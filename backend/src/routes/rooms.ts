@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import roomService from '../services/roomService';
 import { z } from 'zod';
+import { createCrudRoute } from '../utils/crudRouteHandler';
 
 const router = Router();
 
@@ -12,11 +13,12 @@ const createRoomSchema = z.object({
   dataCenterId: z.string().uuid('Invalid datacenter ID'),
 });
 
-const updateRoomSchema = z.object({
+export const updateRoomSchema = z.object({
   id: z.string().uuid('Invalid ID'),
   name: z.string().min(1).optional(),
   shortId: z.number().int().positive('ShortID must be a positive integer').optional(),
   floor: z.string().optional(),
+  dataCenterId: z.string().uuid('Invalid datacenter ID').optional(),
   floorPlanWidth: z.number().positive().optional(),
   floorPlanHeight: z.number().positive().optional(),
 });
@@ -89,34 +91,19 @@ router.post('/by-shortid', async (req: Request, res: Response) => {
 });
 
 // POST /api/v1/rooms/create - 创建
-router.post('/create', async (req: Request, res: Response) => {
-  try {
-    const validatedData = createRoomSchema.parse(req.body);
-    const room = await roomService.createRoom(validatedData);
-    res.status(201).json(room);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
-    }
-    console.error('Error creating room:', error);
-    res.status(500).json({ error: 'Failed to create room' });
-  }
-});
+router.post('/create', createCrudRoute({
+  schema: createRoomSchema,
+  operation: 'create room',
+  successStatus: 201,
+  handler: async (validatedData) => roomService.createRoom(validatedData),
+}));
 
 // POST /api/v1/rooms/update - 更新
-router.post('/update', async (req: Request, res: Response) => {
-  try {
-    const { id, ...updateData } = updateRoomSchema.parse(req.body);
-    const room = await roomService.updateRoom(id, updateData);
-    res.json(room);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
-    }
-    console.error('Error updating room:', error);
-    res.status(500).json({ error: 'Failed to update room' });
-  }
-});
+router.post('/update', createCrudRoute({
+  schema: updateRoomSchema,
+  operation: 'update room',
+  handler: async ({ id, ...updateData }) => roomService.updateRoom(id, updateData),
+}));
 
 // POST /api/v1/rooms/delete - 删除
 router.post('/delete', async (req: Request, res: Response) => {

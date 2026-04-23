@@ -22,7 +22,7 @@ export const roomService = {
   },
 
   // 更新机房
-  async update(id: string, data: { name?: string; shortId?: number; floor?: string; floorPlanWidth?: number; floorPlanHeight?: number }): Promise<Room> {
+  async update(id: string, data: { name?: string; shortId?: number; floor?: string; dataCenterId?: string; floorPlanWidth?: number; floorPlanHeight?: number }): Promise<Room> {
     const response = await api.post('/rooms/update', { id, ...data });
     return response.data;
   },

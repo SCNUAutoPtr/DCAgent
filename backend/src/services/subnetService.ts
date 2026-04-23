@@ -20,7 +20,7 @@ export interface UpdateSubnetDto {
   vlan?: string;
   dnsServers?: string[];
   description?: string;
-  roomId?: string;
+  roomId?: string | null;
 }
 
 export interface ListSubnetsQuery {
@@ -99,7 +99,7 @@ class SubnetService {
           cidr,
           gateway,
           vlan,
-          dnsServers: dnsServers ? JSON.stringify(dnsServers) : null,
+          dnsServers: dnsServers ? JSON.stringify(dnsServers) : undefined,
           description,
           roomId,
         },

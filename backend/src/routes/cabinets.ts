@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import cabinetService from '../services/cabinetService';
 import { z } from 'zod';
+import { createCrudRoute } from '../utils/crudRouteHandler';
 
 const router = Router();
 
@@ -13,12 +14,13 @@ const createCabinetSchema = z.object({
   roomId: z.string().uuid('Invalid room ID'),
 });
 
-const updateCabinetSchema = z.object({
+export const updateCabinetSchema = z.object({
   id: z.string().uuid('Invalid ID'),
   name: z.string().min(1).optional(),
   shortId: z.number().int().positive('ShortID must be a positive integer').optional(),
   position: z.string().optional(),
   height: z.number().int().positive().optional(),
+  roomId: z.string().uuid('Invalid room ID').optional(),
   floorPlanPosition: z.object({
     x: z.number(),
     y: z.number(),
@@ -97,34 +99,19 @@ router.post('/by-shortid', async (req: Request, res: Response) => {
 });
 
 // POST /api/v1/cabinets/create - 创建
-router.post('/create', async (req: Request, res: Response) => {
-  try {
-    const validatedData = createCabinetSchema.parse(req.body);
-    const cabinet = await cabinetService.createCabinet(validatedData);
-    res.status(201).json(cabinet);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
-    }
-    console.error('Error creating cabinet:', error);
-    res.status(500).json({ error: 'Failed to create cabinet' });
-  }
-});
+router.post('/create', createCrudRoute({
+  schema: createCabinetSchema,
+  operation: 'create cabinet',
+  successStatus: 201,
+  handler: async (validatedData) => cabinetService.createCabinet(validatedData),
+}));
 
 // POST /api/v1/cabinets/update - 更新
-router.post('/update', async (req: Request, res: Response) => {
-  try {
-    const { id, ...updateData } = updateCabinetSchema.parse(req.body);
-    const cabinet = await cabinetService.updateCabinet(id, updateData);
-    res.json(cabinet);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
-    }
-    console.error('Error updating cabinet:', error);
-    res.status(500).json({ error: 'Failed to update cabinet' });
-  }
-});
+router.post('/update', createCrudRoute({
+  schema: updateCabinetSchema,
+  operation: 'update cabinet',
+  handler: async ({ id, ...updateData }) => cabinetService.updateCabinet(id, updateData),
+}));
 
 // POST /api/v1/cabinets/delete - 删除
 router.post('/delete', async (req: Request, res: Response) => {

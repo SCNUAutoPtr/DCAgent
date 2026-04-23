@@ -44,7 +44,7 @@ class SearchService {
         ...rooms.map((room) => ({
           type: 'Room' as const,
           id: room.id,
-          shortId: room.shortId,
+          shortId: room.shortId ?? undefined,
           name: room.name,
           description: room.floor || undefined,
           metadata: { floor: room.floor, dataCenterId: room.dataCenterId },
@@ -57,7 +57,7 @@ class SearchService {
         ...cabinets.map((cabinet) => ({
           type: 'Cabinet' as const,
           id: cabinet.id,
-          shortId: cabinet.shortId,
+          shortId: cabinet.shortId ?? undefined,
           name: cabinet.name,
           description: cabinet.position || undefined,
           metadata: {
@@ -126,7 +126,6 @@ class SearchService {
         ...ports.map((port) => ({
           type: 'Port' as const,
           id: port.id,
-          shortId: port.shortId,
           name: `Port ${port.number}`,
           description: `${port.portType || 'Unknown'} - ${port.status}`,
           metadata: {
@@ -171,7 +170,7 @@ class SearchService {
           return {
             type: 'Room',
             id: room.id,
-            shortId: room.shortId,
+            shortId: room.shortId ?? undefined,
             name: room.name,
             description: room.floor || undefined,
             metadata: room,
@@ -186,7 +185,7 @@ class SearchService {
           return {
             type: 'Cabinet',
             id: cabinet.id,
-            shortId: cabinet.shortId,
+            shortId: cabinet.shortId ?? undefined,
             name: cabinet.name,
             description: cabinet.position || undefined,
             metadata: cabinet,
@@ -216,7 +215,6 @@ class SearchService {
           return {
             type: 'Port',
             id: port.id,
-            shortId: port.shortId,
             name: `Port ${port.number}`,
             description: `${port.portType || 'Unknown'} - ${port.status}`,
             metadata: port,

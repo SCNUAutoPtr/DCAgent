@@ -4,8 +4,8 @@ import { DeviceType } from '@prisma/client';
 export interface CreateDeviceDto {
   name: string;
   type: DeviceType;
-  model?: string;
-  serialNo?: string;
+  model?: string | null;
+  serialNo?: string | null;
   uPosition?: number;
   uHeight?: number;
   cabinetId: string;
@@ -14,8 +14,8 @@ export interface CreateDeviceDto {
 export interface UpdateDeviceDto {
   name?: string;
   type?: DeviceType;
-  model?: string;
-  serialNo?: string;
+  model?: string | null;
+  serialNo?: string | null;
   cabinetId?: string;
   uPosition?: number;
   uHeight?: number;
@@ -59,6 +59,9 @@ class DeviceService {
     });
   }
 
+  async getDeviceByShortId(_shortId: number) {
+    return null;
+  }
 
   async getAllDevices() {
     return await prisma.device.findMany({

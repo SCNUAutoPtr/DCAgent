@@ -1,7 +1,6 @@
 import prisma from '../utils/prisma';
 import { PanelType } from '@prisma/client';
-import globalShortIdService from './globalShortIdService';
-import shortIdPoolService from './shortIdPoolService';
+import { shortIdPoolService } from './shortIdPoolService';
 
 export interface CreatePanelDto {
   name: string;

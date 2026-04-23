@@ -45,6 +45,9 @@ class DataCenterService {
     });
   }
 
+  async getDataCenterByShortId(_shortId: number): Promise<DataCenter | null> {
+    return null;
+  }
 
   async createDataCenter(data: CreateDataCenterInput): Promise<DataCenter> {
     return prisma.dataCenter.create({

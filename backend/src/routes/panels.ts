@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import panelService from '../services/panelService';
 import { z } from 'zod';
+import { createCrudRoute } from '../utils/crudRouteHandler';
 
 const router = Router();
 
@@ -120,34 +121,19 @@ router.post('/by-shortid', async (req: Request, res: Response) => {
 });
 
 // POST /api/v1/panels/create - 创建
-router.post('/create', async (req: Request, res: Response) => {
-  try {
-    const validatedData = createPanelSchema.parse(req.body);
-    const panel = await panelService.createPanel(validatedData);
-    res.status(201).json(panel);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
-    }
-    console.error('Error creating panel:', error);
-    res.status(500).json({ error: 'Failed to create panel' });
-  }
-});
+router.post('/create', createCrudRoute({
+  schema: createPanelSchema,
+  operation: 'create panel',
+  successStatus: 201,
+  handler: async (validatedData) => panelService.createPanel(validatedData),
+}));
 
 // POST /api/v1/panels/update - 更新
-router.post('/update', async (req: Request, res: Response) => {
-  try {
-    const { id, ...updateData } = updatePanelSchema.parse(req.body);
-    const panel = await panelService.updatePanel(id, updateData);
-    res.json(panel);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
-    }
-    console.error('Error updating panel:', error);
-    res.status(500).json({ error: 'Failed to update panel' });
-  }
-});
+router.post('/update', createCrudRoute({
+  schema: updatePanelSchema,
+  operation: 'update panel',
+  handler: async ({ id, ...updateData }) => panelService.updatePanel(id, updateData),
+}));
 
 // POST /api/v1/panels/delete - 删除
 router.post('/delete', async (req: Request, res: Response) => {

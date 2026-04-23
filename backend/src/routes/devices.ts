@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import deviceService from '../services/deviceService';
 import { z } from 'zod';
+import { createCrudRoute } from '../utils/crudRouteHandler';
 
 const router = Router();
 
@@ -15,7 +16,7 @@ const createDeviceSchema = z.object({
   cabinetId: z.string().uuid('Invalid cabinet ID'),
 });
 
-const updateDeviceSchema = z.object({
+export const updateDeviceSchema = z.object({
   id: z.string().uuid('Invalid ID'),
   name: z.string().min(1).optional(),
   type: z.enum(['SERVER', 'SWITCH', 'ROUTER', 'FIREWALL', 'STORAGE', 'PDU', 'OTHER']).optional(),
@@ -98,34 +99,19 @@ router.post('/by-shortid', async (req: Request, res: Response) => {
 });
 
 // POST /api/v1/devices/create - 创建
-router.post('/create', async (req: Request, res: Response) => {
-  try {
-    const validatedData = createDeviceSchema.parse(req.body);
-    const device = await deviceService.createDevice(validatedData);
-    res.status(201).json(device);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
-    }
-    console.error('Error creating device:', error);
-    res.status(500).json({ error: 'Failed to create device' });
-  }
-});
+router.post('/create', createCrudRoute({
+  schema: createDeviceSchema,
+  operation: 'create device',
+  successStatus: 201,
+  handler: async (validatedData) => deviceService.createDevice(validatedData),
+}));
 
 // POST /api/v1/devices/update - 更新
-router.post('/update', async (req: Request, res: Response) => {
-  try {
-    const { id, ...updateData } = updateDeviceSchema.parse(req.body);
-    const device = await deviceService.updateDevice(id, updateData);
-    res.json(device);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
-    }
-    console.error('Error updating device:', error);
-    res.status(500).json({ error: 'Failed to update device' });
-  }
-});
+router.post('/update', createCrudRoute({
+  schema: updateDeviceSchema,
+  operation: 'update device',
+  handler: async ({ id, ...updateData }) => deviceService.updateDevice(id, updateData),
+}));
 
 // POST /api/v1/devices/delete - 删除
 router.post('/delete', async (req: Request, res: Response) => {

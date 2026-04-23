@@ -14,6 +14,7 @@ export interface UpdateRoomInput {
   name?: string;
   shortId?: number;
   floor?: string;
+  dataCenterId?: string;
   floorPlanWidth?: number;
   floorPlanHeight?: number;
 }

@@ -16,6 +16,7 @@ export interface UpdateCabinetInput {
   shortId?: number;
   position?: string;
   height?: number;
+  roomId?: string;
   floorPlanPosition?: { x: number; y: number };
   floorPlanSize?: { width: number; depth: number };
 }

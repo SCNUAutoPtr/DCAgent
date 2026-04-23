@@ -27,6 +27,7 @@ export const cabinetService = {
     shortId?: number;
     position?: string;
     height?: number;
+    roomId?: string;
     floorPlanPosition?: { x: number; y: number };
     floorPlanSize?: { width: number; depth: number };
   }): Promise<Cabinet> {
