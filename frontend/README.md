@@ -118,8 +118,11 @@ npm run lint
 ## 环境变量
 
 ```env
-VITE_API_URL=http://localhost:3000/api
+VITE_API_BASE_URL=http://localhost:3000
 ```
+
+本地开发、Docker 暴露到宿主机的前端，以及 E2E 浏览器环境都使用同一个变量名 `VITE_API_BASE_URL`。
+`src/services/api.ts` 会在这个基址后追加 `/api/v1`，所以这里不要再写 `/api`。
 
 ## 页面路由（15个）
 
