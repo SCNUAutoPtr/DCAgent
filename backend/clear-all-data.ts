@@ -100,6 +100,14 @@ async function clearAllData() {
 
     // ==================== 6. 清理机房和数据中心 ====================
     console.log('\n【6/7】清理机房和数据中心...');
+    const rooms = await prisma.room.findMany({
+      select: { shortId: true },
+    });
+    const roomShortIds = rooms
+      .map(r => r.shortId)
+      .filter(id => id !== null) as number[];
+    console.log(`  找到 ${roomShortIds.length} 个机房的 shortID`);
+
     const deletedRooms = await prisma.room.deleteMany({});
     console.log(`  已删除 ${deletedRooms.count} 个机房`);
 
@@ -114,13 +122,11 @@ async function clearAllData() {
       ...cableEndpointShortIds,
       ...panelShortIds,
       ...cabinetShortIds,
+      ...roomShortIds,
     ];
 
     if (shouldClearShortIdPool) {
       // 模式1：完全清空 shortID 池
-      const deletedAllocations = await prisma.globalShortIdAllocation.deleteMany({});
-      console.log(`  已删除 ${deletedAllocations.count} 个全局 shortID 分配记录`);
-
       const deletedShortIds = await prisma.shortIdPool.deleteMany({});
       console.log(`  已删除 ${deletedShortIds.count} 个 shortID 池记录`);
 
@@ -157,23 +163,50 @@ async function clearAllData() {
         console.log(`  已清理 ${orphanedCleaned.count} 个孤儿 shortID 记录`);
       }
 
-      // 清理 globalShortIdAllocation 中的业务数据分配记录
-      const deletedAllocations = await prisma.globalShortIdAllocation.deleteMany({
+      const staleBoundRecords = await prisma.shortIdPool.findMany({
         where: {
-          entityType: {
-            in: ['CABINET', 'PANEL', 'CABLE_ENDPOINT'],
-          },
+          status: 'BOUND',
+          entityId: { not: null },
         },
+        select: { shortId: true, entityType: true, entityId: true },
       });
-      console.log(`  已删除 ${deletedAllocations.count} 个业务数据 shortID 分配记录`);
 
-      const orphanedAllocations = await prisma.globalShortIdAllocation.deleteMany({
-        where: {
-          entityId: '',
-        },
-      });
-      if (orphanedAllocations.count > 0) {
-        console.log(`  已清理 ${orphanedAllocations.count} 个孤儿 shortID 分配记录`);
+      let resetStaleCount = 0;
+      for (const record of staleBoundRecords) {
+        let exists = false;
+
+        switch (record.entityType) {
+          case 'ROOM':
+            exists = !!(await prisma.room.findUnique({ where: { id: record.entityId! }, select: { id: true } }));
+            break;
+          case 'CABINET':
+            exists = !!(await prisma.cabinet.findUnique({ where: { id: record.entityId! }, select: { id: true } }));
+            break;
+          case 'PANEL':
+            exists = !!(await prisma.panel.findUnique({ where: { id: record.entityId! }, select: { id: true } }));
+            break;
+          case 'CABLE_ENDPOINT':
+            exists = !!(await prisma.cableEndpoint.findUnique({ where: { id: record.entityId! }, select: { id: true } }));
+            break;
+          default:
+            exists = false;
+        }
+
+        if (!exists) {
+          await prisma.shortIdPool.updateMany({
+            where: { shortId: record.shortId },
+            data: {
+              status: 'GENERATED',
+              entityType: null,
+              entityId: null,
+              boundAt: null,
+            },
+          });
+          resetStaleCount += 1;
+        }
+      }
+      if (resetStaleCount > 0) {
+        console.log(`  已重置 ${resetStaleCount} 个失效绑定 shortID 记录`);
       }
 
       console.log('\n✅ 所有业务数据清理完成，shortID 池已重置！');
