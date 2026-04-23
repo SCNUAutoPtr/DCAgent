@@ -25,10 +25,12 @@ http://localhost:3000/api/v1
 
 ### 请求规范
 
-**重要：** 所有 API 统一使用 **POST 方法 + body 传参**
+**当前约定：** 项目以 **POST + body 传参** 为主，尤其是 `get / create / update / delete / by-shortid` 这类业务接口；但当前已发布接口中也存在一部分 **GET 列表查询** 和少量 **REST 风格路径参数**（例如 `panel-templates`、`optical-modules`）。
+
+因此，**不要假设所有接口都只会使用 POST**，应始终以 `backend/src/app.ts` 中已挂载的路由和 `backend/openapi.yaml` 为准。
 
 ```typescript
-// 正确的方式
+// 项目中最常见的调用方式
 POST /api/v1/cabinets/get
 Content-Type: application/json
 
@@ -36,15 +38,17 @@ Content-Type: application/json
   "id": "cabinet-uuid-here"
 }
 
-// 不使用的方式
-GET /api/v1/cabinets/:id  // ❌ 不拼接 URL
+// 当前项目中也存在的真实接口风格
+GET /api/v1/cabinets?roomId=<uuid>
+GET /api/v1/optical-modules
+PUT /api/v1/panel-templates/:id
+DELETE /api/v1/panel-templates/:id
 ```
 
-**原因：**
-- 参数复杂时更灵活
-- 避免 URL 编码问题
-- 统一的请求格式
-- 便于日志记录和审计
+**设计原因：**
+- 业务型查询和复杂参数更适合放在 body 中
+- 列表查询保留 GET 便于筛选和调试
+- 历史模块存在不同阶段形成的接口风格，当前文档以实现现状为准
 
 ### 数据验证
 
