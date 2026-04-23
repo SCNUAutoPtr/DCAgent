@@ -34,11 +34,11 @@ const { Option } = Select;
 
 // 面板类型颜色映射
 const panelTypeColorMap: Record<PanelType, string> = {
-  ETHERNET: 'blue',
-  FIBER: 'cyan',
+  NETWORK: 'blue',
   POWER: 'red',
-  SERIAL: 'orange',
+  CONSOLE: 'orange',
   USB: 'purple',
+  MIXED: 'cyan',
   OTHER: 'default',
 };
 
@@ -242,6 +242,7 @@ export default function PanelList() {
             size="small"
             icon={<EditOutlined />}
             onClick={() => handleOpenModal(record)}
+            data-testid="panel-edit-btn"
           >
             {t('buttons.edit')}
           </Button>
@@ -251,8 +252,9 @@ export default function PanelList() {
             onConfirm={() => handleDelete(record.id)}
             okText={t('buttons.confirm')}
             cancelText={t('buttons.cancel')}
+            okButtonProps={{ 'data-testid': 'panel-delete-confirm-btn' } as any}
           >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+            <Button type="link" size="small" danger icon={<DeleteOutlined />} data-testid="panel-delete-btn">
               {t('buttons.delete')}
             </Button>
           </Popconfirm>
@@ -273,7 +275,7 @@ export default function PanelList() {
       <Card>
         <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()} data-testid="panel-create-btn">
               {t('buttons.create')}
             </Button>
             <Select
@@ -322,6 +324,7 @@ export default function PanelList() {
           dataSource={panels}
           loading={loading}
           rowKey="id"
+          data-testid="panel-table"
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -337,8 +340,10 @@ export default function PanelList() {
         onCancel={handleCloseModal}
         okText={t('buttons.save')}
         cancelText={t('buttons.cancel')}
+        okButtonProps={{ 'data-testid': 'panel-save-btn' } as any}
+        wrapProps={{ 'data-testid': 'panel-modal' }}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" data-testid="panel-form">
           <Form.Item
             name="shortId"
             label={
@@ -359,6 +364,7 @@ export default function PanelList() {
               placeholder="扫码或输入shortID（例如：1, 12345）"
               disabled={!!editingPanel}
               min={1}
+              data-testid="panel-shortid-input"
             />
           </Form.Item>
           <Form.Item
@@ -366,14 +372,14 @@ export default function PanelList() {
             label={t('fields.name')}
             rules={[{ required: true, message: t('validation.nameRequired') }]}
           >
-            <Input placeholder={t('placeholders.name')} />
+            <Input placeholder={t('placeholders.name')} data-testid="panel-name-input" />
           </Form.Item>
           <Form.Item
             name="type"
             label={t('fields.type')}
             rules={[{ required: true, message: t('validation.typeRequired') }]}
           >
-            <Select placeholder={t('placeholders.type')}>
+            <Select placeholder={t('placeholders.type')} data-testid="panel-type-select">
               {Object.entries(panelTypeColorMap).map(([key]) => (
                 <Option key={key} value={key}>
                   {t(`panelTypes.${key}`)}
@@ -386,7 +392,7 @@ export default function PanelList() {
             label={t('fields.device')}
             rules={[{ required: true, message: t('validation.deviceRequired') }]}
           >
-            <Select placeholder={t('placeholders.device')} showSearch optionFilterProp="children">
+            <Select placeholder={t('placeholders.device')} showSearch optionFilterProp="children" data-testid="panel-device-select">
               {devices.map((device) => (
                 <Option key={device.id} value={device.id}>
                   {device.name} ({device.type})

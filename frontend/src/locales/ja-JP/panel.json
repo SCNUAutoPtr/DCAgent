@@ -16,11 +16,11 @@
     "actions": "操作"
   },
   "panelTypes": {
-    "ETHERNET": "イーサネットポート",
-    "FIBER": "光ファイバー",
+    "NETWORK": "ネットワーク",
     "POWER": "電源",
-    "SERIAL": "シリアルポート",
+    "CONSOLE": "コンソール",
     "USB": "USB",
+    "MIXED": "混合",
     "OTHER": "その他"
   },
   "placeholders": {

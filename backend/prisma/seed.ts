@@ -217,7 +217,7 @@ async function main() {
   const panel1 = await prisma.panel.create({
     data: {
       name: 'eth0',
-      type: 'ETHERNET',
+      type: 'NETWORK',
       deviceId: switch1.id,
     },
   });
@@ -226,7 +226,7 @@ async function main() {
   const panel2 = await prisma.panel.create({
     data: {
       name: 'eth1',
-      type: 'ETHERNET',
+      type: 'NETWORK',
       deviceId: switch2.id,
     },
   });
@@ -236,7 +236,7 @@ async function main() {
   const panel3 = await prisma.panel.create({
     data: {
       name: 'NIC0',
-      type: 'ETHERNET',
+      type: 'NETWORK',
       deviceId: server1.id,
     },
   });
@@ -245,7 +245,7 @@ async function main() {
   const panel4 = await prisma.panel.create({
     data: {
       name: 'NIC0',
-      type: 'ETHERNET',
+      type: 'NETWORK',
       deviceId: server2.id,
     },
   });
@@ -255,7 +255,7 @@ async function main() {
   const panel5 = await prisma.panel.create({
     data: {
       name: 'GigabitEthernet0/0',
-      type: 'ETHERNET',
+      type: 'NETWORK',
       deviceId: router1.id,
     },
   });

@@ -374,6 +374,7 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
       open={visible}
       onCancel={onCancel}
       width={isEditMode ? 1200 : 800}
+      wrapProps={{ 'data-testid': 'device-panel-editor-modal' }}
       footer={[
         // 删除按钮放在左边，只在编辑模式显示
         panel && (
@@ -383,6 +384,7 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
             icon={<DeleteOutlined />}
             onClick={handleDelete}
             style={{ float: 'left' }}
+            data-testid="device-panel-delete-btn"
           >
             删除面板
           </Button>
@@ -396,6 +398,7 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
           icon={<SaveOutlined />}
           loading={loading}
           onClick={handleSave}
+          data-testid="device-panel-save-btn"
         >
           保存
         </Button>,
@@ -453,7 +456,7 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
                 label="面板名称"
                 rules={[{ required: true, message: '请输入面板名称' }]}
               >
-                <Input placeholder="例如：前面板 - 24口千兆" />
+                <Input placeholder="例如：前面板 - 24口千兆" data-testid="device-panel-name-input" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -462,7 +465,7 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
                 label="面板类型"
                 rules={[{ required: true, message: '请选择面板类型' }]}
               >
-                <Select placeholder="选择面板类型">
+                <Select placeholder="选择面板类型" data-testid="device-panel-type-select">
                   <Option value={PanelType.NETWORK}>网络面板</Option>
                   <Option value={PanelType.POWER}>电源面板</Option>
                   <Option value={PanelType.CONSOLE}>控制台面板</Option>
@@ -487,7 +490,7 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
                   </Space>
                 }
               >
-                <Input placeholder="E-00001 或 1（可选）" />
+                <Input placeholder="E-00001 或 1（可选）" data-testid="device-panel-shortid-input" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -517,6 +520,7 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
                   style={{ width: '100%' }}
                   placeholder="482.6"
                   step={0.1}
+                  data-testid="device-panel-width-input"
                 />
               </Form.Item>
             </Col>
@@ -533,6 +537,7 @@ export const DevicePanelEditor: React.FC<DevicePanelEditorProps> = ({
                   style={{ width: '100%' }}
                   placeholder={`${(device.uHeight || 1) * 44.45}`}
                   step={0.1}
+                  data-testid="device-panel-height-input"
                 />
               </Form.Item>
             </Col>

@@ -16,11 +16,11 @@
     "actions": "操作"
   },
   "panelTypes": {
-    "ETHERNET": "网口",
-    "FIBER": "光纤",
+    "NETWORK": "网络面板",
     "POWER": "电源",
-    "SERIAL": "串口",
+    "CONSOLE": "控制台",
     "USB": "USB",
+    "MIXED": "混合",
     "OTHER": "其他"
   },
   "placeholders": {

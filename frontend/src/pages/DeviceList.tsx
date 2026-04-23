@@ -26,6 +26,7 @@ import { deviceService } from '@/services/deviceService';
 import { cabinetService } from '@/services/cabinetService';
 import { roomService } from '@/services/roomService';
 import { dataCenterService } from '@/services/dataCenterService';
+import { getApiConflictFields, getApiErrorMessage } from '@/services/api';
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -143,7 +144,17 @@ export default function DeviceList() {
       if (error.errorFields) {
         return;
       }
-      message.error(editingDevice ? t('messages.updateFailed') : t('messages.createFailed'));
+
+      if (getApiConflictFields(error).includes('serialNo')) {
+        form.setFields([{ name: 'serialNo', errors: [error.message] }]);
+      }
+
+      message.error(
+        getApiErrorMessage(
+          error,
+          editingDevice ? t('messages.updateFailed') : t('messages.createFailed')
+        )
+      );
       console.error(error);
     }
   };
@@ -357,21 +368,22 @@ export default function DeviceList() {
         okText={t('buttons.save')}
         cancelText={t('buttons.cancel')}
         width={600}
+        wrapProps={{ 'data-testid': 'device-modal' }}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" data-testid="device-form">
           <Form.Item
             name="name"
             label={t('fields.name')}
             rules={[{ required: true, message: t('validation.nameRequired') }]}
           >
-            <Input placeholder={t('placeholders.name')} />
+            <Input placeholder={t('placeholders.name')} data-testid="device-name-input" />
           </Form.Item>
           <Form.Item
             name="type"
             label={t('fields.type')}
             rules={[{ required: true, message: t('validation.typeRequired') }]}
           >
-            <Select placeholder={t('placeholders.type')}>
+            <Select placeholder={t('placeholders.type')} data-testid="device-type-select">
               {Object.entries(t('deviceTypes', { returnObjects: true })).map(([key, label]) => (
                 <Option key={key} value={key}>
                   {label}
@@ -380,17 +392,17 @@ export default function DeviceList() {
             </Select>
           </Form.Item>
           <Form.Item name="model" label={t('fields.model')}>
-            <Input placeholder={t('placeholders.model')} />
+            <Input placeholder={t('placeholders.model')} data-testid="device-model-input" />
           </Form.Item>
           <Form.Item name="serialNo" label={t('fields.serialNo')}>
-            <Input placeholder={t('placeholders.serialNo')} />
+            <Input placeholder={t('placeholders.serialNo')} data-testid="device-serialno-input" />
           </Form.Item>
           <Form.Item
             name="cabinetId"
             label={t('fields.cabinet')}
             rules={[{ required: true, message: t('validation.cabinetRequired') }]}
           >
-            <Select placeholder={t('placeholders.cabinet')} showSearch optionFilterProp="children">
+            <Select placeholder={t('placeholders.cabinet')} showSearch optionFilterProp="children" data-testid="device-cabinet-select">
               {cabinets.map((cabinet) => {
                 const room = rooms.find((r) => r.id === cabinet.roomId);
                 const dc = dataCenters.find((d) => d.id === room?.dataCenterId);
@@ -404,10 +416,10 @@ export default function DeviceList() {
           </Form.Item>
           <Space style={{ width: '100%' }}>
             <Form.Item name="uPosition" label={t('placeholders.uPosition')} style={{ marginBottom: 0 }}>
-              <InputNumber min={1} max={52} placeholder="1" style={{ width: 120 }} />
+              <InputNumber min={1} max={52} placeholder="1" style={{ width: 120 }} data-testid="device-uposition-input" />
             </Form.Item>
             <Form.Item name="uHeight" label={t('fields.uHeight')} initialValue={1} style={{ marginBottom: 0 }}>
-              <InputNumber min={1} max={10} placeholder="1" style={{ width: 120 }} />
+              <InputNumber min={1} max={10} placeholder="1" style={{ width: 120 }} data-testid="device-uheight-input" />
             </Form.Item>
           </Space>
         </Form>

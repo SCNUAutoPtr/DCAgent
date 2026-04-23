@@ -31,6 +31,7 @@ import { cabinetService } from '@/services/cabinetService';
 import { workstationService } from '@/services/workstationService';
 import { ShortIdFormatter } from '@/utils/shortIdFormatter';
 import { FloorPlanEditor } from '@/components/FloorPlanEditor';
+import { getApiErrorMessage } from '@/services/api';
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -145,7 +146,12 @@ export default function RoomList() {
       if (error.errorFields) {
         return;
       }
-      message.error(editingRoom ? t('room:messages.updateFailed') : t('room:messages.createFailed'));
+      message.error(
+        getApiErrorMessage(
+          error,
+          editingRoom ? t('room:messages.updateFailed') : t('room:messages.createFailed')
+        )
+      );
       console.error(error);
     }
   };
@@ -409,8 +415,9 @@ export default function RoomList() {
         onCancel={handleCloseModal}
         okText={t('common:actions.save')}
         cancelText={t('common:actions.cancel')}
+        wrapProps={{ 'data-testid': 'room-modal' }}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" data-testid="room-form">
           <Form.Item
             name="shortId"
             label={
@@ -427,6 +434,7 @@ export default function RoomList() {
           >
             <Input
               placeholder="扫码或输入shortID（例如：E-00001 或 12345）"
+              data-testid="room-shortid-input"
             />
           </Form.Item>
           <Form.Item
@@ -434,17 +442,17 @@ export default function RoomList() {
             label={t('room:fields.name')}
             rules={[{ required: true, message: t('room:validation.nameRequired') }]}
           >
-            <Input placeholder={t('room:placeholders.name')} />
+            <Input placeholder={t('room:placeholders.name')} data-testid="room-name-input" />
           </Form.Item>
           <Form.Item name="floor" label={t('room:fields.floor')}>
-            <Input placeholder={t('room:placeholders.floor')} />
+            <Input placeholder={t('room:placeholders.floor')} data-testid="room-floor-input" />
           </Form.Item>
           <Form.Item
             name="dataCenterId"
             label={t('room:fields.dataCenter')}
             rules={[{ required: true, message: t('room:validation.dataCenterRequired') }]}
           >
-            <Select placeholder={t('room:placeholders.dataCenter')}>
+            <Select placeholder={t('room:placeholders.dataCenter')} data-testid="room-datacenter-select">
               {dataCenters.map((dc) => (
                 <Option key={dc.id} value={dc.id}>
                   {dc.name}
