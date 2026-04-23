@@ -1025,6 +1025,7 @@ function CableTopologyContent() {
               type="primary"
               icon={<PlusOutlined />}
               onClick={handleOpenCreateCableModal}
+              data-testid="topology-create-cable-btn"
             >
               {t('buttons.createConnection')}
             </Button>
@@ -1165,7 +1166,6 @@ function CableTopologyContent() {
         visible={createCableModalVisible}
         onClose={() => setCreateCableModalVisible(false)}
         onSuccess={handleCreateCableSuccess}
-        initialPanelAId={selectedPanelId}
       />
 
       {/* 单端连接对话框 */}

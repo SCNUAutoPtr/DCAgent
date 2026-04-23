@@ -117,16 +117,21 @@ export function navigateToCableEndpoint(
     ? endpoints.portB || endpoints.portA
     : preferredEnd === 'A'
       ? endpoints.portA || endpoints.portB
-      : endpoints.portA || endpoints.portB; // 默认优先A端
+      : endpoints.portA || endpoints.portB;
+  const targetPanel = preferredEnd === 'B'
+    ? endpoints.panelB || endpoints.panelA
+    : preferredEnd === 'A'
+      ? endpoints.panelA || endpoints.panelB
+      : endpoints.panelA || endpoints.panelB;
 
-  if (!targetPort) {
-    console.warn('No valid port endpoint found for cable');
+  if (!targetPort && !targetPanel) {
+    console.warn('No valid cable endpoint target found');
     return null;
   }
 
-  const panelId = targetPort.panel?.id;
+  const panelId = targetPort?.panel?.id || targetPanel?.id;
   if (!panelId) {
-    console.warn('No panel information found for port');
+    console.warn('No panel information found for endpoint');
     return null;
   }
 
@@ -166,7 +171,7 @@ export function navigateToCableEndpoint(
   // 使用 URL 参数跳转
   navigate(`/cable-topology?${searchParams.toString()}`);
 
-  return targetPort;
+  return targetPort || targetPanel;
 }
 
 /**

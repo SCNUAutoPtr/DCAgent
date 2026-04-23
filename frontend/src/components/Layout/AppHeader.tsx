@@ -139,16 +139,25 @@ export default function AppHeader() {
             return;
           }
 
-          const { cable, endpointA, endpointB, portA, portB } = endpoints;
+          const { cable, endpointA, endpointB, portA, portB, panelA, panelB } = endpoints;
 
-          // 判断连接状态
           const aConnected = !!portA;
           const bConnected = !!portB;
+          const aAnchored = !!panelA;
+          const bAnchored = !!panelB;
           const scannedEndType = result.metadata?.endType as 'A' | 'B' | undefined;
           const scannedEnd = scannedEndType || 'A';
           const scannedConnected = scannedEnd === 'A' ? aConnected : bConnected;
           const otherEnd = scannedEnd === 'A' ? 'B' : 'A';
           const otherConnected = scannedEnd === 'A' ? bConnected : aConnected;
+          const scannedAnchored = scannedEnd === 'A' ? aAnchored : bAnchored;
+
+          if (scannedAnchored && !scannedConnected) {
+            navigateToCableEndpoint(endpoints, navigate, scannedEnd);
+            const targetPanel = scannedEnd === 'A' ? panelA : panelB;
+            message.warning(`跳转到${scannedEnd}端悬空线所在面板: ${targetPanel?.name || targetPanel?.label || '面板'}`);
+            return;
+          }
 
           // 场景1: 双端都已连接 - 正常导航
           if (aConnected && bConnected) {
@@ -196,7 +205,7 @@ export default function AppHeader() {
           }
 
           // 场景3: 双端都未连接 - 显示线缆信息
-          if (!aConnected && !bConnected) {
+          if (!aConnected && !bConnected && !aAnchored && !bAnchored) {
             Modal.info({
               title: '线缆未连接',
               content: (

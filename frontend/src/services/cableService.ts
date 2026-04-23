@@ -122,7 +122,8 @@ export const cableService = {
 
   // 单端连接
   async connectSinglePort(data: {
-    portId: string;
+    panelId?: string;
+    portId?: string;
     shortId: number;
     label?: string;
     type?: string;
@@ -136,6 +137,21 @@ export const cableService = {
     peerInfo: any;
   }> {
     const response = await api.post('/cables/connect-single-port', data);
+    return response.data;
+  },
+
+  async getDanglingEndpointsByDevice(deviceId: string): Promise<{
+    total: number;
+    panels: Record<string, Array<{
+      id: string;
+      shortId?: number;
+      panelId?: string | null;
+      portId?: string | null;
+      cable?: Cable;
+      panel?: any;
+    }>>;
+  }> {
+    const response = await api.post('/cables/dangling-by-device', { deviceId });
     return response.data;
   },
 

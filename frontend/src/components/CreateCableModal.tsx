@@ -7,7 +7,6 @@ import {
   InputNumber,
   message,
   Card,
-  Descriptions,
   Space,
   Alert,
   Tag,
@@ -77,7 +76,6 @@ export default function CreateCableModal({
   const [singlePorts, setSinglePorts] = useState<Port[]>([]);
   const [shortId, setShortId] = useState<number | null>(null);
   const [shortIdInput, setShortIdInput] = useState('');
-  const [loadingShortId, setLoadingShortId] = useState(false);
 
   // 双端连接状态
   const [panels, setPanels] = useState<Panel[]>([]);
@@ -108,7 +106,6 @@ export default function CreateCableModal({
     setSinglePorts([]);
     setShortId(null);
     setShortIdInput('');
-    setLoadingShortId(false);
     setShowAdvanced(false);
     setSelectedPanelA('');
     setSelectedPanelB('');
@@ -187,7 +184,6 @@ export default function CreateCableModal({
     if (!value.trim()) return;
 
     try {
-      setLoadingShortId(true);
       const parsedShortId = parseShortId(value.trim());
       setShortId(parsedShortId);
       message.success('插头录入成功');
@@ -196,14 +192,12 @@ export default function CreateCableModal({
         message.error('请输入有效的ID格式（如：E-00001 或 1）');
         setShortId(null);
       }
-    } finally {
-      setLoadingShortId(false);
     }
   };
 
   const handleSingleSubmit = async () => {
-    if (!singlePort) {
-      message.error('请选择端口');
+    if (!singlePanel) {
+      message.error('请选择面板');
       return;
     }
 
@@ -217,8 +211,9 @@ export default function CreateCableModal({
       const values = form.getFieldsValue();
 
       await cableService.connectSinglePort({
-        portId: singlePort,
-        shortId: shortId,
+        panelId: singlePanel,
+        portId: singlePort || undefined,
+        shortId,
         label: values.label,
         type: values.type,
         length: values.length,
@@ -226,7 +221,7 @@ export default function CreateCableModal({
         notes: values.notes,
       });
 
-      message.success('端口连接成功');
+      message.success(singlePort ? '端口连接成功' : '已挂到面板，端口待连接');
       onSuccess?.();
       onClose();
     } catch (error: any) {
@@ -314,14 +309,14 @@ export default function CreateCableModal({
     }
   };
 
-  const canSubmitSingle = singlePort !== '' && shortId !== null;
+  const canSubmitSingle = singlePanel !== '' && shortId !== null;
   const canSubmitDual = selectedPortA && selectedPortB && shortIdInputA && shortIdInputB;
 
   const renderSingleMode = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} data-testid="cable-single-mode">
       <Alert
         message="快速连接模式"
-        description="扫描面板ShortID，可视化选择端口，然后扫描插头标签来快速建立单端连接。"
+        description="扫描面板ShortID，可直接挂到面板，也可以进一步选择端口，然后扫描插头标签建立单端连接。"
         type="info"
         showIcon
         icon={<ThunderboltOutlined />}
@@ -342,6 +337,7 @@ export default function CreateCableModal({
                   onBlur={(e) => handleSinglePanelInput(e.target.value)}
                   size="large"
                   allowClear
+                  data-testid="cable-single-panel-scan-input"
                 />
                 {singlePanelData && (
                   <div style={{ marginTop: 8 }}>
@@ -362,15 +358,19 @@ export default function CreateCableModal({
                   showSearch
                   size="large"
                   filterOption={(input, option: any) =>
-                    option?.children?.toLowerCase().includes(input.toLowerCase())
+                    String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                   }
                   allowClear
+                  data-testid="cable-single-panel-select"
                 >
-                  {panels.map((panel) => (
-                    <Option key={panel.id} value={panel.id}>
-                      {panel.name} {panel.shortId ? `(${formatShortId(panel.shortId)})` : ''}
-                    </Option>
-                  ))}
+                  {panels.map((panel) => {
+                    const optionLabel = `${panel.name} ${panel.shortId ? `(${formatShortId(panel.shortId)})` : ''}`;
+                    return (
+                      <Option key={panel.id} value={panel.id} label={optionLabel}>
+                        <span data-testid={`cable-panel-option-${panel.id}`}>{optionLabel}</span>
+                      </Option>
+                    );
+                  })}
                 </Select>
               </Form.Item>
             </Card>
@@ -387,6 +387,7 @@ export default function CreateCableModal({
                     onBlur={(e) => handleShortIdInput(e.target.value)}
                     size="large"
                     allowClear
+                    data-testid="cable-single-shortid-input"
                   />
                   {shortId && (
                     <div style={{ marginTop: 8 }}>
@@ -404,7 +405,7 @@ export default function CreateCableModal({
           {singlePanelData && singlePorts.length > 0 ? (
             <Card size="small" title="步骤 2: 选择端口" style={{ height: '100%' }}>
               <div style={{ marginBottom: 12 }}>
-                <Text type="secondary">点击面板上的端口进行选择</Text>
+                <Text type="secondary">可直接提交为悬空挂靠；如需落到具体端口，再点击面板上的端口</Text>
                 {singlePort && (
                   <Tag color="green" style={{ marginLeft: 8 }}>
                     已选择: {singlePorts.find(p => p.id === singlePort)?.number}
@@ -507,7 +508,7 @@ export default function CreateCableModal({
   );
 
   const renderDualMode = () => (
-    <Space direction="vertical" style={{ width: '100%' }} size="large">
+    <Space direction="vertical" style={{ width: '100%' }} size="large" data-testid="cable-dual-mode">
       <Alert
         message="双端连接模式"
         description="选择两个端口并输入插头标签来建立完整的端到端连接。"
@@ -527,14 +528,18 @@ export default function CreateCableModal({
                   onChange={handlePanelAChange}
                   showSearch
                   filterOption={(input, option: any) =>
-                    option?.children?.toLowerCase().includes(input.toLowerCase())
+                    String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                   }
+                  data-testid="cable-panel-a-select"
                 >
-                  {panels.map((panel) => (
-                    <Option key={panel.id} value={panel.id}>
-                      {panel.name} {panel.shortId ? `(${formatShortId(panel.shortId)})` : ''}
-                    </Option>
-                  ))}
+                  {panels.map((panel) => {
+                    const optionLabel = `${panel.name} ${panel.shortId ? `(${formatShortId(panel.shortId)})` : ''}`;
+                    return (
+                      <Option key={panel.id} value={panel.id} label={optionLabel}>
+                        <span data-testid={`cable-panel-option-${panel.id}`}>{optionLabel}</span>
+                      </Option>
+                    );
+                  })}
                 </Select>
               </Form.Item>
 
@@ -544,12 +549,16 @@ export default function CreateCableModal({
                   value={selectedPortA}
                   onChange={setSelectedPortA}
                   disabled={!selectedPanelA}
+                  data-testid="cable-port-a-select"
                 >
-                  {portsA.map((port) => (
-                    <Option key={port.id} value={port.id}>
-                      {port.number} {port.label && `(${port.label})`}
-                    </Option>
-                  ))}
+                  {portsA.map((port) => {
+                    const optionLabel = `${port.number} ${port.label ? `(${port.label})` : ''}`;
+                    return (
+                      <Option key={port.id} value={port.id} label={optionLabel}>
+                        <span data-testid={`cable-port-option-${port.id}`}>{optionLabel}</span>
+                      </Option>
+                    );
+                  })}
                 </Select>
               </Form.Item>
 
@@ -559,6 +568,7 @@ export default function CreateCableModal({
                   placeholder="扫描或输入 ShortID"
                   value={shortIdInputA}
                   onChange={(e) => setShortIdInputA(e.target.value)}
+                  data-testid="cable-shortid-a-input"
                 />
               </Form.Item>
             </Card>
@@ -573,14 +583,18 @@ export default function CreateCableModal({
                   onChange={handlePanelBChange}
                   showSearch
                   filterOption={(input, option: any) =>
-                    option?.children?.toLowerCase().includes(input.toLowerCase())
+                    String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                   }
+                  data-testid="cable-panel-b-select"
                 >
-                  {panels.map((panel) => (
-                    <Option key={panel.id} value={panel.id}>
-                      {panel.name} {panel.shortId ? `(${formatShortId(panel.shortId)})` : ''}
-                    </Option>
-                  ))}
+                  {panels.map((panel) => {
+                    const optionLabel = `${panel.name} ${panel.shortId ? `(${formatShortId(panel.shortId)})` : ''}`;
+                    return (
+                      <Option key={panel.id} value={panel.id} label={optionLabel}>
+                        <span data-testid={`cable-panel-option-${panel.id}`}>{optionLabel}</span>
+                      </Option>
+                    );
+                  })}
                 </Select>
               </Form.Item>
 
@@ -590,12 +604,16 @@ export default function CreateCableModal({
                   value={selectedPortB}
                   onChange={setSelectedPortB}
                   disabled={!selectedPanelB}
+                  data-testid="cable-port-b-select"
                 >
-                  {portsB.map((port) => (
-                    <Option key={port.id} value={port.id}>
-                      {port.number} {port.label && `(${port.label})`}
-                    </Option>
-                  ))}
+                  {portsB.map((port) => {
+                    const optionLabel = `${port.number} ${port.label ? `(${port.label})` : ''}`;
+                    return (
+                      <Option key={port.id} value={port.id} label={optionLabel}>
+                        <span data-testid={`cable-port-option-${port.id}`}>{optionLabel}</span>
+                      </Option>
+                    );
+                  })}
                 </Select>
               </Form.Item>
 
@@ -605,6 +623,7 @@ export default function CreateCableModal({
                   placeholder="扫描或输入 ShortID"
                   value={shortIdInputB}
                   onChange={(e) => setShortIdInputB(e.target.value)}
+                  data-testid="cable-shortid-b-input"
                 />
               </Form.Item>
             </Card>
@@ -613,11 +632,11 @@ export default function CreateCableModal({
 
         <Card size="small" title="线缆信息">
           <Form.Item label="线缆标签" name="label">
-            <Input placeholder="例如：服务器1-交换机1" />
+            <Input placeholder="例如：服务器1-交换机1" data-testid="cable-label-input" />
           </Form.Item>
 
           <Form.Item label="线缆类型" name="type">
-            <Select placeholder="默认：CAT6" allowClear>
+            <Select placeholder="默认：CAT6" allowClear data-testid="cable-type-select">
               {cableTypeOptions.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   <Tag color={opt.color}>{opt.label}</Tag>
@@ -656,7 +675,7 @@ export default function CreateCableModal({
     {
       key: 'single',
       label: (
-        <span>
+        <span data-testid="cable-tab-single">
           <ThunderboltOutlined /> 快速连接
         </span>
       ),
@@ -665,7 +684,7 @@ export default function CreateCableModal({
     {
       key: 'dual',
       label: (
-        <span>
+        <span data-testid="cable-tab-dual">
           <ApiOutlined /> 完整连接
         </span>
       ),
@@ -698,6 +717,7 @@ export default function CreateCableModal({
       open={visible}
       onCancel={onClose}
       width={1200}
+      wrapProps={{ 'data-testid': 'create-cable-modal' }}
       footer={[
         <Button key="cancel" onClick={onClose}>
           取消
@@ -709,6 +729,7 @@ export default function CreateCableModal({
           loading={loading}
           disabled={!canSubmit}
           onClick={handleSubmit}
+          data-testid="cable-submit-btn"
         >
           创建连接
         </Button>,

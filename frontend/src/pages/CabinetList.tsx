@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams, useLocation } from 'react-router-dom';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import './CabinetList.css';
 import {
@@ -46,6 +46,7 @@ import {
 } from '@ant-design/icons';
 import { Cabinet, Room, DataCenter, Device, DeviceType, Panel, Port } from '@/types';
 import { cabinetService } from '@/services/cabinetService';
+import { cableService } from '@/services/cableService';
 import { roomService } from '@/services/roomService';
 import { dataCenterService } from '@/services/dataCenterService';
 import { deviceService } from '@/services/deviceService';
@@ -59,6 +60,7 @@ import { PanelVisualizer } from '@/components/PanelVisualizer';
 import { DevicePanelEditor } from '@/components/DevicePanelEditor';
 import { generatePortLayout, sortPortsByNumber } from '@/utils/panelLayoutGenerator';
 import { ShortIdFormatter } from '@/utils/shortIdFormatter';
+import { getApiConflictFields, getApiErrorMessage } from '@/services/api';
 
 
 interface CascaderOption {
@@ -90,6 +92,7 @@ export default function CabinetList() {
   const deviceTypeMap = getDeviceTypeMap(t);
   const [searchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const [cabinets, setCabinets] = useState<Cabinet[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [dataCenters, setDataCenters] = useState<DataCenter[]>([]);
@@ -105,6 +108,7 @@ export default function CabinetList() {
   const [viewingDevice, setViewingDevice] = useState<Device | null>(null);
   const [devicePanels, setDevicePanels] = useState<Panel[]>([]);
   const [panelPorts, setPanelPorts] = useState<Map<string, Port[]>>(new Map());
+  const [danglingByPanel, setDanglingByPanel] = useState<Map<string, any[]>>(new Map());
   const [selectedRoom, setSelectedRoom] = useState<string>();
   const [selectedCabinet, setSelectedCabinet] = useState<Cabinet | null>(null);
   // 从路由 state 中读取初始 activeTab，默认为 'list'
@@ -216,13 +220,30 @@ export default function CabinetList() {
       if (cabinet) {
         setSelectedCabinet(cabinet);
 
-        // 3秒后取消高亮
         setTimeout(() => {
           setHighlightedCabinetId(null);
         }, 3000);
       }
     }
-  }, [location.state, cabinets]);
+
+    if (state?.selectedCabinetId && cabinets.length > 0) {
+      const cabinet = cabinets.find((c) => c.id === state.selectedCabinetId);
+      if (cabinet) {
+        setSelectedCabinet(cabinet);
+      }
+    }
+
+    if (state?.activeTab) {
+      setActiveTab(state.activeTab);
+    }
+
+    if (state?.showDevicePanels && state?.selectedDeviceId) {
+      const device = devices.find((item) => item.id === state.selectedDeviceId);
+      if (device) {
+        void handleViewDevicePanels(device);
+      }
+    }
+  }, [location.state, cabinets, devices]);
 
 
   // 构建级联选择器选项
@@ -303,7 +324,12 @@ export default function CabinetList() {
       if (error.errorFields) {
         return;
       }
-      message.error(editingCabinet ? t('messages.updateFailed') : t('messages.createFailed'));
+      message.error(
+        getApiErrorMessage(
+          error,
+          editingCabinet ? t('messages.updateFailed') : t('messages.createFailed')
+        )
+      );
       console.error(error);
     }
   };
@@ -476,6 +502,13 @@ export default function CabinetList() {
       );
       setPanelPorts(portsMap);
 
+      const dangling = await cableService.getDanglingEndpointsByDevice(device.id);
+      const danglingMap = new Map<string, any[]>();
+      Object.entries(dangling.panels || {}).forEach(([key, value]) => {
+        danglingMap.set(key, value as any[]);
+      });
+      setDanglingByPanel(danglingMap);
+
       setPanelViewModalVisible(true);
     } catch (error) {
       console.error('Error loading device panels:', error);
@@ -518,9 +551,17 @@ export default function CabinetList() {
       await loadCabinets();
     } catch (error: any) {
       if (error.errorFields) return;
-      // console.error('Save device error:', error);
-      // console.error('Error details:', JSON.stringify(error.data?.details, null, 2));
-      message.error(editingDevice ? t('messages.updateFailed') : t('messages.createFailed'));
+
+      if (getApiConflictFields(error).includes('serialNo')) {
+        deviceForm.setFields([{ name: 'serialNo', errors: [error.message] }]);
+      }
+
+      message.error(
+        getApiErrorMessage(
+          error,
+          editingDevice ? t('messages.updateFailed') : t('messages.createFailed')
+        )
+      );
       console.error(error);
     }
   };
@@ -762,6 +803,7 @@ export default function CabinetList() {
             size="small"
             icon={<EyeOutlined />}
             onClick={() => handleViewCabinet(record)}
+            data-testid="cabinet-view-btn"
           >
             {t('buttons.visualize')}
           </Button>
@@ -1070,6 +1112,7 @@ export default function CabinetList() {
                                 icon={<SettingOutlined />}
                                 onClick={() => handleOpenPanelEditor(undefined, device)}
                                 style={{ padding: '0 4px', height: 20 }}
+                                data-testid="cabinet-device-panel-btn"
                               />
                               <Button
                                 type="text"
@@ -1186,8 +1229,9 @@ export default function CabinetList() {
         onCancel={handleCloseModal}
         okText={t('buttons.save')}
         cancelText={t('buttons.cancel')}
+        wrapProps={{ 'data-testid': 'cabinet-modal' }}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" data-testid="cabinet-form">
           <Form.Item
             name="shortId"
             label={
@@ -1204,6 +1248,7 @@ export default function CabinetList() {
           >
             <Input
               placeholder="扫码或输入shortID（例如：E-00001 或 12345）"
+              data-testid="cabinet-shortid-input"
             />
           </Form.Item>
           <Form.Item
@@ -1211,10 +1256,10 @@ export default function CabinetList() {
             label={t('labels.cabinetName')}
             rules={[{ required: true, message: t('validation.nameRequired') }]}
           >
-            <Input placeholder={t('placeholders.name')} />
+            <Input placeholder={t('placeholders.name')} data-testid="cabinet-name-input" />
           </Form.Item>
           <Form.Item name="position" label={t('labels.position')}>
-            <Input placeholder={t('placeholders.position')} />
+            <Input placeholder={t('placeholders.position')} data-testid="cabinet-position-input" />
           </Form.Item>
           <Form.Item
             name="height"
@@ -1222,14 +1267,14 @@ export default function CabinetList() {
             initialValue={42}
             rules={[{ required: true, message: t('validation.heightRequired') }]}
           >
-            <InputNumber min={1} max={52} style={{ width: '100%' }} />
+            <InputNumber min={1} max={52} style={{ width: '100%' }} data-testid="cabinet-height-input" />
           </Form.Item>
           <Form.Item
             name="roomId"
             label={t('labels.selectRoom')}
             rules={[{ required: true, message: t('validation.roomRequired') }]}
           >
-            <Select placeholder={t('labels.selectRoom')} showSearch optionFilterProp="children">
+            <Select placeholder={t('labels.selectRoom')} showSearch optionFilterProp="children" data-testid="cabinet-room-select">
               {rooms.map((room) => {
                 const dc = dataCenters.find((d) => d.id === room.dataCenterId);
                 return (
@@ -1259,21 +1304,22 @@ export default function CabinetList() {
           deviceForm.resetFields();
         }}
         width={600}
+        wrapProps={{ 'data-testid': 'cabinet-device-modal' }}
       >
-        <Form form={deviceForm} layout="vertical">
+        <Form form={deviceForm} layout="vertical" data-testid="cabinet-device-form">
           <Form.Item
             name="name"
             label={t('labels.deviceName')}
             rules={[{ required: true, message: t('validation.deviceNameRequired') }]}
           >
-            <Input placeholder="e.g.: WEB-Server-01" />
+            <Input placeholder="e.g.: WEB-Server-01" data-testid="cabinet-device-name-input" />
           </Form.Item>
           <Form.Item
             name="type"
             label={t('labels.deviceType')}
             rules={[{ required: true, message: t('validation.deviceTypeRequired') }]}
           >
-            <Select placeholder={t('labels.deviceType')}>
+            <Select placeholder={t('labels.deviceType')} data-testid="cabinet-device-type-select">
               <Option value="SERVER">{t('deviceTypes.SERVER')}</Option>
               <Option value="SWITCH">{t('deviceTypes.SWITCH')}</Option>
               <Option value="ROUTER">{t('deviceTypes.ROUTER')}</Option>
@@ -1284,17 +1330,17 @@ export default function CabinetList() {
             </Select>
           </Form.Item>
           <Form.Item name="model" label={t('labels.deviceModel')}>
-            <Input placeholder="e.g.: Dell PowerEdge R740" />
+            <Input placeholder="e.g.: Dell PowerEdge R740" data-testid="cabinet-device-model-input" />
           </Form.Item>
           <Form.Item name="serialNo" label={t('labels.serialNo')}>
-            <Input placeholder="e.g.: SN123456789" />
+            <Input placeholder="e.g.: SN123456789" data-testid="cabinet-device-serialno-input" />
           </Form.Item>
           <Form.Item
             name="cabinetId"
             label={t('labels.selectCabinet')}
             rules={[{ required: true, message: t('validation.deviceCabinetRequired') }]}
           >
-            <Select placeholder={t('labels.selectCabinet')} showSearch optionFilterProp="children">
+            <Select placeholder={t('labels.selectCabinet')} showSearch optionFilterProp="children" data-testid="cabinet-device-cabinet-select">
               {cabinets.map((cabinet) => {
                 const room = rooms.find((r) => r.id === cabinet.roomId);
                 const dc = dataCenters.find((d) => d.id === room?.dataCenterId);
@@ -1308,10 +1354,10 @@ export default function CabinetList() {
           </Form.Item>
           <Space style={{ width: '100%' }}>
             <Form.Item name="uPosition" label={t('labels.uPosition')} style={{ marginBottom: 0 }}>
-              <InputNumber min={1} max={52} placeholder="1" style={{ width: 120 }} />
+              <InputNumber min={1} max={52} placeholder="1" style={{ width: 120 }} data-testid="cabinet-device-uposition-input" />
             </Form.Item>
             <Form.Item name="uHeight" label={t('labels.uHeight')} initialValue={1} style={{ marginBottom: 0 }}>
-              <InputNumber min={1} max={10} placeholder="1" style={{ width: 120 }} />
+              <InputNumber min={1} max={10} placeholder="1" style={{ width: 120 }} data-testid="cabinet-device-uheight-input" />
             </Form.Item>
           </Space>
         </Form>
@@ -1331,6 +1377,7 @@ export default function CabinetList() {
           setViewingDevice(null);
           setDevicePanels([]);
           setPanelPorts(new Map());
+          setDanglingByPanel(new Map());
         }}
         footer={[
           <Button
@@ -1351,6 +1398,7 @@ export default function CabinetList() {
               setViewingDevice(null);
               setDevicePanels([]);
               setPanelPorts(new Map());
+              setDanglingByPanel(new Map());
             }}
           >
             {t('buttons.cancel')}
@@ -1380,6 +1428,28 @@ export default function CabinetList() {
 
             <Divider orientation="left">{t('panels.title')}</Divider>
 
+            {Array.from(danglingByPanel.values()).flat().length > 0 && (
+              <Alert
+                type="warning"
+                showIcon
+                style={{ marginBottom: 16 }}
+                message={`该设备有 ${Array.from(danglingByPanel.values()).flat().length} 根线已挂到面板但未接具体端口`}
+                action={
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      const firstEndpoint = Array.from(danglingByPanel.values()).flat()[0];
+                      if (firstEndpoint?.shortId) {
+                        navigate(`/cable-topology?shortId=${firstEndpoint.shortId}`);
+                      }
+                    }}
+                  >
+                    继续接端口
+                  </Button>
+                }
+              />
+            )}
+
             {devicePanels.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px' }}>
                 <Empty description={t('panels.noPanels')} />
@@ -1388,6 +1458,7 @@ export default function CabinetList() {
                   icon={<PlusOutlined />}
                   onClick={() => handleOpenPanelEditor()}
                   style={{ marginTop: 16 }}
+                  data-testid="cabinet-add-panel-btn"
                 >
                   {t('buttons.addPanel')}
                 </Button>
@@ -1399,6 +1470,7 @@ export default function CabinetList() {
                     type="primary"
                     icon={<PlusOutlined />}
                     onClick={() => handleOpenPanelEditor()}
+                    data-testid="cabinet-add-panel-btn"
                   >
                     {t('buttons.addPanel')}
                   </Button>
@@ -1407,6 +1479,7 @@ export default function CabinetList() {
                   {devicePanels.map((panel, index) => {
                   const ports = panelPorts.get(panel.id) || [];
                   const hasTemplate = panel.templateId && !panel.isCustomized;
+                  const danglingEndpoints = danglingByPanel.get(panel.id) || [];
 
                   return (
                     <TabPane
@@ -1418,6 +1491,7 @@ export default function CabinetList() {
                           )}
                           {hasTemplate && <Tag color="blue">模板</Tag>}
                           {panel.isCustomized && <Tag color="orange">已自定义</Tag>}
+                          {danglingEndpoints.length > 0 && <Tag color="warning">悬空 {danglingEndpoints.length}</Tag>}
                         </Space>
                       }
                       key={index.toString()}
@@ -1427,6 +1501,7 @@ export default function CabinetList() {
                           <Button
                             icon={<EditOutlined />}
                             onClick={() => handleOpenPanelEditor(panel)}
+                            data-testid="cabinet-edit-panel-btn"
                           >
                             {t('buttons.editPanel')}
                           </Button>
@@ -1521,6 +1596,12 @@ export default function CabinetList() {
                           }
                         }}
                         allowEdit={true}
+                        danglingEndpoints={danglingEndpoints}
+                        onDanglingEndpointClick={(endpoint) => {
+                          if (endpoint.shortId) {
+                            navigate(`/cable-topology?shortId=${endpoint.shortId}`);
+                          }
+                        }}
                       />
                     </TabPane>
                   );

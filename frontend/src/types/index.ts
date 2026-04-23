@@ -214,12 +214,14 @@ export interface Cable {
 
 export interface CableEndpoint {
   id: string;
-  shortId?: number; // 端点标签的shortID（用于扫码识别线缆）
+  shortId?: number;
   cableId: string;
   cable?: Cable;
-  portId: string;
-  port?: Port;
-  endType: string; // "A" 表示主端，"B1", "B2"等表示分支端
+  panelId?: string | null;
+  panel?: Panel | null;
+  portId?: string | null;
+  port?: Port | null;
+  endType: string;
   createdAt: string;
 }
 

@@ -12,11 +12,9 @@ import {
   Space,
   Alert,
   Tag,
-  Divider,
   Row,
   Col,
   Empty,
-  Badge,
 } from 'antd';
 import {
   ApiOutlined,
@@ -249,12 +247,11 @@ export default function ConnectSingleCableModal({
 
   const handleStepNext = async () => {
     if (currentStep === 0) {
-      // 验证第一步：选择端口
-      if (!selectedPanel || !selectedPort) {
-        message.warning('请先选择面板和端口');
+      if (!selectedPanel) {
+        message.warning('请先选择面板');
         return;
       }
-      console.log('[Step 0->1] Selected port:', selectedPort.id);
+      console.log('[Step 0->1] Selected port:', selectedPort?.id || 'none');
       setCurrentStep(1);
     } else if (currentStep === 1) {
       // 验证第二步：输入线缆信息
@@ -294,8 +291,8 @@ export default function ConnectSingleCableModal({
   };
 
   const handleSubmit = async () => {
-    if (!selectedPort) {
-      message.error('请选择端口');
+    if (!selectedPanel) {
+      message.error('请选择面板');
       return;
     }
 
@@ -315,7 +312,8 @@ export default function ConnectSingleCableModal({
       }
 
       const data = {
-        portId: selectedPort.id,
+        panelId: selectedPanel.id,
+        portId: selectedPort?.id,
         shortId: values.shortId,
         label: values.label,
         type: values.type,
@@ -326,8 +324,8 @@ export default function ConnectSingleCableModal({
 
       console.log('Request data:', data);
 
-      const result = await cableService.connectSinglePort(data);
-      message.success('线缆连接成功');
+      await cableService.connectSinglePort(data);
+      message.success(selectedPort ? '线缆连接成功' : '已挂到面板，端口待连接');
       onSuccess?.();
       onClose();
     } catch (error: any) {
@@ -348,7 +346,7 @@ export default function ConnectSingleCableModal({
       <Space direction="vertical" style={{ width: '100%' }} size="large">
         <Alert
           message="选择要连接的端口"
-          description="先扫描或选择面板，然后在面板上点击要连接的端口"
+          description="先扫描或选择面板；可以直接提交为悬空挂靠，也可以在面板上点击端口完成精确连接"
           type="info"
           icon={<InfoCircleOutlined />}
           showIcon
@@ -364,6 +362,7 @@ export default function ConnectSingleCableModal({
               onPressEnter={(e) => handleScanInput(e.currentTarget.value)}
               onBlur={(e) => handleScanInput(e.target.value)}
               allowClear
+              data-testid="single-panel-scan-input"
             />
             <Select
               showSearch
@@ -372,10 +371,11 @@ export default function ConnectSingleCableModal({
               onChange={handlePanelChange}
               style={{ width: '100%' }}
               filterOption={(input, option) =>
-                (option?.children as string)
-                  ?.toLowerCase()
-                  .includes(input.toLowerCase()) ?? false
+                String(option?.children ?? '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
               }
+              data-testid="single-panel-select"
             >
               {panels.map((panel) => (
                 <Option key={panel.id} value={panel.id}>
@@ -405,8 +405,7 @@ export default function ConnectSingleCableModal({
                   ports={ports}
                   labelMode="hover"
                   onPortClick={handlePortClick}
-                  selectedPorts={selectedPort ? [selectedPort.id] : []}
-                  highlightAvailable={true}
+                  highlightedPortIds={selectedPort ? [selectedPort.id] : []}
                 />
                 {selectedPort && (
                   <Alert
@@ -454,6 +453,7 @@ export default function ConnectSingleCableModal({
               setShortIdInput(value);
               handleShortIdInput(value);
             }}
+            data-testid="single-shortid-input"
           />
         </Form.Item>
 
@@ -577,7 +577,7 @@ export default function ConnectSingleCableModal({
               )}
             </Descriptions.Item>
             <Descriptions.Item label="端口">
-              {selectedPort?.number}
+              {selectedPort?.number || '未指定（悬空）'}
             </Descriptions.Item>
           </Descriptions>
         </Card>
@@ -647,7 +647,7 @@ export default function ConnectSingleCableModal({
         {existingCable && (
           <Alert
             message="更新已存在线缆"
-            description="该插头已经属于一条线缆，将更新该线缆连接到选定的端口"
+            description={selectedPort ? '该插头已经属于一条线缆，将更新该线缆连接到选定的端口' : '该插头已经属于一条线缆，将把该端点挂到当前面板并保持悬空'}
             type="info"
             showIcon
           />
@@ -690,9 +690,10 @@ export default function ConnectSingleCableModal({
       open={visible}
       onCancel={onClose}
       width={800}
+      wrapProps={{ 'data-testid': 'connect-single-cable-modal' }}
       footer={[
         currentStep > 0 && (
-          <span key="back" onClick={handleStepPrev} style={{ marginRight: 'auto', cursor: 'pointer', color: '#1890ff' }}>
+          <span key="back" onClick={handleStepPrev} style={{ marginRight: 'auto', cursor: 'pointer', color: '#1890ff' }} data-testid="single-step-prev-btn">
             上一步
           </span>
         ),
@@ -704,6 +705,7 @@ export default function ConnectSingleCableModal({
             key="next"
             onClick={handleStepNext}
             style={{ marginLeft: 8, cursor: 'pointer', color: '#1890ff' }}
+            data-testid="single-step-next-btn"
           >
             下一步
           </span>
@@ -712,6 +714,7 @@ export default function ConnectSingleCableModal({
             key="submit"
             onClick={handleSubmit}
             style={{ marginLeft: 8, cursor: 'pointer', color: '#1890ff' }}
+            data-testid="single-submit-btn"
           >
             {loading ? '提交中...' : '提交'}
           </span>

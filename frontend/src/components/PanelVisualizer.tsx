@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Panel, Port, PortStatus } from '@/types';
-import { Tooltip, Button, Space, message, Dropdown, Modal } from 'antd';
+import { Tooltip, Button, Space, message, Dropdown, Modal, Alert, Tag } from 'antd';
 import type { MenuProps } from 'antd';
-import { EditOutlined, LockOutlined, UnlockOutlined, DisconnectOutlined } from '@ant-design/icons';
+import { LockOutlined, UnlockOutlined, DisconnectOutlined } from '@ant-design/icons';
 import { PortType, getPortSize } from '@/constants/portSizes';
 import { getPortIcon } from '@/constants/portIcons';
 import PanelCanvasEditor, { PortDefinition } from './PanelCanvasEditor';
@@ -21,6 +21,8 @@ interface PanelVisualizerProps {
   showPortNumber?: boolean; // 是否显示端口编号（默认true）
   allowEdit?: boolean; // 是否允许编辑模式（默认false）
   highlightedPortIds?: string[]; // 需要高亮的端口ID列表
+  danglingEndpoints?: Array<{ id: string; shortId?: number; cable?: { label?: string; type?: string } }>;
+  onDanglingEndpointClick?: (endpoint: { id: string; shortId?: number }) => void;
 }
 
 // 端口状态颜色映射
@@ -48,15 +50,16 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
   scale = 1,
   labelMode = 'hover', // 默认悬浮显示标签
   showPortNumber = true, // 默认显示端口编号
-  allowEdit = false, // 默认不允许编辑
-  highlightedPortIds = [], // 默认无高亮
+  allowEdit = false,
+  highlightedPortIds = [],
+  danglingEndpoints = [],
+  onDanglingEndpointClick,
 }) => {
   const [hoveredPortId, setHoveredPortId] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false); // 编辑模式状态
   const [draggingPort, setDraggingPort] = useState<{ port: Port; startX: number; startY: number } | null>(null);
   const [editablePorts, setEditablePorts] = useState<PortDefinition[]>([]); // 编辑器使用的端口数据
   const [contextMenuVisible, setContextMenuVisible] = useState(false);
-  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedPort, setSelectedPort] = useState<Port | null>(null);
   const [portConnections, setPortConnections] = useState<Map<string, any>>(new Map()); // 存储端口的连接信息
 
@@ -124,6 +127,8 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
 
     Modal.confirm({
       title: '确认断开连接',
+      okText: '确定',
+      cancelText: '取消',
       content: (
         <div>
           <p>确定要断开端口 <strong>{selectedPort.number}</strong> 的连接吗？</p>
@@ -267,11 +272,6 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
     }
   };
 
-  // SVG 画布尺寸（添加边距）
-  const padding = 20;
-  const viewBoxWidth = panelWidth + padding * 2;
-  const viewBoxHeight = panelHeight + padding * 2;
-
   // 处理端口拖拽开始
   const handlePortMouseDown = (port: Port, e: React.MouseEvent) => {
     if (!isEditMode || !port.position) return;
@@ -286,36 +286,27 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
     });
   };
 
-  // 处理端口拖拽中
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!draggingPort || !draggingPort.port.position) return;
+  const handlePortMouseMove = (port: Port, e: React.MouseEvent) => {
+    if (!isEditMode || !draggingPort || draggingPort.port.id !== port.id || !port.position) return;
 
     const deltaX = (e.clientX - draggingPort.startX) / scale;
     const deltaY = (e.clientY - draggingPort.startY) / scale;
+    const newX = Math.max(0, Math.min(panelWidth - (port.size?.width || 15), (port.position.x || 0) + deltaX));
+    const newY = Math.max(0, Math.min(panelHeight - (port.size?.height || 12), (port.position.y || 0) + deltaY));
 
-    const newX = Math.max(0, Math.min(panelWidth - (draggingPort.port.size?.width || 15), (draggingPort.port.position.x || 0) + deltaX));
-    const newY = Math.max(0, Math.min(panelHeight - (draggingPort.port.size?.height || 12), (draggingPort.port.position.y || 0) + deltaY));
-
-    onPortPositionChange?.(draggingPort.port.id, newX, newY);
-
+    onPortPositionChange?.(port.id, newX, newY);
     setDraggingPort({
-      ...draggingPort,
+      port,
       startX: e.clientX,
       startY: e.clientY,
     });
-  };
-
-  // 处理端口拖拽结束
-  const handleMouseUp = () => {
-    setDraggingPort(null);
   };
 
   // 检测标签是否会被遮挡（超出面板边界或与其他端口重叠）
   const shouldLabelBeAbove = (port: Port): boolean => {
     if (!port.position) return false;
 
-    const { x, y } = port.position;
-    const labelHeight = 12; // 标签文字高度估计
+    const { y } = port.position;
 
     // 如果端口在面板底部1/3区域，标签显示在上方
     if (y > panelHeight * 2 / 3) {
@@ -387,6 +378,7 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
       >
         <g
           className="port"
+          data-testid={`panel-port-${port.number}`}
           transform={`translate(${centerX}, ${centerY}) rotate(${rotation}) translate(${-centerX}, ${-centerY})`}
         >
           {/* 透明的hitbox，确保鼠标交互区域正确 */}
@@ -398,8 +390,11 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
             fill="transparent"
             stroke="none"
             style={{ cursor: cursorStyle }}
+            data-testid={`panel-port-hitbox-${port.number}`}
             onClick={() => !isEditMode && onPortClick?.(port)}
             onMouseDown={(e) => handlePortMouseDown(port, e)}
+            onMouseMove={(e) => handlePortMouseMove(port, e)}
+            onMouseUp={() => setDraggingPort(null)}
             onMouseEnter={() => setHoveredPortId(port.id)}
             onMouseLeave={() => setHoveredPortId(null)}
             onContextMenu={(e) => !isEditMode && handlePortContextMenu(port, e)}
@@ -529,7 +524,7 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
   };
 
   return (
-    <div className="panel-visualizer">
+    <div className="panel-visualizer" data-testid="panel-visualizer">
       <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h3>{panel.name}</h3>
@@ -560,6 +555,29 @@ export const PanelVisualizer: React.FC<PanelVisualizerProps> = ({
           </Space>
         )}
       </div>
+
+      {danglingEndpoints.length > 0 && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 12 }}
+          message={`该面板有 ${danglingEndpoints.length} 根悬空线`}
+          description={
+            <Space wrap>
+              {danglingEndpoints.map((endpoint) => (
+                <Tag
+                  key={endpoint.id}
+                  color="warning"
+                  style={{ cursor: onDanglingEndpointClick ? 'pointer' : 'default' }}
+                  onClick={() => onDanglingEndpointClick?.(endpoint)}
+                >
+                  {endpoint.shortId ? `E-${String(endpoint.shortId).padStart(5, '0')}` : endpoint.cable?.label || endpoint.cable?.type || endpoint.id}
+                </Tag>
+              ))}
+            </Space>
+          }
+        />
+      )}
 
       {/* 编辑模式：使用 PanelCanvasEditor */}
       {isEditMode ? (
