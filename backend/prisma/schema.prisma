@@ -166,13 +166,14 @@ model PanelTemplate {
 
 // 面板（设备上的接口面板）
 model Panel {
-  id              String         @id @default(uuid())
+  id              String          @id @default(uuid())
   name            String
   type            PanelType
-  shortId         Int?           @unique // 面板shortID，用于快速识别和扫码
+  shortId         Int?            @unique // 面板shortID，用于快速识别和扫码
   deviceId        String
-  device          Device         @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  device          Device          @relation(fields: [deviceId], references: [id], onDelete: Cascade)
   ports           Port[]
+  cableEndpoints  CableEndpoint[]
   // 模板引用（可选）
   templateId      String?
   template        PanelTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
@@ -271,12 +272,15 @@ model CableEndpoint {
   shortId   Int?     @unique // 端点标签的shortID（用于扫码识别线缆）
   cableId   String
   cable     Cable    @relation(fields: [cableId], references: [id], onDelete: Cascade)
+  panelId   String?  // 面板ID（可选，支持先挂到面板但不连接端口）
+  panel     Panel?   @relation(fields: [panelId], references: [id], onDelete: Cascade)
   portId    String?  // 端口ID（可选，入库时可能未连接端口）
   port      Port?    @relation(fields: [portId], references: [id], onDelete: Cascade)
   endType   String   // "A" 表示主端（如QSFP端），"B1", "B2", "B3", "B4" 表示分支端（如4个SFP端）
   createdAt DateTime @default(now())
 
   @@unique([cableId, endType]) // 确保同一线缆的端点类型唯一
+  @@index([panelId])
 }
 
 // ShortID池状态枚举

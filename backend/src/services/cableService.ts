@@ -1,6 +1,7 @@
 import prisma from '../utils/prisma';
 import cableGraphService from '../graph/cableGraph';
 import { CableType } from '@prisma/client';
+import { cableShortIdPoolService } from './cableShortIdPoolService';
 import { shortIdPoolService } from './shortIdPoolService';
 
 export interface CreateCableDto {
@@ -35,7 +36,8 @@ export interface ManualInventoryCableDto {
 }
 
 export interface ConnectSinglePortDto {
-  portId: string;      // 要连接的端口ID
+  panelId?: string;    // 要挂靠的面板ID
+  portId?: string;     // 要连接的端口ID
   shortId: number;     // 插头的shortID
   label?: string;      // 线缆标签（可选）
   type?: CableType;    // 线缆类型（可选，默认根据端口类型推断）
@@ -105,6 +107,7 @@ class CableService {
       data: {
         cableId: cable.id,
         endType: 'A',
+        panelId: portA.panelId,
         portId: portAId,
         shortId: shortIdA,
       },
@@ -118,6 +121,7 @@ class CableService {
       data: {
         cableId: cable.id,
         endType: 'B',
+        panelId: portB.panelId,
         portId: portBId,
         shortId: shortIdB,
       },
@@ -190,6 +194,7 @@ class CableService {
       include: {
         endpoints: {
           include: {
+            panel: true,
             port: {
               include: {
                 panel: true,
@@ -207,6 +212,28 @@ class CableService {
     return cable;
   }
 
+  async getCableByShortId(shortId: number) {
+    const endpoint = await prisma.cableEndpoint.findUnique({
+      where: { shortId },
+      include: {
+        cable: {
+          include: {
+            endpoints: {
+              include: {
+                port: {
+                  include: {
+                    panel: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return endpoint?.cable ?? null;
+  }
 
   /**
    * 获取所有线缆
@@ -404,6 +431,23 @@ class CableService {
       include: {
         endpoints: {
           include: {
+            panel: {
+              include: {
+                device: {
+                  include: {
+                    cabinet: {
+                      include: {
+                        room: {
+                          include: {
+                            dataCenter: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
             port: {
               include: {
                 panel: {
@@ -442,7 +486,8 @@ class CableService {
       cable,
       endpointA: endpointA || null,
       endpointB: endpointB || null,
-      // 兼容旧接口
+      panelA: endpointA?.panel || endpointA?.port?.panel || null,
+      panelB: endpointB?.panel || endpointB?.port?.panel || null,
       portA: endpointA?.port || null,
       portB: endpointB?.port || null,
     };
@@ -463,6 +508,23 @@ class CableService {
           include: {
             endpoints: {
               include: {
+                panel: {
+                  include: {
+                    device: {
+                      include: {
+                        cabinet: {
+                          include: {
+                            room: {
+                              include: {
+                                dataCenter: true,
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
                 port: {
                   include: {
                     panel: {
@@ -502,11 +564,12 @@ class CableService {
     const endpointB = endpoint.cable.endpoints.find(e => e.endType === 'B');
 
     return {
-      cableId: endpoint.cable.id, // 添加 cableId 字段
+      cableId: endpoint.cable.id,
       cable: endpoint.cable,
       endpointA: endpointA || null,
       endpointB: endpointB || null,
-      // 兼容旧接口
+      panelA: endpointA?.panel || endpointA?.port?.panel || null,
+      panelB: endpointB?.panel || endpointB?.port?.panel || null,
       portA: endpointA?.port || null,
       portB: endpointB?.port || null,
     };
@@ -514,15 +577,16 @@ class CableService {
 
 
   /**
-   * 单端连接：连接一个端口到插头
-   * 如果插头已经属于某条线缆，则更新该端点连接到指定端口
-   * 如果插头是新的，则创建新线缆，只创建一个端点
+   * 单端连接：把插头挂到面板，端口可稍后再指定。
    */
   async connectSinglePort(data: ConnectSinglePortDto) {
-    const { portId, shortId, ...cableData } = data;
+    const { panelId, portId, shortId, ...cableData } = data;
 
-    // 1. 检查端口是否存在
-    const port = await prisma.port.findUnique({
+    if (!panelId && !portId) {
+      throw new Error('必须提供面板或端口');
+    }
+
+    const port = portId ? await prisma.port.findUnique({
       where: { id: portId },
       include: {
         panel: {
@@ -544,41 +608,73 @@ class CableService {
         },
         opticalModule: true,
       },
-    });
+    }) : null;
 
-    if (!port) {
+    if (portId && !port) {
       throw new Error('端口不存在');
     }
 
-    // 2. 检查端口是否已被占用
-    if (port.status === 'OCCUPIED') {
+    if (port && port.status === 'OCCUPIED') {
       throw new Error('端口已被占用');
     }
 
-    // 3. 检查shortID是否已经存在端点
-    const existingEndpoint = await prisma.cableEndpoint.findUnique({
-      where: { shortId },
+    if (panelId && port && port.panelId !== panelId) {
+      throw new Error('端口不属于所选面板');
+    }
+
+    const resolvedPanelId = port?.panelId || panelId!;
+    const panel = port?.panel || await prisma.panel.findUnique({
+      where: { id: resolvedPanelId },
       include: {
-        cable: {
+        device: {
           include: {
-            endpoints: {
+            cabinet: {
               include: {
-                port: {
+                room: {
                   include: {
-                    panel: {
-                      include: {
-                        device: {
-                          include: {
-                            cabinet: {
-                              include: {
-                                room: {
-                                  include: {
-                                    dataCenter: true,
-                                  },
-                                },
-                              },
-                            },
-                          },
+                    dataCenter: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!panel) {
+      throw new Error('面板不存在');
+    }
+
+    const endpointInclude = {
+      panel: {
+        include: {
+          device: {
+            include: {
+              cabinet: {
+                include: {
+                  room: {
+                    include: {
+                      dataCenter: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      port: {
+        include: {
+          panel: {
+            include: {
+              device: {
+                include: {
+                  cabinet: {
+                    include: {
+                      room: {
+                        include: {
+                          dataCenter: true,
                         },
                       },
                     },
@@ -589,70 +685,100 @@ class CableService {
           },
         },
       },
+    };
+
+    const existingEndpoint = await prisma.cableEndpoint.findUnique({
+      where: { shortId },
+      include: {
+        panel: true,
+        cable: {
+          include: {
+            endpoints: {
+              include: endpointInclude,
+            },
+          },
+        },
+      },
     });
 
-    if (existingEndpoint) {
-      // shortID已经属于某条线缆，更新该端点连接到指定端口
-      const cable = existingEndpoint.cable;
+    if (existingEndpoint?.panelId && existingEndpoint.panelId !== resolvedPanelId) {
+      throw new Error('端点已挂靠到其他面板');
+    }
 
-      // 推断线缆类型（如果没有提供）
+    if (existingEndpoint) {
+      const cable = existingEndpoint.cable;
       const finalType = cableData.type || cable.type;
 
-      // 验证兼容性
-      this.validateCableConnection(port, finalType);
+      if (port) {
+        this.validateCableConnection(port, finalType);
+      }
 
-      // 更新端点的portId
-      await prisma.cableEndpoint.update({
+      const previousPortId = existingEndpoint.portId;
+      if (previousPortId && previousPortId !== port?.id) {
+        const previousPort = await prisma.port.findUnique({
+          where: { id: previousPortId },
+          include: { opticalModule: true },
+        });
+        await prisma.port.update({
+          where: { id: previousPortId },
+          data: {
+            status: 'AVAILABLE',
+            physicalStatus: previousPort?.opticalModule ? 'MODULE_ONLY' : 'EMPTY',
+          },
+        });
+        await cableGraphService.deleteConnection(cable.id);
+      }
+
+      const updatedEndpoint = await prisma.cableEndpoint.update({
         where: { id: existingEndpoint.id },
-        data: { portId },
+        data: {
+          panelId: resolvedPanelId,
+          portId: port?.id || null,
+        },
+        include: endpointInclude,
       });
 
-      // 更新线缆信息（如果提供了新信息）
-      if (cableData.label || cableData.type || cableData.length || cableData.color || cableData.notes) {
-        await prisma.cable.update({
-          where: { id: cable.id },
+      await prisma.cable.update({
+        where: { id: cable.id },
+        data: {
+          label: cableData.label || cable.label,
+          type: finalType,
+          length: cableData.length !== undefined ? cableData.length : cable.length,
+          color: cableData.color || cable.color,
+          notes: cableData.notes || cable.notes,
+          inventoryStatus: 'INVENTORIED',
+        },
+      });
+
+      if (port) {
+        await prisma.port.update({
+          where: { id: port.id },
           data: {
-            label: cableData.label || cable.label,
-            type: finalType,
-            length: cableData.length !== undefined ? cableData.length : cable.length,
-            color: cableData.color || cable.color,
-            notes: cableData.notes || cable.notes,
+            status: 'OCCUPIED',
+            physicalStatus: 'CONNECTED',
           },
         });
       }
 
-      // 更新端口状态
-      await prisma.port.update({
-        where: { id: portId },
-        data: {
-          status: 'OCCUPIED',
-          physicalStatus: 'CONNECTED',
-        },
-      });
-
-      // 检查线缆的另一端是否也已连接
       const otherEndpoint = cable.endpoints.find(e => e.id !== existingEndpoint.id);
-      const bothConnected = otherEndpoint && otherEndpoint.portId;
+      const bothConnected = port && otherEndpoint?.portId;
 
-      // 如果两端都连接了，更新线缆状态为IN_USE，并同步到图数据库
       if (bothConnected) {
         await prisma.cable.update({
           where: { id: cable.id },
           data: { inventoryStatus: 'IN_USE' },
         });
 
-        // 同步到图数据库
         const portA = existingEndpoint.endType === 'A' ? port : await prisma.port.findUnique({
           where: { id: otherEndpoint.portId! },
-          include: { panel: true }
+          include: { panel: true },
         });
         const portB = existingEndpoint.endType === 'B' ? port : await prisma.port.findUnique({
           where: { id: otherEndpoint.portId! },
-          include: { panel: true }
+          include: { panel: true },
         });
 
         if (portA && portB) {
-          // 同步面板节点
           if (portA.panel) {
             await cableGraphService.syncPanelNode(portA.panel.id, portA.panel);
           }
@@ -660,11 +786,9 @@ class CableService {
             await cableGraphService.syncPanelNode(portB.panel.id, portB.panel);
           }
 
-          // 同步端口节点
           await cableGraphService.syncPortNode(portA.id, { ...portA, panelId: portA.panelId });
           await cableGraphService.syncPortNode(portB.id, { ...portB, panelId: portB.panelId });
 
-          // 创建连接
           await cableGraphService.createConnection({
             cableId: cable.id,
             portAId: portA.id,
@@ -679,75 +803,122 @@ class CableService {
         }
       }
 
-      // 查询对端信息
       const peerInfo = otherEndpoint?.portId
         ? await this.getPortConnection(otherEndpoint.portId)
-        : null;
+        : otherEndpoint?.panel
+          ? {
+              panel: otherEndpoint.panel,
+              device: otherEndpoint.panel.device,
+              cabinet: otherEndpoint.panel.device?.cabinet,
+              port: null,
+            }
+          : null;
 
       return {
         cable: await prisma.cable.findUnique({
           where: { id: cable.id },
-          include: { endpoints: true },
+          include: {
+            endpoints: {
+              include: endpointInclude,
+            },
+          },
         }),
-        connectedEndpoint: existingEndpoint,
+        connectedEndpoint: updatedEndpoint,
         otherEndpoint,
         peerInfo,
       };
-    } else {
-      // shortID是新的，创建新线缆
-      // 推断线缆类型
-      const finalType = cableData.type || this.inferCableType(port.portType);
+    }
 
-      // 验证兼容性
+    const finalType = port ? cableData.type || this.inferCableType(port.portType) : cableData.type || 'OTHER';
+
+    if (port) {
       this.validateCableConnection(port, finalType);
+    }
 
-      // 分配shortID
-      await shortIdPoolService.allocateShortId('CABLE_ENDPOINT', '', shortId);
+    await shortIdPoolService.allocateShortId('CABLE_ENDPOINT', '', shortId);
 
-      // 创建线缆记录
-      const cable = await prisma.cable.create({
-        data: {
-          label: cableData.label,
-          type: finalType,
-          length: cableData.length,
-          color: cableData.color,
-          notes: cableData.notes,
-          inventoryStatus: 'INVENTORIED', // 只连接了一端，状态为已入库
-        },
-      });
+    const cable = await prisma.cable.create({
+      data: {
+        label: cableData.label,
+        type: finalType,
+        length: cableData.length,
+        color: cableData.color,
+        notes: cableData.notes,
+        inventoryStatus: 'INVENTORIED',
+      },
+    });
 
-      // 创建端点
-      const endpoint = await prisma.cableEndpoint.create({
-        data: {
-          cableId: cable.id,
-          endType: 'A',
-          portId: portId,
-          shortId: shortId,
-        },
-      });
+    const endpoint = await prisma.cableEndpoint.create({
+      data: {
+        cableId: cable.id,
+        endType: 'A',
+        panelId: resolvedPanelId,
+        portId: port?.id || null,
+        shortId,
+      },
+      include: endpointInclude,
+    });
 
-      // 绑定shortID
-      await shortIdPoolService.bindShortIdToEntity(shortId, 'CABLE_ENDPOINT', endpoint.id);
+    await shortIdPoolService.bindShortIdToEntity(shortId, 'CABLE_ENDPOINT', endpoint.id);
 
-      // 更新端口状态
+    if (port) {
       await prisma.port.update({
-        where: { id: portId },
+        where: { id: port.id },
         data: {
           status: 'OCCUPIED',
           physicalStatus: 'CONNECTED',
         },
       });
-
-      return {
-        cable: await prisma.cable.findUnique({
-          where: { id: cable.id },
-          include: { endpoints: true },
-        }),
-        connectedEndpoint: endpoint,
-        otherEndpoint: null,
-        peerInfo: null,
-      };
     }
+
+    return {
+      cable: await prisma.cable.findUnique({
+        where: { id: cable.id },
+        include: {
+          endpoints: {
+            include: endpointInclude,
+          },
+        },
+      }),
+      connectedEndpoint: endpoint,
+      otherEndpoint: null,
+      peerInfo: null,
+    };
+  }
+
+  async getDanglingEndpointsByDevice(deviceId: string) {
+    const endpoints = await prisma.cableEndpoint.findMany({
+      where: {
+        panelId: { not: null },
+        portId: null,
+        panel: {
+          deviceId,
+        },
+      },
+      include: {
+        cable: true,
+        panel: true,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    const panels = endpoints.reduce<Record<string, typeof endpoints>>((acc, endpoint) => {
+      if (!endpoint.panelId) {
+        return acc;
+      }
+      if (!acc[endpoint.panelId]) {
+        acc[endpoint.panelId] = [];
+      }
+      acc[endpoint.panelId].push(endpoint);
+      return acc;
+    }, {});
+
+    return {
+      total: endpoints.length,
+      panels,
+    };
   }
 
   /**
@@ -764,7 +935,12 @@ class CableService {
             endpoints: true,
           },
         },
-        port: true,
+        port: {
+          include: {
+            panel: true,
+          },
+        },
+        panel: true,
       },
     });
 
@@ -781,7 +957,10 @@ class CableService {
     // 2. 断开端点连接
     await prisma.cableEndpoint.update({
       where: { id: endpoint.id },
-      data: { portId: null },
+      data: {
+        panelId: endpoint.panelId || endpoint.port?.panelId || null,
+        portId: null,
+      },
     });
 
     // 3. 更新端口状态

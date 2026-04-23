@@ -62,17 +62,30 @@ const checkMultipleShortIdsSchema = z.object({
 });
 
 const connectSinglePortSchema = z.object({
-  portId: z.string().uuid('Invalid port ID'),
+  panelId: z.string().uuid('Invalid panel ID').optional(),
+  portId: z.string().uuid('Invalid port ID').optional(),
   shortId: z.number().int().positive('ShortID must be a positive integer'),
   label: z.string().optional(),
   type: z.enum(['CAT5E', 'CAT6', 'CAT6A', 'CAT7', 'FIBER_SM', 'FIBER_MM', 'QSFP_TO_SFP', 'QSFP_TO_QSFP', 'SFP_TO_SFP', 'POWER', 'OTHER']).optional(),
   length: z.number().positive().optional(),
   color: z.string().optional(),
   notes: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (!data.panelId && !data.portId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['panelId'],
+      message: 'panelId or portId is required',
+    });
+  }
 });
 
 const disconnectEndpointSchema = z.object({
   shortId: z.number().int().positive('ShortID must be a positive integer'),
+});
+
+const deviceIdSchema = z.object({
+  deviceId: z.string().uuid('Invalid device ID'),
 });
 
 
@@ -326,6 +339,21 @@ router.post('/connect-single-port', async (req: Request, res: Response) => {
     }
     console.error('Error connecting single port:', error);
     res.status(500).json({ error: 'Failed to connect single port' });
+  }
+});
+
+// POST /api/v1/cables/dangling-by-device - 获取设备上的悬空线端点
+router.post('/dangling-by-device', async (req: Request, res: Response) => {
+  try {
+    const { deviceId } = deviceIdSchema.parse(req.body);
+    const result = await cableService.getDanglingEndpointsByDevice(deviceId);
+    res.json(result);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation error', details: error.errors });
+    }
+    console.error('Error fetching dangling endpoints by device:', error);
+    res.status(500).json({ error: 'Failed to fetch dangling endpoints by device' });
   }
 });
 

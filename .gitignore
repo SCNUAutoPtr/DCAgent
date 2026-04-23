@@ -5,6 +5,9 @@ node_modules/
 
 # Testing
 coverage/
+playwright-report/
+test-results/
+test-data/
 
 # Production
 dist/
@@ -29,6 +32,7 @@ CLAUDE.md
 .vscode/
 .idea/
 .claude/
+.mcp.json
 *.swp
 *.swo
 *~
@@ -42,6 +46,7 @@ CLAUDE.md
 # Database backups (should not be committed to Git)
 db-backups/
 *.sql
+!backend/prisma/migrations/**/migration.sql
 *.dump
 *_backup_*.sql
 *_backup_*.dump
