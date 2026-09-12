@@ -26,6 +26,7 @@ model Room {
   shortId      Int?          @unique // 全局唯一短ID（通过 GlobalShortIdAllocation 分配）
   name         String
   floor        String?
+  notes        String?
   dataCenterId String
   dataCenter   DataCenter    @relation(fields: [dataCenterId], references: [id], onDelete: Cascade)
   cabinets     Cabinet[]
@@ -45,6 +46,7 @@ model Cabinet {
   name      String
   position  String?  // 机房中的位置（文本标识，如"A-01"）
   height    Int      @default(42) // U数，默认42U
+  notes     String?
   roomId    String
   room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   devices   Device[]
@@ -75,6 +77,7 @@ model Device {
   serialNo    String?     @unique
   uPosition   Int?        // 在机柜中的U位
   uHeight     Int?        // 占用几U
+  notes       String?
   cabinetId   String
   cabinet     Cabinet     @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
   panels      Panel[]
@@ -170,6 +173,7 @@ model Panel {
   name            String
   type            PanelType
   shortId         Int?            @unique // 面板shortID，用于快速识别和扫码
+  notes           String?
   deviceId        String
   device          Device          @relation(fields: [deviceId], references: [id], onDelete: Cascade)
   ports           Port[]
@@ -214,6 +218,7 @@ model Port {
   panelId        String
   panel          Panel           @relation(fields: [panelId], references: [id], onDelete: Cascade)
   portType       String?         // 端口类型 (RJ45, SFP, SFP+, QSFP, 等)
+  notes          String?
   rotation       Float?          @default(0) // 旋转角度 (0, 90, 180, 270)
   // 物理布局信息（相对于面板的坐标，单位：mm）
   position       Json?           // 位置坐标 {x, y}
@@ -277,6 +282,7 @@ model CableEndpoint {
   portId    String?  // 端口ID（可选，入库时可能未连接端口）
   port      Port?    @relation(fields: [portId], references: [id], onDelete: Cascade)
   endType   String   // "A" 表示主端（如QSFP端），"B1", "B2", "B3", "B4" 表示分支端（如4个SFP端）
+  notes     String?
   createdAt DateTime @default(now())
 
   @@unique([cableId, endType]) // 确保同一线缆的端点类型唯一

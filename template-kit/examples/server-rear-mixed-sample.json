@@ -1,0 +1,49 @@
+{
+  "name": "服务器后面板样例",
+  "type": "MIXED",
+  "portCount": 5,
+  "description": "2个数据口，1个BMC口，2个USB口的服务器后面板样例",
+  "width": 482.6,
+  "height": 44.45,
+  "layoutConfig": {
+    "portsPerRow": 5,
+    "rowSpacing": 12
+  },
+  "portDefinitions": [
+    {
+      "number": "NIC1",
+      "label": "NIC1",
+      "portType": "SFP",
+      "position": { "x": 40, "y": 12 },
+      "size": { "width": 14, "height": 12 }
+    },
+    {
+      "number": "NIC2",
+      "label": "NIC2",
+      "portType": "SFP",
+      "position": { "x": 58, "y": 12 },
+      "size": { "width": 14, "height": 12 }
+    },
+    {
+      "number": "BMC",
+      "label": "BMC",
+      "portType": "RJ45",
+      "position": { "x": 100, "y": 12 },
+      "size": { "width": 14, "height": 12 }
+    },
+    {
+      "number": "USB1",
+      "label": "USB1",
+      "portType": "USB_A",
+      "position": { "x": 140, "y": 14 },
+      "size": { "width": 12, "height": 8 }
+    },
+    {
+      "number": "USB2",
+      "label": "USB2",
+      "portType": "USB_A",
+      "position": { "x": 156, "y": 14 },
+      "size": { "width": 12, "height": 8 }
+    }
+  ]
+}

@@ -43,6 +43,70 @@ export interface SubnetCalculationResult {
   ipRange: string[];
 }
 
+const ipToInt = (ip: string): number => {
+  const parts = ip.split('.').map(Number);
+  return ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0;
+};
+
+const intToIp = (int: number): string =>
+  [(int >>> 24) & 255, (int >>> 16) & 255, (int >>> 8) & 255, int & 255].join('.');
+
+/**
+ * 子网可用地址数，只看 CIDR，与数据库里建了多少条 IP 记录无关
+ */
+export const getSubnetCapacity = (cidr: number): number => {
+  if (cidr >= 32) return 1;
+  if (cidr === 31) return 2; // RFC 3021：点对点链路两个地址都可用
+  return Math.pow(2, 32 - cidr) - 2; // 去掉网络地址和广播地址
+};
+
+/**
+ * 网络地址和广播地址，这两个不算可用地址；/31 /32 没有
+ */
+export const getEdgeAddresses = (network: string, cidr: number): Set<string> => {
+  if (cidr >= 31) return new Set();
+
+  const maskInt = (0xffffffff << (32 - cidr)) >>> 0;
+  const networkInt = (ipToInt(network) & maskInt) >>> 0;
+  const broadcastInt = (networkInt | (~maskInt >>> 0)) >>> 0;
+
+  return new Set([intToIp(networkInt), intToIp(broadcastInt)]);
+};
+
+type IpAddressLike = { address?: string | null; status: IpStatus };
+
+/**
+ * 子网统计：总数取网段容量，没建记录的地址算空闲
+ * （自动生成地址池是可选的，按记录条数统计会把 /24 显示成只有 1 个地址）
+ */
+export const calculateSubnetStats = (
+  ipAddresses: IpAddressLike[],
+  subnet: { network: string; cidr: number }
+) => {
+  const total = getSubnetCapacity(subnet.cidr);
+  const edges = getEdgeAddresses(subnet.network, subnet.cidr);
+  const hostRows = ipAddresses.filter((ip) => !ip.address || !edges.has(ip.address));
+
+  const countOf = (status: IpStatus) => hostRows.filter((ip) => ip.status === status).length;
+  const allocated = countOf(IpStatus.ALLOCATED);
+  const reserved = countOf(IpStatus.RESERVED);
+  const blocked = countOf(IpStatus.BLOCKED);
+
+  const free = Math.max(0, total - allocated - reserved - blocked);
+  const usable = Math.max(0, total - reserved - blocked);
+  const utilizationRate = usable > 0 ? ((allocated / usable) * 100).toFixed(2) : '0.00';
+
+  return {
+    total,
+    free,
+    allocated,
+    reserved,
+    blocked,
+    usable,
+    utilizationRate,
+  };
+};
+
 class SubnetService {
   /**
    * 创建子网并可选地生成IP地址池
@@ -215,7 +279,7 @@ class SubnetService {
     }
 
     // 计算统计信息
-    const stats = this.calculateSubnetStats(subnet.ipAddresses);
+    const stats = calculateSubnetStats(subnet.ipAddresses, subnet);
 
     return {
       ...subnet,
@@ -258,6 +322,7 @@ class SubnetService {
         },
         ipAddresses: {
           select: {
+            address: true,
             status: true,
           },
         },
@@ -269,7 +334,7 @@ class SubnetService {
 
     // 为每个子网计算统计信息
     const enrichedSubnets = subnets.map((subnet) => {
-      const stats = this.calculateSubnetStats(subnet.ipAddresses);
+      const stats = calculateSubnetStats(subnet.ipAddresses, subnet);
       return {
         ...subnet,
         dnsServers: subnet.dnsServers ? JSON.parse(subnet.dnsServers as string) : [],
@@ -379,13 +444,40 @@ class SubnetService {
    * 获取统计信息
    */
   async getStatistics() {
-    const [totalSubnets, totalIps, freeIps, allocatedIps, reservedIps] = await Promise.all([
-      prisma.ipSubnet.count(),
-      prisma.ipAddress.count(),
-      prisma.ipAddress.count({ where: { status: IpStatus.FREE } }),
-      prisma.ipAddress.count({ where: { status: IpStatus.ALLOCATED } }),
-      prisma.ipAddress.count({ where: { status: IpStatus.RESERVED } }),
+    const subnets = await prisma.ipSubnet.findMany({
+      select: { id: true, network: true, cidr: true },
+    });
+
+    // 总数是各网段容量之和，不是 IpAddress 的记录条数
+    const totalIps = subnets.reduce((sum, subnet) => sum + getSubnetCapacity(subnet.cidr), 0);
+
+    // 网络地址和广播地址如果被建成了记录，不该计入状态统计
+    const edgePairs = subnets.flatMap((subnet) =>
+      [...getEdgeAddresses(subnet.network, subnet.cidr)].map((address) => ({
+        subnetId: subnet.id,
+        address,
+      }))
+    );
+
+    const [statusGroups, edgeRows] = await Promise.all([
+      prisma.ipAddress.groupBy({ by: ['status'], _count: true }),
+      edgePairs.length > 0
+        ? prisma.ipAddress.findMany({ where: { OR: edgePairs }, select: { status: true } })
+        : Promise.resolve([]),
     ]);
+
+    const countOf = (status: IpStatus) => {
+      const total = statusGroups.find((group) => group.status === status)?._count ?? 0;
+      const edges = edgeRows.filter((row) => row.status === status).length;
+      return Math.max(0, total - edges);
+    };
+
+    const allocatedIps = countOf(IpStatus.ALLOCATED);
+    const reservedIps = countOf(IpStatus.RESERVED);
+    const blockedIps = countOf(IpStatus.BLOCKED);
+    // 没建记录的地址算空闲
+    const freeIps = Math.max(0, totalIps - allocatedIps - reservedIps - blockedIps);
+    const usableIps = Math.max(0, totalIps - reservedIps - blockedIps);
 
     // 按机房统计子网
     const subnetsByRoom = await prisma.ipSubnet.groupBy({
@@ -394,14 +486,15 @@ class SubnetService {
     });
 
     return {
-      totalSubnets,
+      totalSubnets: subnets.length,
       totalIps,
       byStatus: {
         free: freeIps,
         allocated: allocatedIps,
         reserved: reservedIps,
+        blocked: blockedIps,
       },
-      utilizationRate: totalIps > 0 ? ((allocatedIps / (totalIps - reservedIps)) * 100).toFixed(2) : '0.00',
+      utilizationRate: usableIps > 0 ? ((allocatedIps / usableIps) * 100).toFixed(2) : '0.00',
       subnetsByRoom: subnetsByRoom.map((item) => ({
         roomId: item.roomId,
         count: item._count,
@@ -427,26 +520,6 @@ class SubnetService {
   /**
    * 计算子网的IP统计信息
    */
-  private calculateSubnetStats(ipAddresses: any[]) {
-    const total = ipAddresses.length;
-    const free = ipAddresses.filter((ip) => ip.status === IpStatus.FREE).length;
-    const allocated = ipAddresses.filter((ip) => ip.status === IpStatus.ALLOCATED).length;
-    const reserved = ipAddresses.filter((ip) => ip.status === IpStatus.RESERVED).length;
-    const blocked = ipAddresses.filter((ip) => ip.status === IpStatus.BLOCKED).length;
-
-    const usable = total - reserved;
-    const utilizationRate = usable > 0 ? ((allocated / usable) * 100).toFixed(2) : '0.00';
-
-    return {
-      total,
-      free,
-      allocated,
-      reserved,
-      blocked,
-      usable,
-      utilizationRate,
-    };
-  }
 }
 
 export default new SubnetService();

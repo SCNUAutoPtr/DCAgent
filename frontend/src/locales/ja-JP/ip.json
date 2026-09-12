@@ -22,12 +22,11 @@
       "totalIps": "総IP数",
       "freeIps": "空きIP",
       "allocatedIps": "割当済",
-      "reservedIps": "予約済",
+      "reservedIps": "予約IPアドレス",
       "blockedIps": "ブロック",
       "usableIps": "使用可能IP",
       "utilizationRate": "使用率",
       "autoGenerateIps": "IPアドレスプール自動生成",
-      "reservedIps": "予約IPアドレス",
       "createdAt": "作成日時"
     },
     "placeholders": {
@@ -184,7 +183,8 @@
     "release": "解放",
     "calculate": "計算",
     "checkConflicts": "競合チェック",
-    "refresh": "更新"
+    "refresh": "更新",
+    "actions": "操作"
   },
   "tabs": {
     "subnets": "サブネットリスト",

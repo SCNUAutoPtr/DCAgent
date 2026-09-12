@@ -22,12 +22,11 @@
       "totalIps": "总IP数",
       "freeIps": "空闲IP",
       "allocatedIps": "已分配",
-      "reservedIps": "保留",
+      "reservedIps": "保留IP地址",
       "blockedIps": "禁用",
       "usableIps": "可用IP",
       "utilizationRate": "使用率",
       "autoGenerateIps": "自动生成IP地址池",
-      "reservedIps": "保留IP地址",
       "createdAt": "创建时间"
     },
     "placeholders": {
@@ -184,7 +183,8 @@
     "release": "释放",
     "calculate": "计算",
     "checkConflicts": "检查冲突",
-    "refresh": "刷新"
+    "refresh": "刷新",
+    "actions": "操作"
   },
   "tabs": {
     "subnets": "子网列表",

@@ -56,13 +56,20 @@ async function clearAllData() {
     const deletedCables = await prisma.cable.deleteMany({});
     console.log(`  已删除 ${deletedCables.count} 个线缆实例`);
 
-    // ==================== 2. 清理端口数据 ====================
-    console.log('\n【2/7】清理端口数据...');
+    // ==================== 2. 清理 IP 地址和子网 ====================
+    console.log('\n【2/7】清理 IP 地址和子网...');
+    const deletedIpAddresses = await prisma.ipAddress.deleteMany({});
+    console.log(`  已删除 ${deletedIpAddresses.count} 个 IP 地址`);
+    const deletedSubnets = await prisma.ipSubnet.deleteMany({});
+    console.log(`  已删除 ${deletedSubnets.count} 个子网`);
+
+    // ==================== 3. 清理端口数据 ====================
+    console.log('\n【3/7】清理端口数据...');
     const deletedPorts = await prisma.port.deleteMany({});
     console.log(`  已删除 ${deletedPorts.count} 个端口`);
 
-    // ==================== 3. 清理面板数据 ====================
-    console.log('\n【3/7】清理面板数据...');
+    // ==================== 4. 清理面板数据 ====================
+    console.log('\n【4/7】清理面板数据...');
 
     // 3.1 获取所有面板的 shortId
     const panels = await prisma.panel.findMany({
@@ -77,13 +84,13 @@ async function clearAllData() {
     const deletedPanels = await prisma.panel.deleteMany({});
     console.log(`  已删除 ${deletedPanels.count} 个面板`);
 
-    // ==================== 4. 清理设备数据 ====================
-    console.log('\n【4/7】清理设备数据...');
+    // ==================== 5. 清理设备数据 ====================
+    console.log('\n【5/7】清理设备数据...');
     const deletedDevices = await prisma.device.deleteMany({});
     console.log(`  已删除 ${deletedDevices.count} 个设备`);
 
-    // ==================== 5. 清理机柜数据 ====================
-    console.log('\n【5/7】清理机柜数据...');
+    // ==================== 6. 清理机柜数据 ====================
+    console.log('\n【6/7】清理机柜数据...');
 
     // 5.1 获取所有机柜的 shortId
     const cabinets = await prisma.cabinet.findMany({
@@ -98,8 +105,8 @@ async function clearAllData() {
     const deletedCabinets = await prisma.cabinet.deleteMany({});
     console.log(`  已删除 ${deletedCabinets.count} 个机柜`);
 
-    // ==================== 6. 清理机房和数据中心 ====================
-    console.log('\n【6/7】清理机房和数据中心...');
+    // ==================== 7. 清理机房和数据中心 ====================
+    console.log('\n【7/7】清理机房和数据中心...');
     const rooms = await prisma.room.findMany({
       select: { shortId: true },
     });
@@ -114,8 +121,8 @@ async function clearAllData() {
     const deletedDataCenters = await prisma.dataCenter.deleteMany({});
     console.log(`  已删除 ${deletedDataCenters.count} 个数据中心`);
 
-    // ==================== 7. 处理 shortID 池 ====================
-    console.log('\n【7/7】处理 shortID 池...');
+    // ==================== 8. 处理 shortID 池 ====================
+    console.log('\n【8/8】处理 shortID 池...');
 
     // 合并所有需要处理的 shortID
     const allShortIds = [
@@ -218,6 +225,8 @@ async function clearAllData() {
     console.log(`  - 机柜: ${deletedCabinets.count}`);
     console.log(`  - 设备: ${deletedDevices.count}`);
     console.log(`  - 面板: ${deletedPanels.count}`);
+    console.log(`  - IP地址: ${deletedIpAddresses.count}`);
+    console.log(`  - 子网: ${deletedSubnets.count}`);
     console.log(`  - 端口: ${deletedPorts.count}`);
     console.log(`  - 线缆: ${deletedCables.count}`);
     console.log(`  - 线缆端点: ${deletedEndpoints.count}`);

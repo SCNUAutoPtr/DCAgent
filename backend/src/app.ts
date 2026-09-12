@@ -16,6 +16,7 @@ import opticalModulesRouter from './routes/opticalModules';
 import subnetsRouter from './routes/subnets';
 import ipAddressesRouter from './routes/ipAddresses';
 import workstationsRouter from './routes/workstations';
+import dashboardRouter from './routes/dashboard';
 import { errorLogger, requestLogger } from './middleware/logger';
 
 dotenv.config();
@@ -77,6 +78,7 @@ export function createApp(): Express {
   app.use('/api/v1/cable-shortid-pool', cableShortIdPoolRouter);
   app.use('/api/v1/shortid-pool', shortIdPoolRouter);
   app.use('/api/v1/search', searchRouter);
+  app.use('/api/v1/dashboard', dashboardRouter);
   app.use('/api/v1/panel-templates', panelTemplateRouter);
 
   app.use((req: Request, res: Response) => {

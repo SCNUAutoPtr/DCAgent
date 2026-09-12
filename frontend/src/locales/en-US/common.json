@@ -38,7 +38,9 @@
     "updateFailed": "Update failed",
     "loadFailed": "Load failed, please try again later",
     "operationSuccess": "Operation succeeded",
-    "operationFailed": "Operation failed"
+    "operationFailed": "Operation failed",
+    "saveSuccess": "Save successful",
+    "saveFailed": "Save failed"
   },
   "searchPlaceholder": "Search or scan QR code...",
   "searchFailed": "Search failed, please try again later"

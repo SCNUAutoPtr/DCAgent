@@ -22,6 +22,7 @@
     "test:lenovo": "tsx src/test-lenovo.ts",
     "test:template": "tsx src/test-template.ts",
     "snmp:walk": "tsx src/snmp-walk.ts",
+    "topology:447:import": "NODE_ENV=production tsx scripts/import-447-topology.ts",
     "openapi:generate": "node scripts/sync-apifox-openapi.mjs",
     "openapi:sync": "node scripts/sync-apifox-openapi.mjs --import",
     "apifox:cases:generate": "node scripts/sync-apifox-test-cases.mjs",

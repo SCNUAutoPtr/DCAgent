@@ -156,7 +156,12 @@ class CabinetService {
 
     return prisma.cabinet.update({
       where: { id },
-      data,
+      data: {
+        ...data,
+        // Json 字段未传时保持原值，和 workstationService 保持一致
+        floorPlanPosition: data.floorPlanPosition || undefined,
+        floorPlanSize: data.floorPlanSize || undefined,
+      },
       include: {
         room: {
           include: {

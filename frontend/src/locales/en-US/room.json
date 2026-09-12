@@ -28,7 +28,9 @@
     "loadFailed": "Failed to load room list",
     "updateFailed": "Update failed",
     "createFailed": "Create failed",
-    "deleteFailed": "Delete failed"
+    "deleteFailed": "Delete failed",
+    "loadFloorPlanFailed": "Failed to load floor plan",
+    "saveFloorPlanFailed": "Failed to save floor plan"
   },
   "validation": {
     "nameRequired": "Please enter room name",
@@ -36,5 +38,55 @@
   },
   "table": {
     "total": "Total {{total}} items"
+  },
+  "actions": {
+    "floorPlan": "Floor Plan"
+  },
+  "floorPlan": {
+    "title": "Floor Plan",
+    "cabinet": "Cabinet",
+    "workstation": "Workstation",
+    "roomSize": "Room Size",
+    "width": "Width",
+    "height": "Depth",
+    "unit": "m",
+    "editHint": "Drag cabinets or workstations to reposition, snapped to 0.1m",
+    "deviceCount": "Devices",
+    "inspector": "Details",
+    "overview": "Room Overview",
+    "area": "Area",
+    "totalDevices": "Devices",
+    "selectHint": "Click a cabinet or workstation to see its details",
+    "newCabinet": "New Cabinet",
+    "cabinetName": "Cabinet Name",
+    "cabinetNamePlaceholder": "e.g.: A-01",
+    "shortId": "ShortID",
+    "shortIdPlaceholder": "E-00001",
+    "cabinetHeight": "Height (U)",
+    "create": "Create",
+    "createSuccess": "Cabinet created",
+    "createFailed": "Failed to create cabinet",
+    "nameRequired": "Cabinet name is required",
+    "shortIdRequired": "ShortID is required",
+    "shortIdInvalid": "Invalid ShortID, use E-XXXXX or digits",
+    "position": "Position",
+    "size": "Size",
+    "status": "Status",
+    "assignedTo": "Assigned To",
+    "ipAddress": "IP Address",
+    "devices": "Devices",
+    "noDevices": "No devices",
+    "moreDevices": "{{count}} more devices",
+    "viewDetail": "View Details",
+    "loadDetailFailed": "Failed to load details",
+    "workstationStatus": {
+      "ONLINE": "Online",
+      "OFFLINE": "Offline",
+      "IN_USE": "In Use",
+      "IDLE": "Idle",
+      "MAINTENANCE": "Maintenance",
+      "FAULTY": "Faulty"
+    },
+    "deviceBadge": "{{count}} dev"
   }
 }

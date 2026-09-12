@@ -28,7 +28,9 @@
     "loadFailed": "加载机房列表失败",
     "updateFailed": "更新失败",
     "createFailed": "创建失败",
-    "deleteFailed": "删除失败"
+    "deleteFailed": "删除失败",
+    "loadFloorPlanFailed": "加载平面图失败",
+    "saveFloorPlanFailed": "保存平面图失败"
   },
   "validation": {
     "nameRequired": "请输入机房名称",
@@ -36,5 +38,55 @@
   },
   "table": {
     "total": "共 {{total}} 条"
+  },
+  "actions": {
+    "floorPlan": "平面图"
+  },
+  "floorPlan": {
+    "title": "平面图",
+    "cabinet": "机柜",
+    "workstation": "工作站",
+    "roomSize": "机房尺寸",
+    "width": "宽",
+    "height": "长",
+    "unit": "m",
+    "editHint": "拖动机柜或工作站调整位置，吸附精度 0.1m",
+    "deviceCount": "设备数",
+    "inspector": "详情",
+    "overview": "机房概览",
+    "area": "面积",
+    "totalDevices": "设备总数",
+    "selectHint": "点击机柜或工作站查看详情",
+    "newCabinet": "新建机柜",
+    "cabinetName": "机柜名称",
+    "cabinetNamePlaceholder": "例如：A-01",
+    "shortId": "ShortID",
+    "shortIdPlaceholder": "E-00001",
+    "cabinetHeight": "U 数",
+    "create": "创建",
+    "createSuccess": "机柜创建成功",
+    "createFailed": "机柜创建失败",
+    "nameRequired": "请输入机柜名称",
+    "shortIdRequired": "请输入 ShortID",
+    "shortIdInvalid": "ShortID 格式无效，请使用 E-XXXXX 或纯数字",
+    "position": "位置",
+    "size": "尺寸",
+    "status": "状态",
+    "assignedTo": "使用人",
+    "ipAddress": "IP 地址",
+    "devices": "设备",
+    "noDevices": "暂无设备",
+    "moreDevices": "还有 {{count}} 个设备",
+    "viewDetail": "查看详情",
+    "loadDetailFailed": "加载详情失败",
+    "workstationStatus": {
+      "ONLINE": "在线",
+      "OFFLINE": "离线",
+      "IN_USE": "使用中",
+      "IDLE": "空闲",
+      "MAINTENANCE": "维护中",
+      "FAULTY": "故障"
+    },
+    "deviceBadge": "设备 {{count}}"
   }
 }

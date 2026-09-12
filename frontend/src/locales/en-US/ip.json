@@ -22,12 +22,11 @@
       "totalIps": "Total IPs",
       "freeIps": "Free IPs",
       "allocatedIps": "Allocated",
-      "reservedIps": "Reserved",
+      "reservedIps": "Reserved IP Addresses",
       "blockedIps": "Blocked",
       "usableIps": "Usable IPs",
       "utilizationRate": "Utilization Rate",
       "autoGenerateIps": "Auto Generate IP Pool",
-      "reservedIps": "Reserved IP Addresses",
       "createdAt": "Created At"
     },
     "placeholders": {
@@ -184,7 +183,8 @@
     "release": "Release",
     "calculate": "Calculate",
     "checkConflicts": "Check Conflicts",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "actions": "Actions"
   },
   "tabs": {
     "subnets": "Subnet List",

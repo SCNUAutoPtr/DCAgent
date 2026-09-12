@@ -38,7 +38,9 @@
     "updateFailed": "更新失败",
     "loadFailed": "加载失败，请稍后重试",
     "operationSuccess": "操作成功",
-    "operationFailed": "操作失败"
+    "operationFailed": "操作失败",
+    "saveSuccess": "保存成功",
+    "saveFailed": "保存失败"
   },
   "searchPlaceholder": "搜索或扫描二维码...",
   "searchFailed": "搜索失败，请稍后重试"

@@ -1,0 +1,38 @@
+{
+  "name": "24口千兆交换机前面板",
+  "type": "NETWORK",
+  "portCount": 24,
+  "description": "标准24口RJ45交换机前面板，双排12列",
+  "width": 482.6,
+  "height": 44.45,
+  "layoutConfig": {
+    "portsPerRow": 12,
+    "rowSpacing": 20
+  },
+  "portDefinitions": [
+    { "number": "1", "label": "GE1", "portType": "RJ45", "position": { "x": 30, "y": 8 }, "size": { "width": 14, "height": 12 } },
+    { "number": "2", "label": "GE2", "portType": "RJ45", "position": { "x": 48, "y": 8 }, "size": { "width": 14, "height": 12 } },
+    { "number": "3", "label": "GE3", "portType": "RJ45", "position": { "x": 66, "y": 8 }, "size": { "width": 14, "height": 12 } },
+    { "number": "4", "label": "GE4", "portType": "RJ45", "position": { "x": 84, "y": 8 }, "size": { "width": 14, "height": 12 } },
+    { "number": "5", "label": "GE5", "portType": "RJ45", "position": { "x": 102, "y": 8 }, "size": { "width": 14, "height": 12 } },
+    { "number": "6", "label": "GE6", "portType": "RJ45", "position": { "x": 120, "y": 8 }, "size": { "width": 14, "height": 12 } },
+    { "number": "7", "label": "GE7", "portType": "RJ45", "position": { "x": 138, "y": 8 }, "size": { "width": 14, "height": 12 } },
+    { "number": "8", "label": "GE8", "portType": "RJ45", "position": { "x": 156, "y": 8 }, "size": { "width": 14, "height": 12 } },
+    { "number": "9", "label": "GE9", "portType": "RJ45", "position": { "x": 174, "y": 8 }, "size": { "width": 14, "height": 12 } },
+    { "number": "10", "label": "GE10", "portType": "RJ45", "position": { "x": 192, "y": 8 }, "size": { "width": 14, "height": 12 } },
+    { "number": "11", "label": "GE11", "portType": "RJ45", "position": { "x": 210, "y": 8 }, "size": { "width": 14, "height": 12 } },
+    { "number": "12", "label": "GE12", "portType": "RJ45", "position": { "x": 228, "y": 8 }, "size": { "width": 14, "height": 12 } },
+    { "number": "13", "label": "GE13", "portType": "RJ45", "position": { "x": 30, "y": 28 }, "size": { "width": 14, "height": 12 } },
+    { "number": "14", "label": "GE14", "portType": "RJ45", "position": { "x": 48, "y": 28 }, "size": { "width": 14, "height": 12 } },
+    { "number": "15", "label": "GE15", "portType": "RJ45", "position": { "x": 66, "y": 28 }, "size": { "width": 14, "height": 12 } },
+    { "number": "16", "label": "GE16", "portType": "RJ45", "position": { "x": 84, "y": 28 }, "size": { "width": 14, "height": 12 } },
+    { "number": "17", "label": "GE17", "portType": "RJ45", "position": { "x": 102, "y": 28 }, "size": { "width": 14, "height": 12 } },
+    { "number": "18", "label": "GE18", "portType": "RJ45", "position": { "x": 120, "y": 28 }, "size": { "width": 14, "height": 12 } },
+    { "number": "19", "label": "GE19", "portType": "RJ45", "position": { "x": 138, "y": 28 }, "size": { "width": 14, "height": 12 } },
+    { "number": "20", "label": "GE20", "portType": "RJ45", "position": { "x": 156, "y": 28 }, "size": { "width": 14, "height": 12 } },
+    { "number": "21", "label": "GE21", "portType": "RJ45", "position": { "x": 174, "y": 28 }, "size": { "width": 14, "height": 12 } },
+    { "number": "22", "label": "GE22", "portType": "RJ45", "position": { "x": 192, "y": 28 }, "size": { "width": 14, "height": 12 } },
+    { "number": "23", "label": "GE23", "portType": "RJ45", "position": { "x": 210, "y": 28 }, "size": { "width": 14, "height": 12 } },
+    { "number": "24", "label": "GE24", "portType": "RJ45", "position": { "x": 228, "y": 28 }, "size": { "width": 14, "height": 12 } }
+  ]
+}

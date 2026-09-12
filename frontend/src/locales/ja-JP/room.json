@@ -28,7 +28,9 @@
     "loadFailed": "機械室一覧の読み込みに失敗しました",
     "updateFailed": "更新に失敗しました",
     "createFailed": "作成に失敗しました",
-    "deleteFailed": "削除に失敗しました"
+    "deleteFailed": "削除に失敗しました",
+    "loadFloorPlanFailed": "平面図の読み込みに失敗しました",
+    "saveFloorPlanFailed": "平面図の保存に失敗しました"
   },
   "validation": {
     "nameRequired": "機械室名を入力してください",
@@ -36,5 +38,55 @@
   },
   "table": {
     "total": "合計 {{total}} 件"
+  },
+  "actions": {
+    "floorPlan": "平面図"
+  },
+  "floorPlan": {
+    "title": "平面図",
+    "cabinet": "ラック",
+    "workstation": "ワークステーション",
+    "roomSize": "機械室サイズ",
+    "width": "幅",
+    "height": "奥行",
+    "unit": "m",
+    "editHint": "ラックやワークステーションをドラッグして配置を調整（0.1m 単位）",
+    "deviceCount": "デバイス数",
+    "inspector": "詳細",
+    "overview": "機械室の概要",
+    "area": "面積",
+    "totalDevices": "デバイス総数",
+    "selectHint": "ラックやワークステーションをクリックすると詳細が表示されます",
+    "newCabinet": "ラックを新規作成",
+    "cabinetName": "ラック名",
+    "cabinetNamePlaceholder": "例：A-01",
+    "shortId": "ShortID",
+    "shortIdPlaceholder": "E-00001",
+    "cabinetHeight": "U 数",
+    "create": "作成",
+    "createSuccess": "ラックを作成しました",
+    "createFailed": "ラックの作成に失敗しました",
+    "nameRequired": "ラック名を入力してください",
+    "shortIdRequired": "ShortID を入力してください",
+    "shortIdInvalid": "ShortID の形式が不正です。E-XXXXX または数字で入力してください",
+    "position": "位置",
+    "size": "サイズ",
+    "status": "ステータス",
+    "assignedTo": "利用者",
+    "ipAddress": "IP アドレス",
+    "devices": "デバイス",
+    "noDevices": "デバイスなし",
+    "moreDevices": "他 {{count}} 台",
+    "viewDetail": "詳細を見る",
+    "loadDetailFailed": "詳細の読み込みに失敗しました",
+    "workstationStatus": {
+      "ONLINE": "オンライン",
+      "OFFLINE": "オフライン",
+      "IN_USE": "使用中",
+      "IDLE": "空き",
+      "MAINTENANCE": "メンテナンス中",
+      "FAULTY": "故障"
+    },
+    "deviceBadge": "機器 {{count}}"
   }
 }

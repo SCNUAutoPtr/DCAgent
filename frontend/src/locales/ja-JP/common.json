@@ -38,7 +38,9 @@
     "updateFailed": "更新失敗",
     "loadFailed": "読み込み失敗。後でもう一度お試しください",
     "operationSuccess": "操作成功",
-    "operationFailed": "操作失敗"
+    "operationFailed": "操作失敗",
+    "saveSuccess": "保存に成功しました",
+    "saveFailed": "保存に失敗しました"
   },
   "searchPlaceholder": "検索またはQRコードをスキャン...",
   "searchFailed": "検索失敗。後でもう一度お試しください"
