@@ -4,7 +4,7 @@
 // Room coordinates (contracts/scene.ts): metres, origin at the room's top-left corner, x to the right,
 // y into the room. In the 3D world room x -> world x, room y -> world z, up is world y.
 // (fpX,fpY) is the top-left corner of the cabinet's footprint as drawn on the floor plan; for 90/270
-// the footprint is d x w. fpRotation 0 = front faces -y (world -z), 90 = front faces +x.
+// the footprint is d x w. fpRotation 0 = front faces +y on the plan (world +z, towards the default camera), 90 = front faces -x.
 import type { CableMedium, DeviceType } from '@contracts/enums';
 import type { SceneCabinet, SceneDevice, SceneWorkstation } from '@contracts/scene';
 import { effectiveUHeight, topU } from '@contracts/rack';
@@ -125,8 +125,8 @@ export function placeCabinets(
   };
 }
 
-/** three.js rotation.y of a cabinet group: front (-z) turns clockwise on the plan as fpRotation grows. */
-export const cabinetYaw = (rotation: number) => (-rotation * Math.PI) / 180;
+/** three.js rotation.y of a cabinet group: the local front (-z) points to world +z at 0 and turns clockwise on the plan as fpRotation grows. */
+export const cabinetYaw = (rotation: number) => Math.PI - (rotation * Math.PI) / 180;
 
 /** A point in the cabinet's own frame (x across, y up from the floor, z front=-d/2 .. rear=+d/2) to world. */
 export function toWorld(p: CabinetPlacement, x: number, y: number, z: number): Vec3 {

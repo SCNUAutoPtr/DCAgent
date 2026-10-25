@@ -3,7 +3,7 @@ import type { LabelRef } from './common';
 
 /**
  * rooms/scene coordinate system: metres, origin at the room's top-left corner,
- * x to the right, y into the room. fpRotation 0 = cabinet front faces -y.
+ * x to the right, y into the room. fpRotation 0 = cabinet front faces +y (towards the bottom of the plan), clockwise from there.
  */
 export const DEFAULT_CABINET_WIDTH_M = 0.6;
 export const DEFAULT_CABINET_DEPTH_M = 1.2;

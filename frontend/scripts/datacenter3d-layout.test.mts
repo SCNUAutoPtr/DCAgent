@@ -32,13 +32,21 @@ test('a positioned cabinet is centred on its footprint; defaults 0.6 x 1.2 m', (
   assert.equal(p.auto, false);
 });
 
-test('a cabinet rotated 90 degrees swaps its footprint and faces +x', () => {
+test('rotation 0 faces +y on the plan (world +z), towards the default camera', () => {
+  const { placements } = L.placeCabinets([cab({ fpX: 0, fpY: 0 })], { widthM: null, depthM: null });
+  const p = placements.get('c');
+  const front = L.toWorld(p, 0, 0, -p.d / 2);
+  close(front.x, 0.3);
+  close(front.z, 0.6 + 0.6);
+});
+
+test('a cabinet rotated 90 degrees swaps its footprint and faces -x (clockwise from +y)', () => {
   const { placements } = L.placeCabinets([cab({ fpX: 0, fpY: 0, fpRotation: 90 })], { widthM: null, depthM: null });
   const p = placements.get('c');
   close(p.cx, 0.6);
   close(p.cz, 0.3);
   const front = L.toWorld(p, 0, 0, -p.d / 2);
-  close(front.x, 0.6 + 0.6);
+  close(front.x, 0.6 - 0.6);
   close(front.z, 0.3);
 });
 

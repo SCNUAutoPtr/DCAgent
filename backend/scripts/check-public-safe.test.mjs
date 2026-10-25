@@ -6,12 +6,12 @@ const kinds = (text, deny = []) => scanText(text, deny).map((f) => f.kind);
 
 test('public IPv4 outside documentation ranges is flagged', () => {
   assert.deepEqual(kinds('gw 8.8.8.8 dns, host 203.0.113.7, 198.51.100.4, 192.0.2.1'), []);
-  assert.deepEqual(kinds('server at 11.22.33.44'), ['public-ip']);
+  assert.deepEqual(kinds('server at 11.22.33.44'), ['public-ip']); // public-safe-ignore
 });
 
 test('private, loopback, masks and CGNAT', () => {
   assert.deepEqual(kinds('127.0.0.1 0.0.0.0 255.255.255.0 10.20.0.1 192.168.1.1 172.16.0.1'), []);
-  assert.deepEqual(kinds('tailnet 100.64.0.3'), ['cgnat-ip']);
+  assert.deepEqual(kinds('tailnet 100.64.0.3'), ['cgnat-ip']); // public-safe-ignore
 });
 
 test('local deny prefixes catch real private ranges, escaped or not', () => {
@@ -22,9 +22,9 @@ test('local deny prefixes catch real private ranges, escaped or not', () => {
 
 test('MAC must be zero, example or locally administered', () => {
   assert.deepEqual(kinds('00:00:00:00:00:00 00:11:22:33:44:55 02:00:00:aa:bb:cc 02-00-00-00-00-04 0200-0000-0004'), []);
-  assert.deepEqual(kinds('ac:de:48:00:11:22'), ['mac']);
-  assert.deepEqual(kinds('AC-DE-48-00-00-04'), ['mac']);
-  assert.deepEqual(kinds('port acde-4800-1122 up'), ['mac']);
+  assert.deepEqual(kinds('ac:de:48:00:11:22'), ['mac']); // public-safe-ignore
+  assert.deepEqual(kinds('AC-DE-48-00-00-04'), ['mac']); // public-safe-ignore
+  assert.deepEqual(kinds('port acde-4800-1122 up'), ['mac']); // public-safe-ignore
 });
 
 test('UUID fragments are not MACs', () => {
@@ -32,8 +32,8 @@ test('UUID fragments are not MACs', () => {
 });
 
 test('absolute home paths are flagged', () => {
-  assert.deepEqual(kinds('cd /Users/alice/code/x'), ['home-path']);
-  assert.deepEqual(kinds('cd /home/bob/x'), ['home-path']);
+  assert.deepEqual(kinds('cd /Users/alice/code/x'), ['home-path']); // public-safe-ignore
+  assert.deepEqual(kinds('cd /home/bob/x'), ['home-path']); // public-safe-ignore
   assert.deepEqual(kinds('~/code/x and backend/src'), []);
 });
 

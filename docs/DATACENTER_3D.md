@@ -16,7 +16,7 @@
 一次请求 `rooms/scene`（body `{ "roomId": "..." }`），返回 `RoomScene`（`backend/src/contracts/scene.ts`）：
 
 - `room`：宽、深（米）。没填或放不下所有机柜时，按内容再加一圈边距扩大。
-- `cabinets`：平面图坐标 `fpX/fpY`（左上角，米）、尺寸 `fpW/fpD`、朝向 `fpRotation`（0 表示正面朝 -y），高度 U 数，以及柜内设备（U 位、高度、型号深度、各面板端口数和已连数）。
+- `cabinets`：平面图坐标 `fpX/fpY`（左上角，米）、尺寸 `fpW/fpD`、朝向 `fpRotation`（0 表示正面朝平面图下方 +y，也就是默认视角的方向；角度按顺时针增加，90 朝 -x），高度 U 数，以及柜内设备（U 位、高度、型号深度、各面板端口数和已连数）。
 - `devices`：不在机柜里、直接放在机房里的设备（只计数）。
 - `workstations`：座位坐标和在线状态（在线 = 最近一次探测时看到过，见 `contracts/workstations.ts` 的 `isOnline`）。
 - `links`：两端都在本机房的线缆；`externalLinkCount`：一端在本机房、另一端在别处的线缆数。

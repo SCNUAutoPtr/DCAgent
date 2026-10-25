@@ -54,7 +54,7 @@ function main() {
   const deny = existsSync(localFile)
     ? readFileSync(localFile, 'utf8').split('\n').map((s) => s.trim()).filter((s) => s && !s.startsWith('#'))
     : [];
-  const files = execFileSync('git', ['-c', 'core.quotepath=off', 'ls-files', '-z'], { cwd: root, encoding: 'utf8' })
+  const files = execFileSync('git', ['-c', 'core.quotepath=off', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], { cwd: root, encoding: 'utf8' })
     .split('\0')
     .filter((f) => f && !/(package-lock\.json|\.(png|jpe?g|gif|ico|svg|woff2?|ttf|glb|gltf|dump))$/i.test(f));
   const bad = [];
