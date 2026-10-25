@@ -31,17 +31,36 @@ import {
   GroupOutlined,
   BorderOuterOutlined,
 } from '@ant-design/icons';
-import { PortType, getPortSize, PORT_TYPE_OPTIONS } from '@/constants/portSizes';
+import { useTranslation } from 'react-i18next';
+import { PORT_TYPES, type PortType } from '@contracts/enums';
+import { PORT_TYPE_INFO } from '@/constants/portTypes';
 import { PortIcon } from './PortIcon';
+
+/** A port being drawn: same geometry fields as PortDto / TemplatePortDraft (millimetres from the panel's top-left). */
+/** Values of the "add port group" form. */
+interface PortGroupValues {
+  portType: PortType;
+  count: number;
+  layout: string;
+  numberingPattern: string;
+  spacing: number;
+  startX: number;
+  startY: number;
+  customPrefix?: string;
+}
 
 export interface PortDefinition {
   id?: string;
   number: string;
-  portType: string;
-  position: { x: number; y: number };
-  size: { width: number; height: number };
-  label?: string;
-  rotation?: number; // 旋转角度：0, 90, 180, 270
+  portType: PortType;
+  xMm: number;
+  yMm: number;
+  wMm: number;
+  hMm: number;
+  rotation: number;
+  label?: string | null;
+  /** carried through untouched (templates may use a {n} pattern) */
+  ifName?: string | null;
 }
 
 interface PanelCanvasEditorProps {
@@ -90,10 +109,10 @@ function PreviewCanvas({ width, height, ports }: PreviewCanvasProps) {
 
     // 绘制端口
     ports.forEach((port) => {
-      const x = port.position.x * previewZoom;
-      const y = port.position.y * previewZoom;
-      const w = port.size.width * previewZoom;
-      const h = port.size.height * previewZoom;
+      const x = port.xMm * previewZoom;
+      const y = port.yMm * previewZoom;
+      const w = port.wMm * previewZoom;
+      const h = port.hMm * previewZoom;
 
       ctx.save();
 
@@ -125,10 +144,10 @@ function PreviewCanvas({ width, height, ports }: PreviewCanvasProps) {
 
       // 检查端口是否超出面板
       const isOutOfBounds =
-        port.position.x < 0 ||
-        port.position.y < 0 ||
-        port.position.x + port.size.width > width ||
-        port.position.y + port.size.height > height;
+        port.xMm < 0 ||
+        port.yMm < 0 ||
+        port.xMm + port.wMm > width ||
+        port.yMm + port.hMm > height;
 
       if (isOutOfBounds) {
         // 绘制警告标记
@@ -167,6 +186,7 @@ export default function PanelCanvasEditor({
 }: PanelCanvasEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { t: tPanel } = useTranslation('panel');
 
   const [zoom, setZoom] = useState(1.5);
   const [ports, setPorts] = useState<PortDefinition[]>(initialPorts);
@@ -231,15 +251,15 @@ export default function PanelCanvasEditor({
       const rotation = port.rotation || 0; // 旋转角度，默认0
 
       // 获取端口类型对应的颜色
-      const portTypeInfo = port.portType ? getPortSize(port.portType as PortType) : null;
+      const portTypeInfo = port.portType ? PORT_TYPE_INFO[port.portType] : null;
       const portColor = portTypeInfo?.color || PORT_COLORS.AVAILABLE;
 
       // 保存当前画布状态
       ctx.save();
 
       // 计算端口中心点
-      const centerX = (port.position.x + port.size.width / 2) * zoom;
-      const centerY = (port.position.y + port.size.height / 2) * zoom;
+      const centerX = (port.xMm + port.wMm / 2) * zoom;
+      const centerY = (port.yMm + port.hMm / 2) * zoom;
 
       // 移动到端口中心，进行旋转
       ctx.translate(centerX, centerY);
@@ -248,20 +268,20 @@ export default function PanelCanvasEditor({
       // 绘制端口矩形（相对于中心点）
       ctx.fillStyle = isSelected ? PORT_COLORS.SELECTED : portColor;
       ctx.fillRect(
-        (-port.size.width / 2) * zoom,
-        (-port.size.height / 2) * zoom,
-        port.size.width * zoom,
-        port.size.height * zoom
+        (-port.wMm / 2) * zoom,
+        (-port.hMm / 2) * zoom,
+        port.wMm * zoom,
+        port.hMm * zoom
       );
 
       // 绘制端口边框
       ctx.strokeStyle = isSelected ? '#0050b3' : '#8c8c8c';
       ctx.lineWidth = isSelected ? 2 : 1;
       ctx.strokeRect(
-        (-port.size.width / 2) * zoom,
-        (-port.size.height / 2) * zoom,
-        port.size.width * zoom,
-        port.size.height * zoom
+        (-port.wMm / 2) * zoom,
+        (-port.hMm / 2) * zoom,
+        port.wMm * zoom,
+        port.hMm * zoom
       );
 
       // 绘制端口编号
@@ -283,7 +303,7 @@ export default function PanelCanvasEditor({
         ctx.fillText(
           portTypeInfo.label,
           centerX,
-          (port.position.y + port.size.height + 2) * zoom
+          (port.yMm + port.hMm + 2) * zoom
         );
       }
     });
@@ -346,10 +366,10 @@ export default function PanelCanvasEditor({
     // 查找点击的端口
     const clickedPort = ports.find(
       (port) =>
-        x >= port.position.x &&
-        x <= port.position.x + port.size.width &&
-        y >= port.position.y &&
-        y <= port.position.y + port.size.height
+        x >= port.xMm &&
+        x <= port.xMm + port.wMm &&
+        y >= port.yMm &&
+        y <= port.yMm + port.hMm
     );
 
     if (clickedPort) {
@@ -378,7 +398,7 @@ export default function PanelCanvasEditor({
         const initialPositions = new Map<string, { x: number; y: number }>();
         ports.forEach(port => {
           if (newSelected.has(port.number)) {
-            initialPositions.set(port.number, { ...port.position });
+            initialPositions.set(port.number, { x: port.xMm, y: port.yMm });
           }
         });
         setDraggedPortsInitialPos(initialPositions);
@@ -426,12 +446,13 @@ export default function PanelCanvasEditor({
               let newY = initialPos.y + deltaY;
 
               // 边界限制
-              newX = Math.max(0, Math.min(newX, width - port.size.width));
-              newY = Math.max(0, Math.min(newY, height - port.size.height));
+              newX = Math.max(0, Math.min(newX, width - port.wMm));
+              newY = Math.max(0, Math.min(newY, height - port.hMm));
 
               return {
                 ...port,
-                position: { x: newX, y: newY },
+                xMm: newX,
+                yMm: newY,
               };
             }
           }
@@ -468,8 +489,8 @@ export default function PanelCanvasEditor({
 
       // 找出选择框内的所有端口
       const portsInSelection = ports.filter((port) => {
-        const portCenterX = port.position.x + port.size.width / 2;
-        const portCenterY = port.position.y + port.size.height / 2;
+        const portCenterX = port.xMm + port.wMm / 2;
+        const portCenterY = port.yMm + port.hMm / 2;
         return (
           portCenterX >= x1 &&
           portCenterX <= x2 &&
@@ -507,7 +528,7 @@ export default function PanelCanvasEditor({
 
   // 查找空白位置（避免重叠）
   const findEmptyPosition = (
-    newPortSize: { width: number; height: number },
+    newPortSize: { w: number; h: number },
     existingPorts: PortDefinition[]
   ): { x: number; y: number } => {
     const margin = 5; // 端口之间的最小间距
@@ -516,20 +537,20 @@ export default function PanelCanvasEditor({
     // 检查两个矩形是否重叠
     const isOverlapping = (
       pos: { x: number; y: number },
-      size: { width: number; height: number },
+      size: { w: number; h: number },
       port: PortDefinition
     ): boolean => {
       return !(
-        pos.x + size.width + margin < port.position.x ||
-        pos.x > port.position.x + port.size.width + margin ||
-        pos.y + size.height + margin < port.position.y ||
-        pos.y > port.position.y + port.size.height + margin
+        pos.x + size.w + margin < port.xMm ||
+        pos.x > port.xMm + port.wMm + margin ||
+        pos.y + size.h + margin < port.yMm ||
+        pos.y > port.yMm + port.hMm + margin
       );
     };
 
     // 从左上角开始，按网格搜索空白位置
-    for (let y = 10; y < height - newPortSize.height - 10; y += gridSize) {
-      for (let x = 10; x < width - newPortSize.width - 10; x += gridSize) {
+    for (let y = 10; y < height - newPortSize.h - 10; y += gridSize) {
+      for (let x = 10; x < width - newPortSize.w - 10; x += gridSize) {
         const pos = { x, y };
         const hasOverlap = existingPorts.some((port) =>
           isOverlapping(pos, newPortSize, port)
@@ -543,8 +564,8 @@ export default function PanelCanvasEditor({
 
     // 如果找不到空位，就放在右下角
     return {
-      x: Math.max(10, width - newPortSize.width - 10),
-      y: Math.max(10, height - newPortSize.height - 10),
+      x: Math.max(10, width - newPortSize.w - 10),
+      y: Math.max(10, height - newPortSize.h - 10),
     };
   };
 
@@ -552,18 +573,20 @@ export default function PanelCanvasEditor({
   const handleAddPort = () => {
     setAddPortModalVisible(true);
     addPortForm.setFieldsValue({
-      portType: PortType.RJ45,
+      portType: 'RJ45',
       label: '',
     });
   };
 
   // 端口类型选项（带图标）
-  const portTypeOptionsWithIcons = PORT_TYPE_OPTIONS.map((option) => ({
-    ...option,
+  const portTypeOptionsWithIcons = PORT_TYPES.map((type) => ({
+    value: type,
     label: (
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <PortIcon portType={option.value} size={20} />
-        <span>{option.label}</span>
+        <PortIcon portType={type} size={20} />
+        <span>
+          {PORT_TYPE_INFO[type].label} - {tPanel(`portTypes.${type}`)}
+        </span>
       </div>
     ),
   }));
@@ -572,7 +595,7 @@ export default function PanelCanvasEditor({
   const handleConfirmAddPort = () => {
     addPortForm.validateFields().then((values) => {
       const { portType, label } = values;
-      const portSize = getPortSize(portType);
+      const portSize = PORT_TYPE_INFO[portType as PortType];
 
       // 使用智能算法找到空白位置
       const emptyPosition = findEmptyPosition(portSize, ports);
@@ -581,8 +604,11 @@ export default function PanelCanvasEditor({
       const newPort: PortDefinition = {
         number: newPortNumber,
         portType,
-        position: emptyPosition, // 使用智能位置
-        size: { width: portSize.width, height: portSize.height },
+        xMm: emptyPosition.x,
+        yMm: emptyPosition.y,
+        wMm: portSize.w,
+        hMm: portSize.h,
+        rotation: 0,
         label: label || undefined,
       };
       const newPorts = [...ports, newPort];
@@ -626,10 +652,8 @@ export default function PanelCanvasEditor({
       if (selectedPorts.has(port.number)) {
         return {
           ...port,
-          position: {
-            x: Math.max(0, Math.min(width - port.size.width, port.position.x + dx)),
-            y: Math.max(0, Math.min(height - port.size.height, port.position.y + dy)),
-          },
+          xMm: Math.max(0, Math.min(width - port.wMm, port.xMm + dx)),
+          yMm: Math.max(0, Math.min(height - port.hMm, port.yMm + dy)),
         };
       }
       return port;
@@ -670,13 +694,13 @@ export default function PanelCanvasEditor({
 
   // 批量添加端口组
   const [addPortGroupModalVisible, setAddPortGroupModalVisible] = useState(false);
-  const [addPortGroupForm] = Form.useForm();
+  const [addPortGroupForm] = Form.useForm<PortGroupValues>();
   const [previewPorts, setPreviewPorts] = useState<PortDefinition[]>([]);
 
   const handleAddPortGroup = () => {
     setAddPortGroupModalVisible(true);
     addPortGroupForm.setFieldsValue({
-      portType: PortType.RJ45,
+      portType: 'RJ45',
       count: 8,
       layout: 'horizontal',
       numberingPattern: 'sequential',
@@ -686,7 +710,7 @@ export default function PanelCanvasEditor({
     });
     // 初始化预览
     updatePreview({
-      portType: PortType.RJ45,
+      portType: 'RJ45',
       count: 8,
       layout: 'horizontal',
       numberingPattern: 'sequential',
@@ -707,7 +731,7 @@ export default function PanelCanvasEditor({
     startY: number,
     customPrefix?: string
   ): PortDefinition[] => {
-    const portSize = getPortSize(portType);
+    const portSize = PORT_TYPE_INFO[portType as PortType];
     const newPorts: PortDefinition[] = [];
 
     // 根据编号模式生成端口编号和位置的映射
@@ -760,22 +784,24 @@ export default function PanelCanvasEditor({
       let y = startY;
 
       if (layout === 'horizontal') {
-        x = startX + index * (portSize.width + spacing);
+        x = startX + index * (portSize.w + spacing);
       } else if (layout === 'vertical') {
-        y = startY + index * (portSize.height + spacing);
+        y = startY + index * (portSize.h + spacing);
       } else if (layout === 'grid') {
         const cols = numberingPattern === 'switch' ? Math.ceil(count / 2) : Math.ceil(Math.sqrt(count));
         const row = Math.floor(index / cols);
         const col = index % cols;
-        x = startX + col * (portSize.width + spacing);
-        y = startY + row * (portSize.height + spacing);
+        x = startX + col * (portSize.w + spacing);
+        y = startY + row * (portSize.h + spacing);
       }
 
       newPorts.push({
         number,
         portType,
-        position: { x, y },
-        size: { width: portSize.width, height: portSize.height },
+        xMm: x,
+        yMm: y,
+        wMm: portSize.w,
+        hMm: portSize.h,
         rotation: 0,
       });
     });
@@ -784,7 +810,7 @@ export default function PanelCanvasEditor({
   };
 
   // 更新预览
-  const updatePreview = (values: any) => {
+  const updatePreview = (values: Partial<PortGroupValues>) => {
     const { portType, count, layout, numberingPattern, spacing, startX, startY, customPrefix } = values;
     if (portType && count && layout && numberingPattern && spacing !== undefined && startX !== undefined && startY !== undefined) {
       const preview = calculateGridPorts(portType, count, layout, numberingPattern, spacing, startX, startY, customPrefix);
@@ -796,30 +822,30 @@ export default function PanelCanvasEditor({
   const handleAutoAdjustPorts = () => {
     try {
       const values = addPortGroupForm.getFieldsValue();
-      const { portType, count, layout, numberingPattern, spacing, startX, startY, customPrefix } = values;
+      const { portType, count, layout, numberingPattern, spacing, startX, startY } = values;
 
       if (!portType || !count || !layout || !numberingPattern || spacing === undefined || startX === undefined || startY === undefined) {
         message.warning('请先填写完整的表单信息');
         return;
       }
 
-      const portSize = getPortSize(portType);
+      const portSize = PORT_TYPE_INFO[portType as PortType];
       let adjustedStartX = startX;
       let adjustedStartY = startY;
 
       // 计算端口组的边界
       if (layout === 'horizontal') {
-        const totalWidth = count * (portSize.width + spacing) - spacing;
+        const totalWidth = count * (portSize.w + spacing) - spacing;
         if (startX + totalWidth > width) {
           adjustedStartX = Math.max(10, width - totalWidth - 10);
         }
-        if (startY + portSize.height > height) {
-          adjustedStartY = Math.max(10, height - portSize.height - 10);
+        if (startY + portSize.h > height) {
+          adjustedStartY = Math.max(10, height - portSize.h - 10);
         }
       } else if (layout === 'vertical') {
-        const totalHeight = count * (portSize.height + spacing) - spacing;
-        if (startX + portSize.width > width) {
-          adjustedStartX = Math.max(10, width - portSize.width - 10);
+        const totalHeight = count * (portSize.h + spacing) - spacing;
+        if (startX + portSize.w > width) {
+          adjustedStartX = Math.max(10, width - portSize.w - 10);
         }
         if (startY + totalHeight > height) {
           adjustedStartY = Math.max(10, height - totalHeight - 10);
@@ -827,8 +853,8 @@ export default function PanelCanvasEditor({
       } else if (layout === 'grid') {
         const cols = numberingPattern === 'switch' ? Math.ceil(count / 2) : Math.ceil(Math.sqrt(count));
         const rows = Math.ceil(count / cols);
-        const totalWidth = cols * (portSize.width + spacing) - spacing;
-        const totalHeight = rows * (portSize.height + spacing) - spacing;
+        const totalWidth = cols * (portSize.w + spacing) - spacing;
+        const totalHeight = rows * (portSize.h + spacing) - spacing;
 
         if (startX + totalWidth > width) {
           adjustedStartX = Math.max(10, width - totalWidth - 10);
@@ -919,7 +945,7 @@ export default function PanelCanvasEditor({
           okText="添加"
           cancelText="取消"
         >
-          <Form form={addPortForm} layout="vertical">
+          <Form name="panel-canvas-editor-add-port-form" form={addPortForm} layout="vertical">
             <Form.Item
               name="portType"
               label="端口类型"
@@ -1223,7 +1249,7 @@ export default function PanelCanvasEditor({
           <Card size="small" title="端口类型">
             <Space wrap>
               {Array.from(new Set(ports.map(p => p.portType).filter(Boolean))).map((portType) => {
-                const portSize = getPortSize(portType as PortType);
+                const portSize = PORT_TYPE_INFO[portType as PortType];
                 return (
                   <Tag
                     key={portType}
@@ -1231,7 +1257,7 @@ export default function PanelCanvasEditor({
                     style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px' }}
                   >
                     <PortIcon portType={portType as PortType} size={16} />
-                    <span>{portSize.label} - {portSize.width}×{portSize.height}mm</span>
+                    <span>{portSize.label} - {portSize.w}×{portSize.h}mm</span>
                   </Tag>
                 );
               })}

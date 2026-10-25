@@ -5,21 +5,22 @@
   "editTitle": "编辑面板",
   "fields": {
     "id": "ID",
-    "shortId": "shortID",
     "name": "面板名称",
     "type": "类型",
     "device": "所属设备",
     "template": "模板",
-    "isCustomized": "自定义",
     "portCount": "端口数",
     "createdAt": "创建时间",
-    "actions": "操作"
+    "actions": "操作",
+    "label": "标签",
+    "face": "朝向",
+    "connected": "已连接",
+    "notes": "备注"
   },
   "panelTypes": {
-    "ETHERNET": "网口",
-    "FIBER": "光纤",
+    "NETWORK": "网络面板",
     "POWER": "电源",
-    "SERIAL": "串口",
+    "CONSOLE": "控制台",
     "USB": "USB",
     "OTHER": "其他"
   },
@@ -27,19 +28,16 @@
     "name": "例如：eth0",
     "type": "选择面板类型",
     "device": "选择设备",
-    "template": "选择模板",
     "search": "搜索面板名称"
   },
   "messages": {
     "deleteConfirm": "确定要删除这个面板吗？",
-    "deleteWarning": "删除后将同时删除其下所有端口",
+    "deleteWarning": "端口上还有线缆、光模块或 IP 时会要求再次确认",
     "createSuccess": "面板创建成功",
     "updateSuccess": "面板更新成功",
     "deleteSuccess": "面板删除成功",
-    "loadFailed": "加载面板列表失败",
-    "updateFailed": "更新失败",
-    "createFailed": "创建失败",
-    "deleteFailed": "删除失败"
+    "forceDeleteTitle": "面板的端口仍在使用",
+    "forceDeleteContent": "强制删除会把插在这些端口上的线缆端子变成悬空，并解除 IP 绑定。装着光模块的端口需要先卸下模块。"
   },
   "validation": {
     "nameRequired": "请输入面板名称",
@@ -48,10 +46,6 @@
   },
   "table": {
     "total": "共 {{total}} 条"
-  },
-  "labels": {
-    "customized": "自定义",
-    "fromTemplate": "从模板"
   },
   "buttons": {
     "create": "新建面板",
@@ -64,5 +58,213 @@
   "filters": {
     "selectDevice": "选择设备",
     "selectType": "选择类型"
+  },
+  "faces": {
+    "FRONT": "前面板",
+    "REAR": "后面板"
+  },
+  "view": {
+    "size": "尺寸 {{w}} × {{h}} mm",
+    "noPorts": "暂无端口",
+    "number": "编号",
+    "type": "类型",
+    "state": "状态",
+    "plug": "插头",
+    "ifName": "接口名",
+    "module": "光模块",
+    "yes": "有",
+    "portStates": {
+      "FREE": "空闲",
+      "CONNECTED": "已连接",
+      "RESERVED": "预留",
+      "FAULTY": "故障"
+    }
+  },
+  "portTypes": {
+    "RJ45": "以太网电口",
+    "SFP": "SFP 光口 (1G)",
+    "SFP_PLUS": "SFP+ 光口 (10G)",
+    "SFP28": "SFP28 光口 (25G)",
+    "QSFP": "QSFP 光口 (40G)",
+    "QSFP28": "QSFP28 光口 (100G)",
+    "QSFP_DD": "QSFP-DD 光口 (400G)",
+    "CONSOLE": "控制台口",
+    "USB": "USB 口",
+    "POWER": "电源口",
+    "OTHER": "其他"
+  },
+  "adminStates": {
+    "NORMAL": "正常",
+    "RESERVED": "预留",
+    "FAULTY": "故障"
+  },
+  "editor": {
+    "createTitle": "新建设备面板",
+    "editTitle": "编辑设备面板",
+    "device": "设备",
+    "deviceType": "设备类型",
+    "model": "型号",
+    "uPosition": "U 位",
+    "widthMm": "宽度 (mm)",
+    "heightMm": "高度 (mm)",
+    "heightHint": "设备 {{u}}U = {{mm}} mm；标准 19 英寸宽 482.6 mm",
+    "template": "模板",
+    "noTemplate": "不使用模板",
+    "templateInfo": "{{count}} 个端口，r{{revision}}",
+    "templateOutdated": "模板已更新到 r{{revision}}，可以重新套用",
+    "applyTemplate": "套用模板",
+    "ports": "端口布局",
+    "portsHint": "拖动端口调整位置，保存时只写回有变化的端口",
+    "saved": "面板已保存",
+    "deleted": "面板已删除",
+    "delete": "删除面板",
+    "placeholders": {
+      "name": "例如：前面板"
+    },
+    "templatesForModel": "本型号的模板",
+    "otherTemplates": "其他模板"
+  },
+  "generator": {
+    "outside": "超出面板范围",
+    "auto": "自动",
+    "dragHint": "共 {{count}} 个端口。拖动单个端口微调位置，按住 Shift 拖动可移动整组",
+    "clearOverrides": "清除 {{count}} 处手动微调",
+    "issuesTitle": "生成器参数有问题，修正后才能保存",
+    "issues": {
+      "DUPLICATE_NUMBER": "端口编号重复：{{value}}",
+      "DUPLICATE_IFNAME": "接口名重复：{{value}}",
+      "NAMES_COUNT_MISMATCH": "第 {{value}} 组的自定义编号个数与端口数不一致",
+      "UNKNOWN_OVERRIDE": "微调指向不存在的端口：{{value}}"
+    },
+    "group": "端口组 {{n}}",
+    "moveUp": "上移",
+    "moveDown": "下移",
+    "removeGroup": "删除该组",
+    "portType": "端口类型",
+    "count": "数量",
+    "numbering": "编号方式",
+    "numberingPrefix": "前缀 + 序号",
+    "numberingNames": "逐个命名",
+    "names": "编号（逗号分隔）",
+    "prefix": "编号前缀",
+    "start": "起始序号",
+    "step": "步长",
+    "ifName": "接口名（{n} 为序号）",
+    "rows": "行数",
+    "order": "排列顺序",
+    "orders": {
+      "ROW_MAJOR": "按行顺序",
+      "COLUMN_MAJOR": "奇上偶下（按列）"
+    },
+    "gap": "与上一组间距 (mm)",
+    "xMm": "X (mm)",
+    "yMm": "Y (mm)",
+    "geometry": "尺寸与间距",
+    "pitchX": "列间距 (mm)",
+    "pitchY": "行间距 (mm)",
+    "wMm": "端口宽 (mm)",
+    "hMm": "端口高 (mm)",
+    "rotation": "旋转",
+    "addGroup": "添加端口组",
+    "presets": {
+      "switch48ge4xge": "48 电口 + 4 万兆光口交换机（奇上偶下）",
+      "switch24ge4xge": "24 电口 + 4 万兆光口交换机（奇上偶下）",
+      "patchPanel24": "24 口配线架",
+      "serverRear": "服务器后面板：2 电源 + 4 网口 + BMC + 2 USB + VGA"
+    }
+  },
+  "apply": {
+    "title": "套用模板",
+    "confirm": "确认套用",
+    "done": "模板已套用",
+    "create": "新增 {{count}}",
+    "update": "更新 {{count}}",
+    "delete": "将删除 {{count}}",
+    "kept": "保留 {{count}}",
+    "reasons": {
+      "CABLE": "接着线缆",
+      "MODULE": "装着光模块",
+      "IP": "绑定 IP",
+      "WORKSTATION": "挂着工作站",
+      "OBSERVATION": "有采集记录",
+      "ADMIN_STATE": "状态为预留或故障",
+      "LABEL": "填了标签",
+      "NOTES": "写了备注"
+    },
+    "conflictsTitle": "存在冲突，不能套用",
+    "conflicts": {
+      "IFNAME_TAKEN": "端口 {{number}} 仍在使用，并占用了模板需要的接口名 {{value}}",
+      "MODULE_DOES_NOT_FIT": "端口 {{number}} 装着的光模块不适配新的端口类型 {{value}}，请先卸下模块"
+    },
+    "untouched": "按编号匹配端口；已有端口的状态、标签、备注和连接不会改动。模板里没有的端口，只要在用或者填过状态、标签、备注就保留，不会删除。"
+  },
+  "batch": {
+    "title": "批量套用：{{name}}",
+    "confirm": "套用到 {{count}} 台设备",
+    "done": "已套用到 {{count}} 台设备",
+    "noModel": "模板没有关联设备型号，不能批量套用",
+    "hint": "型号 {{model}} 共 {{count}} 台设备。所选设备在同一个事务里套用，任一冲突则全部不执行。",
+    "device": "设备",
+    "panel": "目标面板",
+    "newPanel": "新建面板",
+    "newPanelDetail": "该设备没有对应朝向的面板，将按模板新建一个（自动分配标签）。",
+    "summary": "变化",
+    "conflicts": "{{count}} 处冲突"
+  },
+  "suggest": {
+    "title": "该型号有 {{count}} 个面板模板",
+    "hint": "勾选的模板会在设备创建后自动生成面板和端口。"
+  },
+  "templates": {
+    "title": "面板模板",
+    "description": "用参数化生成器或逐口布局定义面板，关联设备型号后可在新建设备时自动生成，也可批量套用到同型号设备。",
+    "createTitle": "新建面板模板",
+    "editTitle": "编辑模板：{{name}}",
+    "viewTitle": "模板预览",
+    "fields": {
+      "name": "名称",
+      "type": "面板类型",
+      "face": "朝向",
+      "deviceModel": "设备型号",
+      "widthMm": "面板宽 (mm)",
+      "heightMm": "面板高 (mm)",
+      "description": "说明",
+      "size": "尺寸",
+      "source": "定义方式",
+      "portCount": "端口数",
+      "panelCount": "已套用面板",
+      "revision": "版本"
+    },
+    "validation": {
+      "nameRequired": "请输入模板名称"
+    },
+    "deviceModelHint": "关联后，新建该型号设备时会提示此模板，并可批量套用",
+    "heightHint": "约 {{u}}U",
+    "modeGenerator": "参数化生成",
+    "modeManual": "逐口布局",
+    "startFromPreset": "从预设开始…",
+    "revisionHint": "已有 {{count}} 个面板套用此模板；修改端口会升版本，面板上会提示可重新套用",
+    "manualHint": "逐口布局保存后不再保留生成器参数。",
+    "toGeneratorTitle": "切换回参数化生成？",
+    "toGeneratorContent": "手工调整的端口位置会被生成器结果替换。",
+    "created": "模板已创建",
+    "updated": "模板已保存",
+    "deleted": "模板已删除",
+    "deleteConfirm": "删除这个模板？",
+    "deleteConfirmDescription": "已套用的 {{count}} 个面板和端口保留不变，只解除与模板的关联。",
+    "imported": "导入完成：新增 {{created}}，更新 {{updated}}，未变 {{unchanged}}",
+    "exported": "已导出 {{count}} 个模板",
+    "importInvalid": "文件不是 {{format}} 格式",
+    "panelCount": "已有 {{count}} 个面板套用此模板",
+    "actions": {
+      "view": "预览",
+      "edit": "编辑",
+      "batchApply": "批量套用",
+      "delete": "删除",
+      "importPresets": "导入系统预设",
+      "import": "导入 JSON",
+      "export": "导出 JSON",
+      "create": "新建模板"
+    }
   }
 }

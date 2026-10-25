@@ -1,0 +1,99 @@
+{
+  "title": "可观测性",
+  "description": "座位状态、流量和交换机端口健康，一页看全",
+  "tabs": {
+    "seats": "座位",
+    "flows": "流量",
+    "ports": "端口体检",
+    "unmatched": "待认领"
+  },
+  "common": {
+    "refresh": "刷新",
+    "autoRefresh": "自动刷新",
+    "empty": "暂无数据"
+  },
+  "seats": {
+    "room": "机房",
+    "selectRoom": "选择机房",
+    "online": "开机",
+    "offline": "关机",
+    "unlocated": "未定位接线",
+    "traffic": "流量",
+    "lastSeen": "最后在线",
+    "switchPort": "接线",
+    "legend": "按所接交换机分组；绿色为开机，灰色为关机，边框越粗流量越大",
+    "byLayout": "按座位",
+    "bySwitch": "按交换机",
+    "front": "前 / 屏幕",
+    "layoutLegend": "按教室真实座位排布；顶部色条是所接交换机，底下数字是端口号；绿色为开机，边框越粗流量越大",
+    "noLayout": "这个机房的工作站还没有座位坐标，下面按交换机分组显示。在平面图编辑器里摆好座位后就会按实际座位画出来。",
+    "noWiring": "这个机房的工作站都还没有对应的交换机端口（没有接线记录），所以都在“未定位接线”下。同步端口后会按交换机分组。"
+  },
+  "flows": {
+    "window": "时间窗口",
+    "sampler": "采样设备",
+    "allSamplers": "全部",
+    "limit": "条数",
+    "source": "源",
+    "destination": "目的",
+    "protocol": "协议",
+    "bytes": "流量",
+    "rate": "平均速率",
+    "records": "样本数",
+    "buffered": "缓冲中的流记录",
+    "hint": "流量来自 sFlow/NetStream 采样估算；由采集脚本推送"
+  },
+  "ports": {
+    "switchName": "交换机 sysname",
+    "switchNamePlaceholder": "如 445A-U6",
+    "interfaceBrief": "display interface brief 输出",
+    "transceiver": "display transceiver diagnosis 输出（可选）",
+    "save": "保存为快照",
+    "analyze": "体检",
+    "findings": "发现",
+    "noFindings": "没有发现问题",
+    "interfaces": "端口",
+    "severity": "级别",
+    "critical": "严重",
+    "warning": "注意",
+    "kind": "类型",
+    "value": "数值",
+    "margin": "余量(dB)",
+    "message": "说明",
+    "phy": "物理状态",
+    "inUtil": "入利用率",
+    "outUtil": "出利用率",
+    "inErrors": "入错包",
+    "outErrors": "出错包",
+    "history": "历史",
+    "switches": "已采集的交换机",
+    "lastCollected": "最近采集",
+    "observations": "快照条数",
+    "saved": "已保存 {{count}} 条",
+    "kinds": {
+      "RX_POWER": "收光",
+      "TX_POWER": "发光",
+      "INPUT_ERRORS": "入错包",
+      "OUTPUT_ERRORS": "出错包",
+      "UTILIZATION": "利用率",
+      "ERRORS_GROWING": "错包增长"
+    },
+    "unmatched": "没有 sysname 为 {{sysname}} 的设备，{{count}} 条快照已暂存到待认领",
+    "noDevice": "未关联设备，无法查看历史"
+  },
+  "unmatched": {
+    "source": "来源",
+    "sysname": "sysname",
+    "ifName": "接口",
+    "workstation": "工作站",
+    "createdAt": "采集时间",
+    "resolve": "认领",
+    "resolveTitle": "认领采集数据",
+    "device": "设备",
+    "resolved": "已认领",
+    "sources": {
+      "WORKSTATION_ATTACH": "工作站接线",
+      "PORT_OBSERVATION": "端口快照"
+    }
+  }
+}

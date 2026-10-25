@@ -1,268 +1,171 @@
-import { useState, useEffect } from 'react';
-import {
-  Card,
-  Table,
-  Button,
-  Modal,
-  Form,
-  Input,
-  Select,
-  message,
-  Space,
-  Popconfirm,
-  Typography,
-  Tag,
-  InputNumber,
-} from 'antd';
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  HomeOutlined,
-  ScanOutlined,
-} from '@ant-design/icons';
+import { useCallback, useEffect, useState } from 'react';
+import { Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Typography, message } from 'antd';
+import { DeleteOutlined, EditOutlined, HomeOutlined, LayoutOutlined, PlusOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { Room, DataCenter } from '@/types';
-import { roomService } from '@/services/roomService';
-import { dataCenterService } from '@/services/dataCenterService';
-import { shortIdPoolService } from '@/services/shortIdPoolService';
-import { ShortIdFormatter } from '@/utils/shortIdFormatter';
+import { useNavigate, useParams } from 'react-router-dom';
+import type { DataCenterDto, RoomDto } from '@contracts/hierarchy';
+import type { RoomScene } from '@contracts/scene';
+import { formatShortId } from '@contracts/shortId';
+import { cabinetService, dataCenterService, roomService } from '@/services/hierarchyService';
+import { workstationService } from '@/services/workstationService';
+import { FloorPlanEditor, type FloorPlanCabinetInput, type FloorPlanSaveUpdates } from '@/components/FloorPlanEditor';
+import { LabelField } from '@/components/LabelField';
+import { parseLabelInput, rebindIfChanged } from '@/utils/labels';
+import { paths } from '@/routes';
+import { SearchInput } from '@/components/SearchInput';
 
 const { Title } = Typography;
-const { Search } = Input;
-const { Option } = Select;
+
+interface FormValues {
+  name: string;
+  floor?: string | null;
+  dataCenterId: string;
+  shortId?: string;
+}
 
 export default function RoomList() {
   const { t } = useTranslation(['room', 'common']);
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [dataCenters, setDataCenters] = useState<DataCenter[]>([]);
+  const navigate = useNavigate();
+  const { id: sceneRoomId } = useParams();
+  const [rooms, setRooms] = useState<RoomDto[]>([]);
+  const [dataCenters, setDataCenters] = useState<DataCenterDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingRoom, setEditingRoom] = useState<Room | null>(null);
-  const [selectedDataCenter, setSelectedDataCenter] = useState<string>();
-  const [shortIdChecking, setShortIdChecking] = useState(false);
-  const [form] = Form.useForm();
+  const [search, setSearch] = useState('');
+  const [dataCenterId, setDataCenterId] = useState<string>();
+  const [editing, setEditing] = useState<RoomDto | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [scene, setScene] = useState<RoomScene | null>(null);
+  const [form] = Form.useForm<FormValues>();
 
-  // 加载数据中心列表
-  const loadDataCenters = async () => {
-    try {
-      const data = await dataCenterService.getAll();
-      setDataCenters(data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  // 加载机房列表
-  const loadRooms = async (searchQuery?: string, dataCenterId?: string) => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      let data;
-      if (searchQuery) {
-        data = await roomService.search(searchQuery);
-      } else if (dataCenterId) {
-        data = await roomService.getAll(dataCenterId);
-      } else {
-        data = await roomService.getAll();
-      }
-      setRooms(data);
-    } catch (error) {
-      message.error(t('room:messages.loadFailed'));
-      console.error(error);
+      setRooms(await roomService.list({ dataCenterId, search: search || undefined }));
+    } catch {
+      // reported by rpc
     } finally {
       setLoading(false);
     }
-  };
+  }, [dataCenterId, search]);
 
   useEffect(() => {
-    loadDataCenters();
-    loadRooms();
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    dataCenterService.list().then(setDataCenters, () => undefined);
   }, []);
 
-  // 打开创建/编辑对话框
-  const handleOpenModal = (room?: Room) => {
-    if (room) {
-      setEditingRoom(room);
-      // 编辑模式：将数字shortID转换为显示格式
-      form.setFieldsValue({
-        ...room,
-        shortId: room.shortId ? ShortIdFormatter.toDisplayFormat(room.shortId) : undefined,
-      });
-    } else {
-      setEditingRoom(null);
-      form.resetFields();
-    }
-    setModalVisible(true);
-  };
-
-  // 关闭对话框
-  const handleCloseModal = () => {
-    setModalVisible(false);
-    setEditingRoom(null);
-    form.resetFields();
-  };
-
-  // 保存机房
-  const handleSave = async () => {
+  // /rooms/:id opens the floor plan of that room
+  const loadScene = useCallback(async (roomId: string) => {
     try {
-      const values = await form.validateFields();
+      setScene(await roomService.scene({ roomId }));
+    } catch {
+      setScene(null);
+    }
+  }, []);
 
-      // 处理shortID：转换为数字格式
-      let numericShortId: number | undefined = undefined;
-      if (values.shortId && typeof values.shortId === 'string' && values.shortId.trim()) {
-        try {
-          numericShortId = ShortIdFormatter.toNumericFormat(values.shortId.trim());
-        } catch (error) {
-          message.error('shortID格式无效，请使用 E-XXXXX 格式或纯数字');
-          return;
-        }
-      } else if (typeof values.shortId === 'number') {
-        numericShortId = values.shortId;
-      }
+  useEffect(() => {
+    if (sceneRoomId) loadScene(sceneRoomId);
+    else setScene(null);
+  }, [sceneRoomId, loadScene]);
 
-      const saveData = {
-        ...values,
-        shortId: numericShortId,
-      };
+  const open = (room?: RoomDto) => {
+    setEditing(room ?? null);
+    form.setFieldsValue({
+      name: room?.name ?? '',
+      floor: room?.floor ?? '',
+      dataCenterId: room?.dataCenterId ?? dataCenterId ?? dataCenters[0]?.id,
+      shortId: room?.label ? formatShortId(room.label.shortId) : '',
+    });
+    setModalOpen(true);
+  };
 
-      if (editingRoom) {
-        await roomService.update(editingRoom.id, saveData);
+  const save = async () => {
+    const values = await form.validateFields();
+    const shortId = parseLabelInput(values.shortId);
+    try {
+      if (editing) {
+        await roomService.update({ id: editing.id, name: values.name, floor: values.floor });
+        await rebindIfChanged({ kind: 'ROOM', id: editing.id }, editing.label?.shortId, shortId);
         message.success(t('room:messages.updateSuccess'));
       } else {
-        await roomService.create(saveData);
+        await roomService.create({ dataCenterId: values.dataCenterId, name: values.name, floor: values.floor, labelShortId: shortId });
         message.success(t('room:messages.createSuccess'));
       }
-      handleCloseModal();
-      loadRooms(undefined, selectedDataCenter);
-    } catch (error: any) {
-      if (error.errorFields) {
-        return;
-      }
-      message.error(editingRoom ? t('room:messages.updateFailed') : t('room:messages.createFailed'));
-      console.error(error);
+      setModalOpen(false);
+      load();
+    } catch {
+      // reported by rpc
     }
   };
 
-  // 验证shortID是否可用
-  const validateShortId = async (_: any, value: string) => {
-    if (!value || !value.trim()) {
-      return Promise.reject('请输入shortID');
-    }
-
-    setShortIdChecking(true);
+  const remove = async (id: string) => {
     try {
-      // 转换为数字格式
-      const numericShortId = ShortIdFormatter.toNumericFormat(value.trim());
-
-      // 如果是编辑模式且shortID未改变，跳过验证
-      if (editingRoom && editingRoom.shortId === numericShortId) {
-        return Promise.resolve();
-      }
-
-      const result = await shortIdPoolService.checkShortIdExists(numericShortId);
-      if (result.exists) {
-        // 如果是在Pool中
-        if (result.usedBy === 'pool') {
-          // 检查是否已经分配给其他实体（entityId 不为空且不是当前机房）
-          if (result.details?.entityId) {
-            // 如果是编辑模式，且这个shortID已经分配给当前机房，允许使用
-            if (editingRoom && result.details.entityId === editingRoom.id && result.details.entityType === 'ROOM') {
-              return Promise.resolve();
-            }
-            // 否则说明已经分配给其他实体了
-            return Promise.reject(`shortID已分配给其他${result.details.entityType || '实体'}`);
-          }
-          // entityId 为空，说明只是在池中，状态是GENERATED或PRINTED，可以使用
-          return Promise.resolve();
-        }
-        // 如果已经绑定到其他实体（在实体表中找到）
-        return Promise.reject(`shortID已被占用: ${result.entityType || '实体'}`);
-      }
-      return Promise.resolve();
-    } catch (error: any) {
-      if (error.message && error.message.includes('无效的shortID格式')) {
-        return Promise.reject('shortID格式无效，请使用 E-XXXXX 格式或纯数字');
-      }
-      return Promise.reject('验证失败');
-    } finally {
-      setShortIdChecking(false);
-    }
-  };
-
-  // 删除机房
-  const handleDelete = async (id: string) => {
-    try {
-      await roomService.delete(id);
+      await roomService.delete({ id });
       message.success(t('room:messages.deleteSuccess'));
-      loadRooms(undefined, selectedDataCenter);
-    } catch (error) {
-      message.error(t('room:messages.deleteFailed'));
-      console.error(error);
+      load();
+    } catch {
+      // reported by rpc
     }
   };
 
-  // 搜索
-  const handleSearch = (value: string) => {
-    loadRooms(value);
+  // the editor only hands back what changed; a failure is rethrown so it keeps the edits
+  const saveFloorPlan = async (updates: FloorPlanSaveUpdates) => {
+    if (!scene) return;
+    const roomId = scene.room.id;
+    if (updates.roomSize) await roomService.update({ id: roomId, widthM: updates.roomSize.width, depthM: updates.roomSize.height });
+    await Promise.all([
+      ...(updates.cabinets ?? []).map((c) => cabinetService.update({ id: c.id, fpX: c.position.x, fpY: c.position.y })),
+      ...(updates.workstations ?? []).map((w) => workstationService.update({ id: w.id, fpX: w.position.x, fpY: w.position.y })),
+    ]);
+    message.success(t('common:messages.saveSuccess'));
+    await loadScene(roomId);
   };
 
-  // 按数据中心过滤
-  const handleDataCenterFilter = (value: string) => {
-    setSelectedDataCenter(value);
-    loadRooms(undefined, value);
+  const createCabinet = async (input: FloorPlanCabinetInput) => {
+    if (!scene) return;
+    await cabinetService.create({
+      roomId: scene.room.id,
+      name: input.name,
+      heightU: input.height,
+      labelShortId: input.shortId,
+      fpX: input.position.x,
+      fpY: input.position.y,
+    });
+    message.success(t('room:floorPlan.createSuccess'));
+    await loadScene(scene.room.id);
+    load();
   };
 
   const columns = [
     {
-      title: t('room:fields.id'),
-      dataIndex: 'shortId',
-      key: 'shortId',
-      width: 80,
+      title: t('room:fields.label'),
+      key: 'label',
+      width: 110,
+      render: (_: unknown, r: RoomDto) => (r.label ? <Tag>{formatShortId(r.label.shortId)}</Tag> : '-'),
     },
-    {
-      title: t('room:fields.name'),
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: t('room:fields.floor'),
-      dataIndex: 'floor',
-      key: 'floor',
-      render: (text: string) => text || '-',
-    },
-    {
-      title: t('room:fields.dataCenter'),
-      dataIndex: 'dataCenterId',
-      key: 'dataCenterId',
-      render: (dataCenterId: string) => {
-        const dc = dataCenters.find((d) => d.id === dataCenterId);
-        return dc ? <Tag color="blue">{dc.name}</Tag> : '-';
-      },
-    },
-    {
-      title: t('room:fields.createdAt'),
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (text: string) => new Date(text).toLocaleString('zh-CN'),
-    },
+    { title: t('room:fields.name'), dataIndex: 'name', key: 'name' },
+    { title: t('room:fields.floor'), dataIndex: 'floor', key: 'floor', render: (v: string | null) => v || '-' },
+    { title: t('room:fields.dataCenter'), dataIndex: 'dataCenterName', key: 'dataCenterName', render: (v: string) => <Tag color="blue">{v}</Tag> },
+    { title: t('room:fields.cabinetCount'), dataIndex: 'cabinetCount', key: 'cabinetCount', width: 90 },
+    { title: t('room:fields.workstationCount'), dataIndex: 'workstationCount', key: 'workstationCount', width: 100 },
     {
       title: t('room:fields.actions'),
       key: 'actions',
-      width: 150,
-      render: (_: any, record: Room) => (
+      width: 260,
+      render: (_: unknown, record: RoomDto) => (
         <Space>
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleOpenModal(record)}
-          >
+          <Button type="link" size="small" icon={<LayoutOutlined />} onClick={() => navigate(paths.room(record.id))}>
+            {t('room:actions.floorPlan')}
+          </Button>
+          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => open(record)}>
             {t('common:actions.edit')}
           </Button>
           <Popconfirm
             title={t('room:messages.deleteConfirm')}
             description={t('room:messages.deleteWarning')}
-            onConfirm={() => handleDelete(record.id)}
+            onConfirm={() => remove(record.id)}
             okText={t('common:actions.confirm')}
             cancelText={t('common:actions.cancel')}
           >
@@ -280,102 +183,67 @@ export default function RoomList() {
       <Title level={2}>
         <HomeOutlined /> {t('room:title')}
       </Title>
-      <p style={{ color: '#8c8c8c', marginBottom: 24 }}>
-        {t('room:description')}
-      </p>
+      <p style={{ color: '#8c8c8c', marginBottom: 24 }}>{t('room:description')}</p>
 
       <Card>
         <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
-              {t('common:actions.create')} {t('room:createTitle')}
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => open()}>
+              {t('room:createTitle')}
             </Button>
             <Select
               placeholder={t('room:placeholders.dataCenter')}
               allowClear
               style={{ width: 200 }}
-              onChange={handleDataCenterFilter}
-              onClear={() => loadRooms()}
-            >
-              {dataCenters.map((dc) => (
-                <Option key={dc.id} value={dc.id}>
-                  {dc.name}
-                </Option>
-              ))}
-            </Select>
+              value={dataCenterId}
+              onChange={setDataCenterId}
+              options={dataCenters.map((dc) => ({ value: dc.id, label: dc.name }))}
+            />
           </Space>
-          <Search
-            placeholder={t('room:placeholders.search')}
-            allowClear
-            onSearch={handleSearch}
-            style={{ width: 300 }}
-          />
+          <SearchInput placeholder={t('room:placeholders.search')} onSearch={setSearch} style={{ width: 300 }} />
         </Space>
-
         <Table
           columns={columns}
           dataSource={rooms}
           loading={loading}
           rowKey="id"
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => t('room:table.total', { total }),
-          }}
+          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => t('room:table.total', { total }) }}
         />
       </Card>
 
       <Modal
-        title={editingRoom ? t('room:editTitle') : t('room:createTitle')}
-        open={modalVisible}
-        onOk={handleSave}
-        onCancel={handleCloseModal}
+        title={editing ? t('room:editTitle') : t('room:createTitle')}
+        open={modalOpen}
+        onOk={save}
+        onCancel={() => setModalOpen(false)}
         okText={t('common:actions.save')}
         cancelText={t('common:actions.cancel')}
+        forceRender
+        wrapProps={{ 'data-testid': 'room-modal' }}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="shortId"
-            label={
-              <Space>
-                <ScanOutlined />
-                ShortID
-              </Space>
-            }
-            rules={[
-              { required: true, message: '请输入shortID' },
-              { validator: validateShortId },
-            ]}
-            validateTrigger="onBlur"
-          >
-            <Input
-              placeholder="扫码或输入shortID（例如：E-00001 或 12345）"
-            />
-          </Form.Item>
-          <Form.Item
-            name="name"
-            label={t('room:fields.name')}
-            rules={[{ required: true, message: t('room:validation.nameRequired') }]}
-          >
-            <Input placeholder={t('room:placeholders.name')} />
+        <Form name="room-list-form" form={form} layout="vertical" data-testid="room-form">
+          <LabelField name="shortId" self={editing ? { kind: 'ROOM', id: editing.id } : undefined} testId="room-shortid-input" />
+          <Form.Item name="name" label={t('room:fields.name')} rules={[{ required: true, message: t('room:validation.nameRequired') }]}>
+            <Input placeholder={t('room:placeholders.name')} data-testid="room-name-input" />
           </Form.Item>
           <Form.Item name="floor" label={t('room:fields.floor')}>
-            <Input placeholder={t('room:placeholders.floor')} />
+            <Input placeholder={t('room:placeholders.floor')} data-testid="room-floor-input" />
           </Form.Item>
-          <Form.Item
-            name="dataCenterId"
-            label={t('room:fields.dataCenter')}
-            rules={[{ required: true, message: t('room:validation.dataCenterRequired') }]}
-          >
-            <Select placeholder={t('room:placeholders.dataCenter')}>
-              {dataCenters.map((dc) => (
-                <Option key={dc.id} value={dc.id}>
-                  {dc.name}
-                </Option>
-              ))}
-            </Select>
+          <Form.Item name="dataCenterId" label={t('room:fields.dataCenter')} rules={[{ required: true, message: t('room:validation.dataCenterRequired') }]}>
+            <Select
+              placeholder={t('room:placeholders.dataCenter')}
+              data-testid="room-datacenter-select"
+              disabled={!!editing}
+              options={dataCenters.map((dc) => ({ value: dc.id, label: dc.name }))}
+            />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal title={null} open={!!sceneRoomId && !!scene} onCancel={() => navigate(paths.rooms())} footer={null} width="90%" style={{ top: 20 }} destroyOnHidden>
+        {scene && (
+          <FloorPlanEditor scene={scene} onSave={saveFloorPlan} onCreateCabinet={createCabinet} onCabinetClick={(id) => navigate(paths.cabinet(id))} />
+        )}
       </Modal>
     </div>
   );

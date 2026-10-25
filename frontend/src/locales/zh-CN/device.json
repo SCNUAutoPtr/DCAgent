@@ -4,7 +4,6 @@
   "createTitle": "新建设备",
   "editTitle": "编辑设备",
   "fields": {
-    "id": "ID",
     "name": "设备名称",
     "type": "类型",
     "model": "型号",
@@ -13,7 +12,13 @@
     "uHeight": "占用U数",
     "cabinet": "所在位置",
     "createdAt": "创建时间",
-    "actions": "操作"
+    "actions": "操作",
+    "sysname": "sysname",
+    "notes": "备注",
+    "placement": "位置类型",
+    "room": "机房",
+    "panelCount": "面板数",
+    "uHeightUnknown": "高度未知"
   },
   "deviceTypes": {
     "SERVER": "服务器",
@@ -27,29 +32,28 @@
   "placeholders": {
     "name": "例如：WEB-Server-01",
     "type": "选择设备类型",
-    "model": "例如：Dell PowerEdge R740",
+    "model": "选择设备型号",
     "serialNo": "例如：SN123456789",
-    "uPosition": "1",
-    "uHeight": "1",
     "cabinet": "选择机柜",
-    "search": "搜索设备名称或型号"
+    "search": "搜索设备名称或型号",
+    "sysname": "与交换机配置一致，如 445A-U6",
+    "room": "选择机房"
   },
   "messages": {
     "deleteConfirm": "确定要删除这个设备吗？",
-    "deleteWarning": "删除后将同时删除其下所有面板和端口",
+    "deleteWarning": "有面板的设备需要再次确认，端口仍在使用时不能删除",
     "createSuccess": "设备创建成功",
     "updateSuccess": "设备更新成功",
     "deleteSuccess": "设备删除成功",
-    "loadFailed": "加载设备列表失败",
-    "updateFailed": "更新失败",
-    "createFailed": "创建失败",
-    "deleteFailed": "删除失败"
+    "forceDeleteTitle": "设备不是空的",
+    "forceDeleteContent": "连同面板和端口一起删除，同时删除它的端口观测历史，并解除管理 IP 绑定（地址记录保留在 IP 管理里）？端口上还有线缆、光模块、IP 或工作站时仍会被拒绝。"
   },
   "validation": {
     "nameRequired": "请输入设备名称",
     "typeRequired": "请选择设备类型",
     "cabinetRequired": "请选择机柜",
-    "uHeightRequired": "占用U数为必填项"
+    "uHeightRequired": "占用U数为必填项",
+    "roomRequired": "请选择机房"
   },
   "table": {
     "total": "共 {{total}} 条"
@@ -65,5 +69,9 @@
   "filters": {
     "selectCabinet": "选择机柜",
     "selectType": "选择类型"
+  },
+  "placement": {
+    "CABINET": "机柜内",
+    "ROOM": "直接放在机房"
   }
 }

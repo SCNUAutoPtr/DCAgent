@@ -1,24 +1,15 @@
 import { useRef, useEffect, useState } from 'react';
-import { Cabinet, Device } from '@/types';
-import { ViewMode, CabinetVisualizerHandle } from './CabinetVisualizer';
+import type { CabinetVisualizerHandle, RackDevice } from './CabinetVisualizer';
+import { effectiveUHeight } from '@contracts/rack';
 
 interface CabinetThumbnailProps {
-  cabinet: Cabinet;
-  devices: Device[];
-  viewMode: ViewMode;
+  cabinet: { heightU: number };
+  devices: RackDevice[];
   containerHeight?: number;
   mainViewRef?: React.RefObject<CabinetVisualizerHandle>;
-  contentContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
-export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
-  cabinet,
-  devices,
-  viewMode,
-  containerHeight = 600,
-  mainViewRef,
-  contentContainerRef,
-}) => {
+export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({ cabinet, devices, containerHeight = 600, mainViewRef }) => {
   const [viewportRect, setViewportRect] = useState({ top: 0, height: 100 });
   const [isDragging, setIsDragging] = useState(false);
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
@@ -87,13 +78,12 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
 
       // 在缩略图中的每U高度和缩放计算
       const uHeight = 12;
-      const thumbnailTotalHeight = cabinet.height * uHeight; // SVG原始高度：42 * 12 = 504px
+      const thumbnailTotalHeight = cabinet.heightU * uHeight; // SVG原始高度：42 * 12 = 504px
       const thumbnailPaddingTop = 10; // 缩略图容器的paddingTop
 
       // 计算缩放比例（与renderCabinetView中的逻辑一致）
       const availableHeight = containerHeight - thumbnailPaddingTop - 20;
       const scale = thumbnailTotalHeight > availableHeight ? availableHeight / thumbnailTotalHeight : 1;
-      const scaledThumbnailHeight = thumbnailTotalHeight * scale; // 实际渲染高度
 
       // 计算视口在SVG中的位置（基于原始尺寸）
       const viewportTopInSVG = scrolledUCount * uHeight; // 从SVG顶部开始的像素位置
@@ -111,7 +101,7 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
 
       // 转换为百分比（基于containerHeight）
       let topPercent = (viewportTopInContainer / containerHeight) * 100;
-      let heightPercent = (viewportHeightInContainer / containerHeight) * 100;
+      const heightPercent = (viewportHeightInContainer / containerHeight) * 100;
 
       // 确保视口不会超出底部 (top + height <= 100)
       if (topPercent + heightPercent > 100) {
@@ -133,7 +123,7 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
       //     可滚动距离: scrollHeight - clientHeight,
       //   },
       //   '第2步_机柜高度': {
-      //     cabinetHeightInU: cabinet.height,
+      //     cabinetHeightInU: cabinet.heightU,
       //     actualCabinetHeight,
       //     每U高度: U_HEIGHT_IN_VISUALIZER,
       //   },
@@ -208,7 +198,7 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
         };
       }
     }
-  }, [mainViewRef, cabinet.height]);
+  }, [mainViewRef, cabinet.heightU, containerHeight]);
 
   // 处理拖动视口指示框来滚动主视图
   const handleViewportDrag = (clientY: number) => {
@@ -223,7 +213,7 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
     const U_HEIGHT_IN_VISUALIZER = 40;
 
     // 计算缩放比例（与updateViewport中一致）
-    const thumbnailTotalHeight = cabinet.height * uHeight;
+    const thumbnailTotalHeight = cabinet.heightU * uHeight;
     const availableHeight = containerHeight - thumbnailPaddingTop - 20;
     const scale = thumbnailTotalHeight > availableHeight ? availableHeight / thumbnailTotalHeight : 1;
 
@@ -264,16 +254,6 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
     handleViewportDrag(e.clientY);
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (isDragging) {
-      handleViewportDrag(e.clientY);
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
   // 触摸拖动事件处理
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault();
@@ -281,19 +261,19 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
     handleViewportDrag(e.touches[0].clientY);
   };
 
-  const handleTouchMove = (e: TouchEvent) => {
-    if (isDragging && e.touches.length > 0) {
-      handleViewportDrag(e.touches[0].clientY);
-    }
-  };
-
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-  };
+  // the latest drag handler, read by the document listeners below
+  const dragRef = useRef(handleViewportDrag);
+  dragRef.current = handleViewportDrag;
 
   // 添加全局鼠标和触摸事件监听
   useEffect(() => {
     if (isDragging) {
+      const handleMouseMove = (e: MouseEvent) => dragRef.current(e.clientY);
+      const handleTouchMove = (e: TouchEvent) => {
+        if (e.touches.length > 0) dragRef.current(e.touches[0].clientY);
+      };
+      const handleMouseUp = () => setIsDragging(false);
+      const handleTouchEnd = () => setIsDragging(false);
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       document.addEventListener('touchmove', handleTouchMove);
@@ -312,7 +292,7 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
   const renderCabinetView = () => {
     const uHeight = 12; // 每个U位的高度（像素）
     const cabinetWidth = 200; // 机柜宽度
-    const totalHeight = cabinet.height * uHeight;
+    const totalHeight = cabinet.heightU * uHeight;
     const thumbnailPaddingTop = 10;
 
     // 计算可用高度（容器高度 - padding - 一些余量）
@@ -345,7 +325,7 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
         />
 
         {/* U位刻度线 */}
-        {Array.from({ length: cabinet.height }, (_, i) => {
+        {Array.from({ length: cabinet.heightU }, (_, i) => {
           const y = i * uHeight;
           return (
             <g key={`u-${i}`}>
@@ -366,7 +346,7 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
                   fontSize={8}
                   fontFamily="monospace"
                 >
-                  U{cabinet.height - i}
+                  U{cabinet.heightU - i}
                 </text>
               )}
             </g>
@@ -375,10 +355,11 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
 
         {/* 设备 */}
         {devices.map((device) => {
-          if (!device.uPosition || !device.uHeight) return null;
+          if (!device.uPosition) return null;
+          const h = effectiveUHeight(device.uHeight);
 
-          const deviceY = (cabinet.height - device.uPosition - device.uHeight + 1) * uHeight;
-          const deviceHeight = device.uHeight * uHeight;
+          const deviceY = (cabinet.heightU - device.uPosition - h + 1) * uHeight;
+          const deviceHeight = h * uHeight;
 
           // 设备颜色映射
           const colorMap: Record<string, string> = {
@@ -406,7 +387,7 @@ export const CabinetThumbnail: React.FC<CabinetThumbnailProps> = ({
                 rx={2}
               />
               {/* 设备名称 */}
-              {device.uHeight >= 2 && (
+              {h >= 2 && (
                 <text
                   x={cabinetWidth / 2}
                   y={deviceY + deviceHeight / 2 + 3}

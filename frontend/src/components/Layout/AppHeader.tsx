@@ -1,304 +1,224 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { Layout, Typography, AutoComplete, Input, message, Modal } from 'antd';
-import { DatabaseOutlined, SearchOutlined, BarcodeOutlined } from '@ant-design/icons';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AutoComplete, Button, Input, Layout, Select, Space, Tooltip, message, theme } from 'antd';
+import type { InputRef } from 'antd';
+import { BarcodeOutlined, LoadingOutlined, MenuOutlined, MobileOutlined, MoonOutlined, SunOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { PathNode } from '@contracts/common';
+import type { PathKind } from '@contracts/enums';
+import type { SearchKind } from '@contracts/search';
+import { parseShortId } from '@contracts/shortId';
 import LanguageSwitcher from '../LanguageSwitcher';
-import searchService, { SearchResult } from '../../services/searchService';
-import {
-  formatSearchResultLabel,
-  navigateToEntity,
-  navigateToCableEndpoint,
-  getSearchResultKey,
-} from '../../utils/navigationHelper';
-import { ShortIdFormatter } from '../../utils/shortIdFormatter';
+import AppBreadcrumb from './AppBreadcrumb';
+import { useUiPrefs } from '../../stores/uiPrefs';
+import { paletteShortcut } from '../CommandPalette/shortcut';
+import { labelService } from '@/services/labelService';
+import { searchService } from '@/services/searchService';
+import { pathForEntity } from '@/routes';
+import { DECK_SCALES, useDeckMode, type DeckScale } from '../../stores/deckMode';
 
 const { Header } = Layout;
-const { Title } = Typography;
+
+interface Hit {
+  key: string;
+  kind: SearchKind | PathKind;
+  id: string;
+  name: string;
+  path: PathNode[];
+  description: string | null;
+}
+
+const toShortId = (text: string): number | null => {
+  try {
+    return parseShortId(text);
+  } catch {
+    return null;
+  }
+};
+
+const pathText = (path: PathNode[]) =>
+  path
+    .filter((n) => n.kind !== 'DATACENTER')
+    .map((n) => n.name)
+    .join(' / ');
 
 export default function AppHeader() {
   const navigate = useNavigate();
   const { t } = useTranslation('common');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchOptions, setSearchOptions] = useState<{ value: string; label: string; data: SearchResult }[]>([]);
+  const deckEnabled = useDeckMode((s) => s.enabled);
+  const deckScale = useDeckMode((s) => s.scale);
+  const setScale = useDeckMode((s) => s.setScale);
+  const toggleDeck = useDeckMode((s) => s.toggle);
+  const toggleSidebar = useDeckMode((s) => s.toggleSidebar);
+  const mode = useUiPrefs((s) => s.theme);
+  const toggleTheme = useUiPrefs((s) => s.toggleTheme);
+  const openPalette = useUiPrefs((s) => s.setPaletteOpen);
+  const { token } = theme.useToken();
+
+  const [query, setQuery] = useState('');
+  const [hits, setHits] = useState<Hit[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
-  const searchInputRef = useRef<any>(null);
-  const [lastSearchWasShortId, setLastSearchWasShortId] = useState(false);
+  const inputRef = useRef<InputRef>(null);
+  const seq = useRef(0);
 
-  // 全局 Tab 键监听，聚焦到搜索框
+  // Tab outside an input jumps to the search box (scanner workflow)
   useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // 按下 Tab 键且不在输入框、文本域等元素中
-      if (e.key === 'Tab') {
-        const activeElement = document.activeElement;
-        const isInInput = activeElement?.tagName === 'INPUT' ||
-                         activeElement?.tagName === 'TEXTAREA' ||
-                         activeElement?.getAttribute('contenteditable') === 'true';
-
-        // 如果当前不在输入框中，阻止默认行为并聚焦到搜索框
-        if (!isInInput) {
-          e.preventDefault();
-          searchInputRef.current?.focus();
-        }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const el = document.activeElement;
+      const typing = el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || el?.getAttribute('contenteditable') === 'true';
+      if (!typing) {
+        e.preventDefault();
+        inputRef.current?.focus();
       }
     };
-
-    document.addEventListener('keydown', handleGlobalKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleGlobalKeyDown);
-    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, []);
 
-  // 处理搜索
-  const handleSearch = useCallback(async (value: string) => {
-    setSearchQuery(value);
-
-    if (!value || value.trim().length === 0) {
-      setSearchOptions([]);
-      setLastSearchWasShortId(false);
-      return;
-    }
-
-    const trimmedValue = value.trim();
-
-    // 尝试解析为 shortId（支持 E-00003 或 3 格式）
-    let isShortIdFormat = false;
-    try {
-      const numericValue = ShortIdFormatter.toNumericFormat(trimmedValue);
-      isShortIdFormat = true;
-
-      // 如果成功解析为数字，尝试根据 shortId 查找
+  const handleSearch = useCallback(
+    async (value: string) => {
+      setQuery(value);
+      const q = value.trim();
+      const mine = ++seq.current;
+      if (!q) {
+        setHits([]);
+        setNotice(null);
+        return;
+      }
       setSearching(true);
       try {
-        const result = await searchService.findByShortId(numericValue);
-        if (result) {
-          setSearchOptions([
-            {
-              value: getSearchResultKey(result),
-              label: formatSearchResultLabel(result),
-              data: result,
-            },
-          ]);
-          setLastSearchWasShortId(true);
-          return;
-        } else {
-          // shortId 格式正确，但未找到结果 - 只标记，不清空
-          setSearchOptions([]);
-          setLastSearchWasShortId(true);
+        const shortId = /^e-\d+$/i.test(q) ? toShortId(q) : null;
+        if (shortId !== null) {
+          // a scanned label: one call, the answer carries the full location path
+          const r = await labelService.resolve({ shortId }, { silent: true });
+          if (mine !== seq.current) return;
+          if (r.bound) {
+            const last = r.bound.path[r.bound.path.length - 1];
+            setHits([{ key: `${r.bound.kind}-${r.bound.id}`, kind: r.bound.kind, id: r.bound.id, name: last?.name ?? r.display, path: r.bound.path, description: r.display }]);
+            setNotice(null);
+          } else {
+            setHits([]);
+            setNotice(t(r.state === null ? 'scan.unknown' : r.state === 'VOID' ? 'scan.void' : 'scan.unbound', { display: r.display }));
+          }
           return;
         }
-      } catch (error) {
-        console.error('Error finding by shortId:', error);
-        // 查询出错 - 只标记，不清空
-        setSearchOptions([]);
-        setLastSearchWasShortId(true);
-        return;
+        // free text (pure digits also resolve a label on the server)
+        const rows = await searchService.global({ q, take: 10 }, { silent: true });
+        if (mine !== seq.current) return;
+        setHits(rows.map((h) => ({ key: `${h.kind}-${h.id}`, kind: h.kind, id: h.id, name: h.name, path: h.path, description: h.description })));
+        setNotice(null);
+      } catch {
+        if (mine === seq.current) {
+          setHits([]);
+          setNotice(t('searchFailed'));
+        }
       } finally {
-        setSearching(false);
+        if (mine === seq.current) setSearching(false);
       }
-    } catch {
-      // 不是有效的 shortId 格式，继续进行文本搜索
-      setLastSearchWasShortId(false);
-    }
-
-    // 全局文本搜索
-    setSearching(true);
-    try {
-      const results = await searchService.globalSearch(trimmedValue);
-      setSearchOptions(
-        results.map((result) => ({
-          value: getSearchResultKey(result),
-          label: formatSearchResultLabel(result),
-          data: result,
-        }))
-      );
-    } catch (error) {
-      console.error('Error in global search:', error);
-      message.error(t('searchFailed'));
-      setSearchOptions([]);
-    } finally {
-      setSearching(false);
-    }
-  }, []);
-
-  // 处理选择搜索结果
-  const handleSelect = useCallback(
-    async (value: string) => {
-      const selectedOption = searchOptions.find((opt) => opt.value === value);
-      if (!selectedOption) return;
-
-      const result = selectedOption.data;
-
-      // 如果是线缆，需要先查询端点信息再跳转
-      if (result.type === 'Cable') {
-        try {
-          const endpoints = await searchService.getCableEndpointsByShortId(result.shortId);
-
-          if (!endpoints) {
-            message.warning('未找到线缆连接信息');
-            return;
-          }
-
-          const { cable, endpointA, endpointB, portA, portB } = endpoints;
-
-          // 判断连接状态
-          const aConnected = !!portA;
-          const bConnected = !!portB;
-          const scannedEndType = result.metadata?.endType as 'A' | 'B' | undefined;
-          const scannedEnd = scannedEndType || 'A';
-          const scannedConnected = scannedEnd === 'A' ? aConnected : bConnected;
-          const otherEnd = scannedEnd === 'A' ? 'B' : 'A';
-          const otherConnected = scannedEnd === 'A' ? bConnected : aConnected;
-
-          // 场景1: 双端都已连接 - 正常导航
-          if (aConnected && bConnected) {
-            navigateToCableEndpoint(endpoints, navigate, scannedEnd);
-            const targetPort = scannedEnd === 'A' ? portA : portB;
-            message.success(`跳转到线缆端点${scannedEnd}: ${targetPort?.label || targetPort?.number}`);
-            return;
-          }
-
-          // 场景2: 扫描端未连接，但对端已连接 - 提供选项
-          if (!scannedConnected && otherConnected) {
-            const otherPort = scannedEnd === 'A' ? portB : portA;
-            const otherEndpoint = scannedEnd === 'A' ? endpointB : endpointA;
-
-            Modal.confirm({
-              title: '线缆单端连接',
-              content: (
-                <div>
-                  <p>扫描的{scannedEnd}端（ID={result.shortId}）尚未连接</p>
-                  <p>但该线缆的{otherEnd}端{otherEndpoint?.shortId ? `（ID=${otherEndpoint.shortId}）` : ''}已连接到：</p>
-                  <p style={{ marginLeft: 16, color: '#1890ff' }}>
-                    {otherPort?.panel?.device?.label || '设备'} /
-                    {otherPort?.panel?.label || '面板'} /
-                    {otherPort?.number}
-                  </p>
-                  <p style={{ marginTop: 12 }}>是否查看{otherEnd}端的拓扑图？</p>
-                </div>
-              ),
-              okText: `查看${otherEnd}端拓扑`,
-              cancelText: '查看线缆详情',
-              onOk: () => {
-                // 跳转到对端
-                navigateToCableEndpoint(endpoints, navigate, otherEnd);
-              },
-              onCancel: () => {
-                // 跳转到线缆管理页面
-                navigate('/cable-manual-inventory', {
-                  state: {
-                    highlightCableId: cable.id
-                  }
-                });
-              }
-            });
-            return;
-          }
-
-          // 场景3: 双端都未连接 - 显示线缆信息
-          if (!aConnected && !bConnected) {
-            Modal.info({
-              title: '线缆未连接',
-              content: (
-                <div>
-                  <p>该线缆（{cable.label || cable.type}）的两端都尚未连接</p>
-                  <p>A端 ID: {endpointA?.shortId || '无'}</p>
-                  <p>B端 ID: {endpointB?.shortId || '无'}</p>
-                  <p style={{ marginTop: 12 }}>点击确定查看线缆详情</p>
-                </div>
-              ),
-              okText: '查看详情',
-              onOk: () => {
-                navigate('/cable-manual-inventory', {
-                  state: { highlightCableId: cable.id }
-                });
-              }
-            });
-            return;
-          }
-
-          // 场景4: 扫描端已连接，对端未连接 - 正常导航并提示
-          if (scannedConnected && !otherConnected) {
-            navigateToCableEndpoint(endpoints, navigate, scannedEnd);
-            const targetPort = scannedEnd === 'A' ? portA : portB;
-            message.info(`跳转到${scannedEnd}端（${otherEnd}端尚未连接）: ${targetPort?.label || targetPort?.number}`);
-            return;
-          }
-
-        } catch (error) {
-          console.error('Error fetching cable endpoints:', error);
-          message.error('获取线缆连接信息失败');
-        }
-      } else {
-        // 其他实体直接跳转
-        navigateToEntity(result, navigate);
-        message.success(`跳转到 ${formatSearchResultLabel(result)}`);
-      }
-
-      // 清空搜索框
-      setSearchQuery('');
-      setSearchOptions([]);
     },
-    [searchOptions, navigate]
+    [t],
   );
 
-  // 处理回车键 - 自动选择第一个候选项
-  const handlePressEnter = useCallback(() => {
-    if (searchOptions.length > 0) {
-      handleSelect(searchOptions[0].value);
-    } else if (lastSearchWasShortId && searchQuery.trim()) {
-      // shortId 格式但未找到 - 显示警告并清空
-      message.warning(`shortID ${searchQuery.trim()} 尚未分配给任何实体`, 3);
-      setSearchQuery('');
-      setSearchOptions([]);
-      setLastSearchWasShortId(false);
-    }
-  }, [searchOptions, handleSelect, lastSearchWasShortId, searchQuery]);
+  const go = useCallback(
+    (hit: Hit) => {
+      navigate(pathForEntity(hit.kind, hit.id, hit.path));
+      setQuery('');
+      setHits([]);
+      setNotice(null);
+    },
+    [navigate],
+  );
 
+  const handlePressEnter = () => {
+    if (hits.length) go(hits[0]);
+    else if (notice) {
+      message.warning(notice);
+      setQuery('');
+      setNotice(null);
+    }
+  };
+
+  const options = hits.map((h) => {
+    const where = pathText(h.path.slice(0, -1));
+    return {
+      value: h.key,
+      label: `[${t(`entityKinds.${h.kind}`)}] ${h.name}${h.description ? ` (${h.description})` : ''}${where ? ` - ${where}` : ''}`,
+    };
+  });
 
   return (
     <Header
+      className="app-header"
       style={{
         display: 'flex',
         alignItems: 'center',
-        background: '#001529',
-        padding: '0 24px',
+        gap: deckEnabled ? 6 : 12,
+        borderBottom: `1px solid ${token.colorBorderSecondary}`,
       }}
     >
-      <DatabaseOutlined style={{ fontSize: '24px', color: '#fff', marginRight: '12px' }} />
-      <Title level={4} style={{ color: '#fff', margin: 0 }}>
-        DCAgent
-      </Title>
-      <span style={{ color: '#8c8c8c', marginLeft: '12px', fontSize: '14px' }}>
-        見えない線を、見える化へ
-      </span>
+      {deckEnabled && <Button type="text" icon={<MenuOutlined />} onClick={toggleSidebar} />}
+      {!deckEnabled && <AppBreadcrumb />}
 
-      {/* 全局搜索框 */}
-      <div style={{ marginLeft: 'auto', width: '400px' }}>
+      {/* search box: where the barcode scanner types */}
+      <div style={{ marginLeft: 'auto', width: deckEnabled ? 240 : 340 }}>
         <AutoComplete
-          value={searchQuery}
-          options={searchOptions}
+          value={query}
+          options={options}
           onSearch={handleSearch}
-          onSelect={handleSelect}
+          onSelect={(key: string) => {
+            const hit = hits.find((h) => h.key === key);
+            if (hit) go(hit);
+          }}
+          notFoundContent={notice}
           style={{ width: '100%' }}
           placeholder={t('searchPlaceholder')}
         >
           <Input
-            ref={searchInputRef}
-            prefix={<SearchOutlined />}
-            suffix={<BarcodeOutlined style={{ color: '#8c8c8c' }} />}
-            loading={searching}
+            ref={inputRef}
+            data-testid="global-search"
+            suffix={searching ? <LoadingOutlined style={{ color: token.colorTextTertiary }} /> : <BarcodeOutlined style={{ color: token.colorTextTertiary }} />}
             allowClear
             onPressEnter={handlePressEnter}
           />
         </AutoComplete>
       </div>
 
-      {/* 语言切换器 */}
-      <div style={{ marginLeft: '16px' }}>
-        <LanguageSwitcher />
-      </div>
+      <Space size={4}>
+        {!deckEnabled && (
+          <Tooltip title={t('palette.open')}>
+            <Button className="app-kbd-button" icon={<ThunderboltOutlined />} onClick={() => openPalette(true)} data-testid="command-palette-open">
+              <kbd className="app-kbd">{paletteShortcut()}</kbd>
+            </Button>
+          </Tooltip>
+        )}
+        {deckEnabled && (
+          <Select<DeckScale>
+            size="small"
+            value={deckScale}
+            onChange={setScale}
+            style={{ width: 72 }}
+            options={DECK_SCALES.map((s) => ({ value: s, label: `${Math.round(s * 100)}%` }))}
+          />
+        )}
+        <Tooltip title={t(mode === 'dark' ? 'theme.toLight' : 'theme.toDark')}>
+          <Button type="text" icon={mode === 'dark' ? <SunOutlined /> : <MoonOutlined />} onClick={toggleTheme} data-testid="theme-toggle" />
+        </Tooltip>
+        <Tooltip title={t('actions.deckMode')}>
+          <Button
+            type="text"
+            icon={<MobileOutlined />}
+            onClick={() => {
+              toggleDeck();
+              message.info(t(deckEnabled ? 'actions.deckModeOff' : 'actions.deckModeOn'));
+            }}
+            style={{ color: deckEnabled ? token.colorPrimary : undefined }}
+            data-testid="deck-mode-toggle"
+          />
+        </Tooltip>
+        {!deckEnabled && <LanguageSwitcher />}
+      </Space>
     </Header>
   );
 }
-

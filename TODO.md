@@ -1,404 +1,329 @@
-# DCAgent 开发待办清单
+# DCAgent TODO
 
-## 当前状态
+更新日期: 2026-04-22
 
-### 已完成 (Phase 1)
+## 已完成概览
 
-- [x] 项目基础结构搭建
-- [x] 后端框架配置 (Express + TypeScript)
-- [x] Prisma 数据模型设计
-- [x] Neo4j 图数据库集成
-- [x] 设备管理 API (CRUD)
-- [x] 线缆跟踪 API
-- [x] 图数据库查询服务
-- [x] 前端框架配置 (React + Vite + Ant Design)
-- [x] 基础页面和布局
-- [x] Docker Compose 配置
-- [x] 项目文档
+- [x] 核心资源管理: DataCenter / Room / Cabinet / Device / Panel / Port 基础 CRUD
+- [x] 线缆拓扑可视化和相关前后端接口
+- [x] 批量上架助手
+- [x] ShortID 池、打印、格式化显示
+- [x] Docker Compose、本地开发环境、基础文档
 
-### 已完成 (Phase 2 - 2025-11-04)
+## P0 当前阻塞项
 
-- [x] 修复前端图标导入问题
-  - [x] AppSidebar.tsx - ServerOutlined -> DatabaseOutlined
-  - [x] Dashboard.tsx - ServerOutlined -> CloudServerOutlined
-- [x] API 版本化 (改为 /api/v1 格式)
-- [x] API 设计模式统一
-  - [x] 只使用 POST/GET 方法 (不使用 PUT/DELETE)
-  - [x] 所有参数通过 body JSON 传递 (包括 ID)
-  - [x] 统一路由模式: GET / (列表), POST /get (详情), POST /create, POST /update, POST /delete
-- [x] 数据中心管理 (DataCenter)
-  - [x] dataCenterService.ts - 服务层
-  - [x] datacenters.ts - 路由层
-  - [x] dataCenterService.ts (前端) - API 调用层
-  - [x] DataCenterList.tsx - 前端页面
-  - [x] 完整 CRUD + 搜索功能
-- [x] 机房管理 (Room)
-  - [x] roomService.ts - 服务层
-  - [x] rooms.ts - 路由层
-  - [x] roomService.ts (前端) - API 调用层
-  - [x] RoomList.tsx - 前端页面
-  - [x] 完整 CRUD + 搜索功能
-  - [x] 按数据中心过滤
-- [x] 机柜管理 (Cabinet)
-  - [x] cabinetService.ts - 服务层
-  - [x] cabinets.ts - 路由层
-  - [x] cabinetService.ts (前端) - API 调用层
-  - [x] CabinetList.tsx - 前端页面
-  - [x] 完整 CRUD + 搜索功能
-  - [x] 按机房过滤
-  - [x] 级联选择器 (数据中心 -> 机房)
-- [x] 设备管理 API 重构
-  - [x] devices.ts - 更新为统一的 API 模式
-  - [x] deviceService.ts (前端) - 更新 API 调用
-- [x] 线缆管理 API 重构
-  - [x] cables.ts - 更新为统一的 API 模式
-  - [x] cableService.ts (前端) - 更新 API 调用
-- [x] 面板管理 (Panel)
-  - [x] panelService.ts - 服务层
-  - [x] panels.ts - 路由层
-  - [x] panelService.ts (前端) - API 调用层
-  - [x] PanelList.tsx - 前端页面
-  - [x] 完整 CRUD + 搜索功能
-  - [x] 6种面板类型支持 (ETHERNET, FIBER, POWER, SERIAL, USB, OTHER)
-  - [x] 按设备和类型过滤
-- [x] 端口管理 (Port)
-  - [x] portService.ts - 服务层
-  - [x] ports.ts - 路由层
-  - [x] portService.ts (前端) - API 调用层
-  - [x] PortList.tsx - 前端页面
-  - [x] 完整 CRUD + 搜索功能
-  - [x] 4种端口状态支持 (AVAILABLE, OCCUPIED, RESERVED, FAULTY)
-  - [x] 批量创建端口功能
-  - [x] 表格内快速切换端口状态
-  - [x] 按面板和状态过滤
-- [x] 前端路由和导航更新
-  - [x] App.tsx - 添加面板和端口路由
-  - [x] AppSidebar.tsx - 添加"连接管理"菜单组
+### 1. 修复已确认的后端业务 Bug
 
-### 已完成 (Phase 3 - 2025-11-05/06)
+- [x] 修复 `Room` 更新接口无法修改 `dataCenterId`
+  - 已完成:
+    - `backend/src/routes/rooms.ts`
+    - `backend/src/services/roomService.ts`
+    - `frontend/src/services/roomService.ts`
+  - 自动化验证:
+    - `backend/src/routes/hierarchy-migration.test.ts`
 
-- [x] 线缆拓扑可视化
-  - [x] 实现 React Flow 拓扑图展示
-  - [x] 端口连接关系可视化
-  - [x] 交互式拓扑图操作
-- [x] 面板编辑增强
-  - [x] 支持面板旋转功能
-  - [x] 端口组添加能力
-  - [x] 修复已知 bug
-- [x] 批量上架助手 (Bulk Deployment)
-  - [x] BulkImportModal 通用组件
-  - [x] Excel/CSV 文件解析和验证
-  - [x] 批量创建设备 API (POST /api/v1/devices/bulk-create)
-  - [x] 批量创建设备前端界面
-  - [x] 数据验证和错误提示
-  - [x] 模板下载功能
-  - [x] 批量上架助手使用文档
+- [x] 修复 `Cabinet` 更新接口无法修改 `roomId`
+  - 已完成:
+    - `backend/src/routes/cabinets.ts`
+    - `backend/src/services/cabinetService.ts`
+    - `frontend/src/services/cabinetService.ts`
+  - 自动化验证:
+    - `backend/src/routes/hierarchy-migration.test.ts`
 
-## 下一步要做的事情
+- [x] 复核其他层级迁移能力，避免只修一半
+  - `Device` 已保留 `cabinetId` 回归测试
+  - 自动化验证:
+    - `backend/src/routes/hierarchy-migration.test.ts`
 
-### 优先级 1 - 核心功能继续扩展
+- [ ] `Panel` 是否支持跨设备迁移待单独决策
+  - 当前编辑器仍默认绑定当前设备
+  - 需要先决定是否支持跨设备迁移，再决定是否补 API/UI
 
-#### 1. 面板和端口管理 ✅ 已完成
-- [x] 创建 Panel CRUD API
-- [x] 创建 Port CRUD API
-- [x] 面板类型管理 (ETHERNET, FIBER, POWER 等)
-- [x] 端口状态管理 (AVAILABLE, OCCUPIED, RESERVED, FAULTY)
-- [x] 前端管理界面
-- [x] 批量创建端口功能
+### 2. 统一后端错误处理语义
 
-#### 2. 数据中心管理前端界面 ✅ 已完成
-- [x] 数据中心列表页面
-- [x] 创建/编辑数据中心表单
-- [x] 机房列表页面
-- [x] 创建/编辑机房表单
-- [x] 机柜列表页面
-- [x] 创建/编辑机柜表单
-- [x] 级联选择和过滤功能 (数据中心 -> 机房 -> 机柜 -> 设备)
+- [x] 为资源 CRUD 路由补统一错误分类
+  - `ZodError` -> 400
+  - 业务 `Error` -> 400
+  - `PrismaClientKnownRequestError` `P2002` -> 409，并返回 `code` / `conflictFields`
 
-#### 3. 设备管理完善
-- [ ] 完善设备创建表单 (关联到机柜)
-- [ ] 完善设备编辑功能
-- [ ] 添加设备删除确认
-- [ ] 设备搜索和过滤
-- [ ] 设备详情页面
-- [ ] 显示设备所在位置 (数据中心 -> 机房 -> 机柜)
+- [x] 覆盖以下路由的 `create/update` 错误返回
+  - `backend/src/routes/rooms.ts`
+  - `backend/src/routes/cabinets.ts`
+  - `backend/src/routes/devices.ts`
+  - `backend/src/routes/panels.ts`
 
-#### 4. 添加测试数据
-- [ ] 使用 Prisma Studio 添加测试数据中心
-- [ ] 添加测试机房
-- [ ] 添加测试机柜
-- [ ] 添加测试设备
-- [ ] 测试所有 API 端点
+- [x] 把重复的 `try/catch` 逻辑收敛成可复用 helper
+  - `backend/src/utils/crudRouteHandler.ts`
+  - 自动化验证:
+    - `backend/src/utils/crudRouteHandler.test.ts`
+    - `backend/src/app.test.ts`
 
-### 优先级 2 - IP和电源管理
+### 3. 统一前端错误展示
 
-#### 5. IP地址管理功能
-- [ ] 扩展 Device 模型添加 IP 字段
-  ```prisma
-  ipAddresses  String[]  // 设备的所有IP
-  managementIp String?   // 管理IP
-  ```
-- [ ] 扩展 Port 模型添加网络字段
-  ```prisma
-  ipAddress String?
-  vlan      String?
-  speed     String?  // 1G, 10G, 25G等
-  ```
-- [ ] 创建 IP 管理 API
-- [ ] 创建 IP 管理前端页面
-- [ ] 添加 IP 地址与端口映射展示
+- [ ] 机房和机柜页面不要只显示通用失败提示
+  - 代码已完成:
+    - `frontend/src/pages/RoomList.tsx`
+    - `frontend/src/pages/CabinetList.tsx`
+  - 剩余工作:
+    - 待前后端运行时 UI 验证 toast 展示的是后端返回 message，而不是通用失败文案
 
-#### 6. 电源管理功能
-- [ ] 扩展 Device 模型添加电源字段
-  ```prisma
-  powerPhase  String?  // L1, L2, L3
-  powerSource PowerSource?  // MAINS, UPS
-  ```
-- [ ] 创建 PowerSource 枚举
-- [ ] 创建电源连接 API
-- [ ] 创建电源管理前端页面
-- [ ] PDU 端口映射功能
+- [x] 设备保存失败时优先展示后端返回的具体错误
+  - 场景: `serialNo` 唯一约束冲突
+  - 已实现:
+    - toast 展示后端错误
+    - `serialNo` 字段级错误展示
+  - 自动化验证:
+    - `backend/src/app.test.ts`
 
-#### 7. 线缆管理完善
-- [ ] 线缆列表页面
-- [ ] 创建线缆连接表单
-- [ ] 编辑线缆信息
-- [ ] 删除线缆连接
-- [ ] 查看线缆两端端口
+- [x] 明确前端对冲突类错误的展示方式
+  - 设备 `serialNo` 冲突: toast + 表单字段级错误
+  - 其他保存失败: toast 优先展示后端返回 message
 
-### 优先级 3 - 可视化功能
+### 4. 引入 Playwright E2E
 
-#### 8. 网状拓扑图可视化 (React Flow) ✅ 已完成
-- [x] 安装 React Flow 依赖
-- [x] 创建拓扑图组件
-- [x] 从 API 获取拓扑数据
-- [x] 将数据转换为 React Flow 格式
-- [x] 实现节点和边的自定义样式
-- [x] 添加交互功能：
-  - [x] 点击节点查看详情
-  - [x] 高亮选中路径
-  - [x] 搜索节点
-  - [x] 缩放和平移
-  - [x] 导出拓扑图
+- [ ] 在 `frontend` 安装 `@playwright/test`
+  - 配置和脚本已落地
+  - 待本地执行:
+    - `cd frontend && npm install --save-dev @playwright/test`
+    - `npx playwright install chromium`
 
-#### 9. U位可视化
-- [ ] 创建 2D 机柜视图组件
-- [ ] 显示机柜 U 位网格
-- [ ] 显示设备在机柜中的位置
-- [ ] 设备占用 U 位高亮
-- [ ] 拖拽调整设备位置
-- [ ] 显示设备信息卡片
+- [x] 新增 `frontend/playwright.config.ts`
 
-#### 10. 仪表板数据统计
+- [x] 在 `frontend/package.json` 添加 E2E 脚本
+
+- [x] 设计本地执行方式
+  - 当前方案: 不自动拉起前后端，依赖本地已有 3000 / 5173 服务
+  - 运行方式:
+    - `cd frontend && npm run e2e`
+
+- [x] 确定测试数据策略
+  - 使用 `backend` 的 `data:seed:reset`
+  - 辅助代码:
+    - `frontend/e2e/helpers/reset.ts`
+    - `frontend/e2e/helpers/setup.ts`
+
+- [x] 第一批 E2E 用例
+  - `frontend/e2e/room-hierarchy.spec.ts`
+  - `frontend/e2e/cabinet-hierarchy.spec.ts`
+  - `frontend/e2e/unique-constraint.spec.ts`
+  - 当前状态: spec 已编写，待本地环境实际执行
+
+- [x] 不把 `Room/Cabinet shortId` 冲突作为第一优先 UI E2E
+  - 原因: 前端已有 `shortId` 预检查，很多情况下不会真正打到后端冲突分支
+
+## P1 近期工程债
+
+### 5. 修复前端环境变量命名不一致
+
+- [x] 统一使用 `VITE_API_BASE_URL`
+  - 已更新:
+    - `frontend/.env.example`
+    - `frontend/src/vite-env.d.ts`
+    - `docker-compose.yml`
+    - `frontend/README.md`
+    - `frontend/ENV_SETUP.md`
+
+- [x] 补一条说明: 本地开发、Docker、E2E 三种运行方式都要使用同一变量名
+
+### 6. 清理后端 TypeScript 构建错误
+
+- [x] 先做一次错误分组，不要无差别平推
+  - 已分组:
+    - 路由返回类型问题
+    - 路由/服务契约不匹配
+    - 测试与工具类型清理
+    - 历史脚本 / 监控漂移
+
+- [x] 优先处理明显的接口定义缺口
+  - 已处理:
+    - `deviceService.getDeviceByShortId`
+    - `dataCenterService.getDataCenterByShortId`
+    - `cableService.getCableByShortId`
+
+- [ ] 修复资源路由里的返回类型问题
+  - 仍有大量 `Not all code paths return a value`
+  - 主要跟踪任务:
+    - `#15 Fix backend route handler return typing`
+
+- [ ] 处理 DTO 与 Prisma nullable 类型不一致
+  - 已处理一部分:
+    - `Device`
+    - `Subnet`
+    - 若干 service/contract mismatch
+  - 剩余清理仍在继续
+
+- [x] 目标
+  - 让 `backend` 稳定通过 `npm run build`
+  - 2026-10-24 达成：`tsc --noEmit` 0 错误（原 152 个，主要是路由 `return res.xxx()` 的隐式返回），行为不变
+
+### 7. 测试可维护性改造
+
+- [x] 给关键页面补稳定选择器
+  - 已完成:
+    - 机房创建/编辑弹窗
+    - 机柜创建/编辑弹窗
+    - 设备创建/编辑弹窗
+    - 错误区域可通过表单容器选择器稳定定位
+
+- [ ] 给常用测试路径补最小化测试工具
+  - 已有:
+    - `frontend/e2e/helpers/reset.ts`
+    - `frontend/e2e/helpers/setup.ts`
+  - 待补:
+    - 更通用的数据创建 helper
+    - 登录/初始化 helper（如果后续引入认证）
+
+## P2 中期功能项
+
+### 8. 机柜和设备可视化完善
+
+- [ ] 梳理现有 2D/3D 机柜可视化能力，区分“已实现但未打磨”和“完全未做”
+- [ ] 完善设备在 U 位中的展示、移动、占用冲突校验
+- [ ] 明确机柜详情页、设备详情页、可视化视图之间的导航关系
+
+### 9. 仪表板和统计
+
 - [ ] 实现设备统计 API
 - [ ] 实现线缆统计 API
 - [ ] 实现端口占用率统计
-- [ ] 更新仪表板数据展示
-- [ ] 添加图表展示 (ECharts)
+- [ ] 更新 Dashboard 展示
+- [ ] 决定是否引入图表库，避免为了统计页过早增加复杂度
 
-### 优先级 4 - 高级功能
+### 10. 网络与电源管理
 
-#### 11. SNMP 集成
-- [ ] 研究 SNMP 库 (net-snmp)
-- [ ] 创建 SNMP 服务
-- [ ] 设备 SNMP 配置管理
-- [ ] 定时采集设备数据
-- [ ] 存储监控数据
-- [ ] 展示监控数据
+- [ ] 重新评估 IP 管理功能，先对照当前仓库已有的 `ipAddresses/subnets` 能力，避免重复设计
+- [ ] 明确“设备 IP”“端口网络属性”“子网归属”的边界
+- [ ] 电源管理先从数据模型和连接关系建模开始，不急着上完整 UI
 
-#### 12. IPMI 集成
-- [ ] 研究 IPMI 库
-- [ ] 创建 IPMI 服务
-- [ ] 设备 IPMI 配置管理
-- [ ] 获取设备健康状态
-- [ ] 电源管理功能
-- [ ] 远程控制功能
+### 11. 设备/线缆管理补齐
 
-#### 13. 资产盘点功能
-- [ ] 二维码生成功能
-- [ ] 二维码扫描功能
-- [ ] 盘点清单管理
-- [ ] 盘点报告生成
-- [ ] 差异对比
+- [ ] 梳理设备详情、搜索、位置展示是否还缺独立页面，还是已有能力只是交互未收口
+- [ ] 明确线缆列表、编辑、删除、两端查看的最终入口
+- [ ] 评估是否需要单独的线缆管理页，而不是继续分散在多个页面中
 
-#### 14. 报表功能
-- [ ] 设备清单报表
-- [ ] 线缆连接报表
-- [ ] IP 地址分配报表
-- [ ] 端口使用率报表
-- [ ] 导出为 Excel/PDF
+## P3 延后项
 
-### 优先级 5 - 智能化
+### 12. 认证与审计
 
-#### 15. AI 布局优化
-- [ ] 收集布局数据
-- [ ] 训练优化模型
-- [ ] 布局建议 API
-- [ ] 前端展示建议
-- [ ] 应用优化方案
+- [ ] 用户认证
+- [ ] 权限模型
+- [ ] 操作审计日志
 
-## 重启后立即执行的任务
+### 13. 盘点与报表
 
-1. **启动数据库**
-   ```bash
-   docker ps  # 检查 Neo4j 和 PostgreSQL 是否运行
-   ```
+- [ ] 二维码生成和扫码盘点
+- [ ] 盘点清单和差异报告
+- [ ] 设备/线缆/IP/端口报表导出
 
-2. **启动后端**
-   ```bash
-   cd backend
-   npm run dev
-   ```
+### 14. 监控集成
 
-3. **启动前端**
-   ```bash
-   cd frontend
-   npm run dev
-   ```
+- [ ] SNMP 能力梳理和最小可用接入
+- [ ] IPMI 能力梳理和最小可用接入
+- [ ] 明确监控数据采集、存储、展示边界
 
-4. **验证服务**
-   - 前端: http://localhost:5174
-   - 后端: http://localhost:3000/health
-   - API 文档: http://localhost:3000/api/v1
-   - Neo4j: http://localhost:7474
+### 15. 探索项
 
-## API 端点清单
+- [ ] 多租户
+- [ ] 移动端适配
+- [ ] AI 布局优化
 
-### v1 API (当前 - 统一模式)
+### 16. 学生机（教室终端）纳入 DCAgent（2026-10-20 备忘，等控制平面理清后再做）
 
-**API 设计原则:**
-- 只使用 GET 和 POST 方法
-- 所有参数通过 body JSON 传递 (包括 ID)
-- 统一路由模式
+背景: 学生机管理平台（https://10.99.31.201，云课堂 VOI/VDI，后端 thor）已能通过 `~/code/lab-power` 读取全部终端并按教室关机。
+数据源: `lab-power export` 导出 CSV（教室, 名字, IP, MAC, 状态），10/20 快照在 `CiderLLM/network/学生机清单-20261020.csv`，共 263 台。
 
-**数据中心 (DataCenter)**
-- GET /api/v1/datacenters - 列表
-- GET /api/v1/datacenters?search=query - 搜索
-- POST /api/v1/datacenters/get - 获取详情 (body: {id})
-- POST /api/v1/datacenters/create - 创建 (body: {name, location})
-- POST /api/v1/datacenters/update - 更新 (body: {id, name?, location?})
-- POST /api/v1/datacenters/delete - 删除 (body: {id})
+| 平台教室 | 台数 | IP 段 | 合并到 Room |
+| --- | --- | --- | --- |
+| 110教室 | 100 | 10.99.31.1-100 | 110 |
+| 工科楼445A学生机 / 教师机 | 54 / 1 | 198.51.100.5-58 / .59 | 445A |
+| 工科楼445B学生机 / 教师机 | 56 / 1 | 198.51.100.70-125 / .126 | 445B |
+| 工科楼446教室 / 教师机 | 50 / 1 | 198.51.100.160-209 / .150 | 446 |
 
-**机房 (Room)**
-- GET /api/v1/rooms - 列表
-- GET /api/v1/rooms?dataCenterId=xxx - 按数据中心过滤
-- GET /api/v1/rooms?search=query - 搜索
-- POST /api/v1/rooms/get - 获取详情 (body: {id})
-- POST /api/v1/rooms/create - 创建 (body: {name, floor?, dataCenterId})
-- POST /api/v1/rooms/update - 更新 (body: {id, name?, floor?})
-- POST /api/v1/rooms/delete - 删除 (body: {id})
+现有模型已够用，不改 schema:
+- `Room.workstations` -> `Workstation`（code 唯一、ipAddress、macAddress、os、status、floorPlanPosition）
+- 接口: `/api/v1/workstations/by-code`、`/create`、`/update`、`/update-status`（body 传参）
+- `IpSubnet` 登记 198.51.100.0/24（业务 VLAN1，445A/445B/446 共用）和 10.99.31.0/24（110），每台登记 `IpAddress` ALLOCATED + hostname + MAC
 
-**机柜 (Cabinet)**
-- GET /api/v1/cabinets - 列表
-- GET /api/v1/cabinets?roomId=xxx - 按机房过滤
-- GET /api/v1/cabinets?search=query - 搜索
-- POST /api/v1/cabinets/get - 获取详情 (body: {id})
-- POST /api/v1/cabinets/create - 创建 (body: {name, position?, height?, roomId})
-- POST /api/v1/cabinets/update - 更新 (body: {id, name?, position?, height?})
-- POST /api/v1/cabinets/delete - 删除 (body: {id})
+- [ ] 确认/新建 Room: 445A、445B、446、110（Room 需要 shortID，`E-xxxxx` 号段由 9x 分配）
+- [ ] 导入脚本放 lab-power（`lab-power sync-dcagent`），DCAgent 不改代码
+  - 映射: code = name = 机器名（如 `C446-01`）；os = windows10；教师机写进 notes；平台 status 0 -> OFFLINE，其余 -> ONLINE
+  - 幂等: 先 `/by-code`，有则 update，无则 create；先演练打印新增/更新清单，9x 确认后再写
+- [ ] 登记两个 IpSubnet 和 263 个 IpAddress
+- [ ] 后续: 执行器定时把在线状态推到 `/update-status`，看板显示各教室开机数
+- [ ] 后续: 用 MAC 对交换机 MAC 表（SNMP），补 Workstation 到交换机端口的归属
+- 前置: 9x 先把 k8s 控制平面理清（lab-power 执行器计划做成 hostNetwork Pod 钉在 VLAN1 节点）
+- 注意: 后端由 9x 自己启动（3000 / 5173），导入前确认已开
 
-**设备 (Device)**
-- GET /api/v1/devices - 列表
-- GET /api/v1/devices?cabinetId=xxx - 按机柜过滤
-- GET /api/v1/devices?search=query - 搜索
-- POST /api/v1/devices/get - 获取详情 (body: {id})
-- POST /api/v1/devices/create - 创建 (body: {name, type, model?, serialNo?, uPosition?, uHeight?, cabinetId})
-- POST /api/v1/devices/update - 更新 (body: {id, ...})
-- POST /api/v1/devices/delete - 删除 (body: {id})
-- POST /api/v1/devices/bulk-create - 批量创建 (body: {devices: [...]})
+## 近期建议执行顺序
 
-**面板 (Panel)**
-- GET /api/v1/panels - 列表
-- GET /api/v1/panels?deviceId=xxx - 按设备过滤
-- GET /api/v1/panels?type=xxx - 按类型过滤
-- GET /api/v1/panels?search=query - 搜索
-- POST /api/v1/panels/get - 获取详情 (body: {id})
-- POST /api/v1/panels/create - 创建 (body: {name, type, deviceId})
-- POST /api/v1/panels/update - 更新 (body: {id, name?, type?})
-- POST /api/v1/panels/delete - 删除 (body: {id})
+1. 先做运行时验证：
+   - 机房/机柜保存失败提示是否展示后端 message
+   - Room / Cabinet / Device 层级迁移的 DB-backed 验证
+2. 安装 Playwright 并执行第一批 E2E。
+3. 继续清理 `backend` TypeScript 构建债（优先 `#15` / `#17`）。
+4. 再决定 `Panel` 是否支持跨设备迁移。
 
-**端口 (Port)**
-- GET /api/v1/ports - 列表
-- GET /api/v1/ports?panelId=xxx - 按面板过滤
-- GET /api/v1/ports?status=xxx - 按状态过滤
-- GET /api/v1/ports?search=query - 搜索
-- POST /api/v1/ports/get - 获取详情 (body: {id})
-- POST /api/v1/ports/create - 创建 (body: {number, label?, status?, panelId})
-- POST /api/v1/ports/create-bulk - 批量创建 (body: {panelId, count, prefix?})
-- POST /api/v1/ports/update - 更新 (body: {id, number?, label?, status?})
-- POST /api/v1/ports/update-status - 更新状态 (body: {id, status})
-- POST /api/v1/ports/delete - 删除 (body: {id})
-- POST /api/v1/ports/available - 获取可用端口 (body: {panelId})
+## 可观测性（2026-10-24 夜间，Claude）
 
-**线缆 (Cable)**
-- GET /api/v1/cables - 列表
-- POST /api/v1/cables/get - 获取详情 (body: {id})
-- POST /api/v1/cables/create - 创建 (body: {label?, type, length?, color?, notes?, portAId, portBId})
-- POST /api/v1/cables/update - 更新 (body: {id, ...})
-- POST /api/v1/cables/delete - 删除 (body: {id})
-- POST /api/v1/cables/port-connection - 获取端口连接 (body: {portId})
-- POST /api/v1/cables/panel-connections - 获取面板连接 (body: {panelId})
-- POST /api/v1/cables/network-topology - 获取网络拓扑 (body: {panelId, depth?})
+详见 `docs/observability/README.md`。
 
-## 技术债务
+- [x] 后端 `/api/v1/observability`：goflow2 流量导入与 Top 流、华为端口体检与快照、工作站开关机/接线同步、座位数字影子
+- [x] 数据库：`Workstation.switchName/switchPort/lastSeenAt`，新表 `PortObservation`（迁移已应用；之前的库备份在 `db-backups/dcagent-before-observability-20261024.dump`）
+- [x] 前端「可观测性」页面（座位 / 流量 / 端口体检），中英日三语
+- [x] 采集器 `scripts/collect-observability.ts`（flows / switches / power），导入脚本 `scripts/import-classroom-workstations.ts`
+- [x] 已导入 445A、445B、446、110 共 263 台工作站（445A/445B 带接线位置）
+- [x] E2E 清库保护：`E2E_ALLOW_RESET=1` 才允许 `data:seed:reset`
+- [x] 交换机互联导入线缆拓扑 `scripts/import-switch-links.ts`（数据来自 CiderLLM `topo.py --json`）：新增 8 条、教室交换机 7 台、端口标签写座位号 111 个
+- [ ] 服务器千兆口归属：F13 GE0/0/11–15 五个 AMI BMC、GE0/0/17–24 OpenStack 那批的网卡、A38 GE0/0/6 的 BMC，巡检里只有 MAC，要先对上是哪台服务器才能连线
+  - 图灵 7 台里有两台新的 3647 平台机器，凭据还没移交；等移交后登 BMC 读 MAC，再把 7 台建成设备、连到 F13 GE17–24（2026-10-24 挂起）
+- [ ] 采集器常驻：flows 模式放到 jumper 或 221 上跑（systemd），switches / power 定时跑
+- [ ] 流量窗口目前在内存里，重启即丢；需要长期留存时再接时序库
+- [x] 座位按真实排布（445A/445B 已写入坐标，`--layout`）；446、110 的排布参数待补
+- [ ] 446、110 的接线位置还没定位（需要那边交换机的 MAC 表）
+- [ ] 端口快照关联 DCAgent 设备：库里设备名是"F13 核心交换机"，sysname 是"445C-F13"，目前要手动传 deviceId
+- [ ] 老 bug（清类型错误时发现，未改以免改变接口输出）：`routes/monitoring.ts` 的 temperature / fans 接口读 `s.value` / `f.value`，但 SNMP 服务返回的是 `reading` / `speed`，接口里的数值一直是 undefined（Dell 温度的 name 也是）
+- [ ] 前端还有 89 个老的类型错误（`npm run build` 会失败），可以用同样的办法清
 
-- [ ] 添加错误处理中间件
-- [ ] 添加请求日志
-- [ ] 添加数据验证
-- [ ] 编写单元测试
-- [ ] 编写集成测试
-- [ ] 添加 API 文档 (Swagger)
-- [ ] 性能优化
-- [ ] 安全加固
+## 2026-10-25 夜间重构
 
-## 已知问题
+分支 `night/20261025-modernize`，基线 `ecef2e5`。方案和每条决策的理由见 `docs/REFACTOR_PLAN_20261025.md`。
 
-- ✅ 前端图标问题已修复 (ServerOutlined 不存在)
-- 后端启动时需要确保端口 3000 未被占用
+### 做了什么
 
-## 当前服务状态
+- 数据层
+  - 去掉 Neo4j，只用 PostgreSQL；迁移历史压成一个 `0001_baseline`（生成的 DDL + 末尾手写的 CHECK、EXCLUDE、触发器）。
+  - shortID 只认 `Label` 一张表：一个号最多贴一个实体，机柜、面板、线缆端子提交时必须有标签（延迟约束触发器），实体删除后标签自动解绑但不会被重新分配。
+  - 派生状态不再存：端口是否连接、线缆在库/在用、工作站在线都在读取时推导。
+  - 层级容器删除改为 RESTRICT，服务层先检查、非空返回 409；所有写用例都在一个事务里。
+- 接口：统一 `POST /api/v1/<资源>/<动作>`，参数全部在 body；前后端共用 `backend/src/contracts/` 的 zod schema 和 DTO；错误统一 `{code,message,details}`。旧的 OpenAPI/Apifox 文件和脚本已删除，接口列表见 `docs/API.md`。
+- 测试隔离：测试、E2E、迁移演练只用 `dcagent_test`（库名不以 `_test` 结尾就拒绝）；E2E 自己起 3100/5174；`playwright.night.config.ts` 只读巡检真实环境。
+- 新功能：面板模板参数化生成器与批量套用（`docs/PANEL_TEMPLATES.md`）、3D 机房（`docs/DATACENTER_3D.md`）、命令面板、仪表板改版。
+- 验收复审后的修正（同一晚）：
+  - 删除设备不再悄悄带走端口观测历史：`PortObservation.deviceId` 改为 RESTRICT；有面板、观测历史或管理 IP 时返回 `NOT_EMPTY` 并列出内容，确认后 force 才删除历史、解除 IP 绑定（地址记录保留）。删除被外键 RESTRICT 拦下时也返回 `NOT_EMPTY` 而不是 `NOT_FOUND`。
+  - 套用模板不再删除状态为预留/故障、有标签或有备注的端口，差异里写明保留原因；光模块移动记录写入时保存端口文字路径，端口删掉后历史仍可读。
+  - 设备高度未知（旧库 10 台 `uHeight` 为空）不再写成 1U：`Device.uHeight`、`DeviceModel.uHeight` 可空，界面显示"高度未知"，排位冲突按 1U 计。
+  - 型号目录不再包含占位文字：`未确认`、`台式机` 不建型号，原文写进设备备注最后一行（`迁移前型号字段：...`）；`SR650` 型号按厂商规格记 2U。型号从 14 个变为 12 个。
+  - 名称列（机房、机柜、设备、面板、端口号、工作站、子网、型号、模板）用 ICU `natural` 排序规则，`S110-9 < S110-10 < S110-100`，分页列表也对。
+  - 可观测性：手工认领观测记录时校验端口属于所选设备；座位页默认打开有座位布局的机房，没有布局或没有接线记录时给出说明。
+  - 迁移脚本：Neo4j 证据改为直接读只读备份文件，逐个节点和连接核对，孤儿（父节点在旧库已删除）单独列出；`--target=prod --apply` 在真实库有迁移之后录入的数据时拒绝执行（按表比较 digest），需要 `--overwrite-live`。
+  - `docker-compose.yml` 保持 `postgres:16-alpine`，与现有数据卷一致（换成 Debian 镜像会让文本索引排序失配）。
+  - 界面：IP 子网表列宽和固定操作列、仪表板 3D 卡片按钮箭头（原因是 `.dash-3d svg` 选择器连按钮图标一起绝对定位了）、语言选择框、英日文菜单过长、统计卡副标题截断、3D 悬停指针残留、机柜视图补"未设置 U 位的设备"区。
 
-### 运行中的服务
-- ✅ PostgreSQL 数据库 (端口 5432)
-- ✅ Neo4j 图数据库 (端口 7474, 7687)
-- ✅ 后端服务 (http://localhost:3000)
-- ✅ 前端服务 (http://localhost:5173)
+### 怎么用
 
-### 可用的功能
-- ✅ 数据中心 CRUD
-- ✅ 机房 CRUD (支持按数据中心过滤)
-- ✅ 机柜 CRUD (支持按机房过滤)
-- ✅ 设备 CRUD (支持按机柜过滤 + 批量导入)
-- ✅ 面板 CRUD (支持按设备和类型过滤 + 面板旋转 + 端口组)
-- ✅ 端口 CRUD (支持批量创建、状态管理、按面板和状态过滤)
-- ✅ 线缆拓扑可视化 (React Flow + 交互操作)
+- 启动、测试、迁移步骤见 `GETTING_STARTED.md`；后端脚本见 `backend/README.md`。
+- 真实库已按新结构重建：`db:deploy` -> `migrate:legacy --target=prod --apply`（报告 `backend/migration-reports/20261024T200937-prod.json`，全部对账项通过，digest `1dab5a33a537c1da8466f0960f2cdf39`，与 dcagent_test 演练一致）-> `templates:presets`（7 个预设）。
+- 对账基线（旧 -> 新）：DataCenter 1 -> 1，Room 6 -> 6，Cabinet 11 -> 11，Device 35 -> 35，Panel 41 -> 41，Port 180 -> 180，Cable 42 -> 42，CableEndpoint 84 -> 84，Workstation 263 -> 263，PortObservation 127 -> 127，ShortIdPool 120 -> Label 192（+72 补号），IpSubnet 6 -> 8（+2 个终端 /24），IpAddress 33 -> 296（+263 条由工作站 IP/MAC 迁入），PanelTemplate 0 -> 0（之后导入 7 个预设），DeviceModel 新表 12。
+- Neo4j 备份核对：Panel 79 = 41 在旧库 + 38 孤儿，Port 239 = 180 + 59 孤儿，Cable 33 = 32 + 1 孤儿（E2E Dual Cable），没有无法解释的节点或连接。
+- 本次操作前后的整库备份：`db-backups/dcagent-before-review-fixes-20261024-1309.dump`（重建前）、`db-backups/dcagent-after-review-fixes-20261024-1309.dump`（重建并导入预设后）。重构前的两份只读备份未动，校验和与 `SHA256SUMS-20261025` 一致。
 
-## 想法和改进
+### 遗留
 
-- 考虑添加用户认证和权限管理
-- 考虑添加操作审计日志
-- 考虑添加数据备份功能
-- 考虑添加多租户支持
-- 考虑移动端适配
-
----
-
-**更新日期**: 2025-11-06
-**当前 Phase**: Phase 3 完成 - 可视化与批量操作
-
-**最近更新** (2025-11-05/06):
-- ✅ 完成线缆拓扑可视化 (React Flow + 交互操作)
-- ✅ 面板编辑增强 (旋转 + 端口组)
-- ✅ 批量上架助手功能完成
-  - BulkImportModal 通用组件
-  - Excel/CSV 解析和验证
-  - 批量创建设备 API
-  - 完整使用文档
-- ✅ Beta Release V0.1 发布
-
-**下一阶段重点 (Phase 4)**:
-1. 完善机柜 U 位可视化
-2. 实现仪表板数据统计·    
-3. IP地址管理功能
-4. 电源管理功能
-5. 用户认证和权限管理
+- [ ] 补打标签：72 个迁移补号（机柜、面板、线缆端子），清单 `backend/migration-reports/labels-to-print-20261024T200937-prod.csv`。
+- [ ] 确认 10 台高度未知设备的 U 高：445A-U6/U9/U12、445B-U6/U8/U11、446stack、A柜30T缓存（SR650，应为 2U）、A柜人院服务器1、D柜电子班牌服务器。在设备表单里填上即可。
+- [ ] 确认 10 台型号为"未确认"/"台式机"的设备的真实型号（备注最后一行有原文），确认后建型号、关联模板。
+- [ ] "447实验室 虚拟机柜"要不要删（D12，数据清理，留给 9x 决定）。
+- [ ] 110 和 446 两个教室没有座位坐标和接线记录（旧库就没有），需要那边交换机的 MAC 表和排布参数。
+- [ ] `docs/` 下重构前的旧文档（ARCHITECTURE、DATABASE、SHORTID、IMPLEMENTATION_SUMMARY、CABINET_VISUALIZATION、PORT_*、SNMP*、批量上架助手使用说明）描述的是旧接口，需要按新结构重写或删除。
+- [ ] 未切换 Express 5，旧页面还没有全部改成 react-query（D14）。
+- [ ] 前端主包 1MB、3D 包 880KB，可以再拆分。

@@ -1,0 +1,55 @@
+{
+  "title": "3D サーバールーム",
+  "description": "フロアプランの座標でラック、機器、ケーブルを表示します。ラックをクリックすると機器を確認できます",
+  "roomPlaceholder": "ルームを選択",
+  "noRooms": "ルームがまだありません。先にルームページで作成してください",
+  "loadFailed": "ルームのシーンを読み込めませんでした",
+  "retry": "再試行",
+  "controls": {
+    "resetView": "視点をリセット",
+    "cables": "ケーブル",
+    "colorBy": "色分け",
+    "colorType": "種類別",
+    "colorOccupancy": "使用率別",
+    "openRoom": "ルーム詳細"
+  },
+  "stats": {
+    "cabinets": "ラック {{count}}",
+    "devices": "機器 {{count}}",
+    "links": "ケーブル {{count}}",
+    "externalLinks": "{{count}} 本のケーブルが他のルームへ接続",
+    "looseDevices": "{{count}} 台の機器がラック外にあります",
+    "workstations": "ワークステーション {{online}}/{{count}} オンライン",
+    "autoPlaced": "{{count}} 台のラックにフロアプラン座標がないため、グリッドに自動配置しました"
+  },
+  "legend": {
+    "type": "機器の種類",
+    "occupancy": "ポート使用率（ラック枠は U 使用率）",
+    "idle": "空き",
+    "full": "満杯",
+    "noPorts": "ポートなし",
+    "cables": "ケーブル媒体"
+  },
+  "tooltip": {
+    "uSingle": "U{{from}}、1U",
+    "uRange": "U{{from}}-U{{to}}、{{height}}U",
+    "ports": "ポート {{connected}}/{{total}} 接続済み",
+    "noPorts": "ポートなし",
+    "uUnknownHeight": "U{{from}}、高さ不明"
+  },
+  "drawer": {
+    "uUsage": "U 使用 {{used}}/{{total}}",
+    "devices": "機器",
+    "noDevices": "このラックにはまだ機器がありません",
+    "unplaced": "U 位置未設定",
+    "openCabinet": "ラックビューを開く",
+    "openPanel": "パネルを開く",
+    "highlight": "ケーブルを強調",
+    "autoPlaced": "フロアプラン座標がないため自動配置されています"
+  },
+  "webgl": {
+    "title": "3D ビューを表示できません",
+    "description": "このブラウザまたはグラフィックスカードは WebGL に対応していません。ハードウェアアクセラレーション対応のブラウザを使うか、ルームページのフロアプランを利用してください。",
+    "openRoom": "ルームのフロアプランを開く"
+  }
+}

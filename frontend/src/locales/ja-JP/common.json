@@ -1,5 +1,4 @@
 {
-  "appName": "データセンター資産管理システム",
   "actions": {
     "create": "新規作成",
     "edit": "編集",
@@ -7,15 +6,14 @@
     "save": "保存",
     "cancel": "キャンセル",
     "confirm": "確定",
-    "search": "検索",
     "reset": "リセット",
-    "submit": "送信",
-    "back": "戻る",
     "view": "表示",
     "export": "エクスポート",
     "import": "インポート",
     "refresh": "更新",
-    "visualize": "可視化"
+    "deckMode": "Deck モード",
+    "deckModeOn": "Deck モード オン",
+    "deckModeOff": "Deck モード オフ"
   },
   "status": {
     "success": "成功",
@@ -38,8 +36,85 @@
     "updateFailed": "更新失敗",
     "loadFailed": "読み込み失敗。後でもう一度お試しください",
     "operationSuccess": "操作成功",
-    "operationFailed": "操作失敗"
+    "operationFailed": "操作失敗",
+    "saveSuccess": "保存に成功しました",
+    "saveFailed": "保存に失敗しました"
   },
   "searchPlaceholder": "検索またはQRコードをスキャン...",
-  "searchFailed": "検索失敗。後でもう一度お試しください"
+  "searchFailed": "検索失敗。後でもう一度お試しください",
+  "entityKinds": {
+    "DATACENTER": "データセンター",
+    "ROOM": "機械室",
+    "CABINET": "ラック",
+    "DEVICE": "機器",
+    "PANEL": "パネル",
+    "PORT": "ポート",
+    "CABLE": "ケーブル",
+    "CABLE_ENDPOINT": "ケーブル端子",
+    "WORKSTATION": "端末",
+    "IP_ADDRESS": "IP アドレス"
+  },
+  "scan": {
+    "unknown": "ラベル {{display}} は存在しません",
+    "unbound": "ラベル {{display}} はどこにも紐付いていません",
+    "void": "ラベル {{display}} は無効です"
+  },
+  "tagline": "見えない線を、見える化へ",
+  "label": {
+    "field": "ラベル",
+    "placeholder": "スキャンまたは入力（例 E-00001）",
+    "placeholderAuto": "スキャンまたは入力。空欄で自動割り当て",
+    "invalid": "ラベルの形式が不正です。E-XXXXX または数字で入力してください",
+    "bound": "ラベルは {{name}} に紐付いています",
+    "void": "ラベルは無効です"
+  },
+  "portPicker": {
+    "selectDevice": "機器を選択",
+    "selectPanel": "パネルを選択",
+    "selectPort": "ポートを選択",
+    "busy": "使用中"
+  },
+  "bulkImport": {
+    "downloadTemplate": "テンプレートをダウンロード",
+    "templateDownloaded": "テンプレートをダウンロードしました",
+    "templateSuffix": "テンプレート",
+    "dragText": "クリックまたはドラッグしてファイルをアップロード",
+    "dragHint": "Excel (.xlsx, .xls) と CSV に対応",
+    "parsed": "{{count}} 件を読み込みました",
+    "parseFailed": "ファイルを読み込めません",
+    "hasErrors": "エラーのある行があります。修正して再試行してください",
+    "noData": "インポートするデータがありません",
+    "row": "行",
+    "status": "状態",
+    "ok": "正常",
+    "errorCount": "エラー ({{count}})",
+    "errorsFound": "{{count}} 行にエラーがあります",
+    "errorsHint": "エラーの行を確認し、修正して再アップロードしてください",
+    "errorDetails": "エラー詳細",
+    "required": "{{field}} は必須です",
+    "clear": "クリア",
+    "submit": "インポート ({{count}} 件)"
+  },
+  "palette": {
+    "open": "コマンドパレット",
+    "placeholder": "ページ・資産を検索、またはラベル番号を入力...",
+    "empty": "一致する結果はありません",
+    "groups": {
+      "assets": "資産",
+      "pages": "ページ",
+      "actions": "操作"
+    },
+    "hintMove": "選択",
+    "hintOpen": "開く",
+    "hintClose": "閉じる",
+    "themeKeywords": "テーマ ダーク ライト theme dark light"
+  },
+  "theme": {
+    "toDark": "ダークテーマに切り替え",
+    "toLight": "ライトテーマに切り替え"
+  },
+  "breadcrumb": {
+    "detail": "詳細",
+    "page": "ページ"
+  }
 }

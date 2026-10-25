@@ -1,0 +1,42 @@
+{
+  "format": "dcagent.panel-template",
+  "version": 1,
+  "templates": [
+    {
+      "name": "样例 48 电口 + 4 万兆光口交换机前面板",
+      "type": "NETWORK",
+      "face": "FRONT",
+      "deviceModel": null,
+      "widthMm": 482.6,
+      "heightMm": 44.45,
+      "description": "样例：48 个 RJ45 + 4 个 SFP+，两行，奇数口在上、偶数口在下，接口名 GigabitEthernet0/0/n、XGigabitEthernet0/0/n",
+      "generator": {
+        "version": 1,
+        "groups": [
+          {
+            "portType": "RJ45",
+            "count": 48,
+            "numberPrefix": "ge",
+            "ifNamePattern": "GigabitEthernet0/0/{n}",
+            "rows": 2,
+            "order": "COLUMN_MAJOR",
+            "xMm": 20,
+            "pitchXMm": 15.5,
+            "pitchYMm": 16
+          },
+          {
+            "portType": "SFP_PLUS",
+            "count": 4,
+            "numberPrefix": "xge",
+            "ifNamePattern": "XGigabitEthernet0/0/{n}",
+            "rows": 2,
+            "order": "COLUMN_MAJOR",
+            "gapMm": 12,
+            "pitchXMm": 15,
+            "pitchYMm": 14
+          }
+        ]
+      }
+    }
+  ]
+}

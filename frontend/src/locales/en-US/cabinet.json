@@ -4,52 +4,43 @@
   "createTitle": "Create Cabinet",
   "editTitle": "Edit Cabinet",
   "fields": {
-    "id": "ID",
-    "shortId": "ID",
     "name": "Cabinet Name",
-    "position": "Position",
+    "position": "Position code",
     "height": "U Height",
     "room": "Room",
     "deviceCount": "Device Count",
     "portUtilization": "Port Utilization",
     "createdAt": "Created At",
-    "actions": "Actions"
+    "actions": "Actions",
+    "label": "Label",
+    "usedU": "Used U"
   },
   "placeholders": {
     "name": "e.g.: A-01",
-    "position": "e.g.: First row, third column",
-    "height": "Enter U height",
+    "position": "e.g. A-01",
     "room": "Select room",
     "search": "Search cabinet name"
   },
   "messages": {
     "deleteConfirm": "Are you sure to delete this cabinet?",
-    "deleteWarning": "All devices under it will be deleted",
+    "deleteWarning": "A cabinet that still holds devices cannot be deleted",
     "createSuccess": "Cabinet created successfully",
     "updateSuccess": "Cabinet updated successfully",
     "deleteSuccess": "Cabinet deleted successfully",
-    "loadFailed": "Failed to load cabinet list",
-    "updateFailed": "Update failed",
-    "createFailed": "Create failed",
-    "deleteFailed": "Delete failed",
     "selectCabinet": "Please select a cabinet",
-    "selectCabinetVisual": "Please select a cabinet from the left to visualize",
+    "selectCabinetVisual": "Select a cabinet on the left",
     "noCabinets": "No cabinets",
-    "panelLoadFailed": "Failed to load device panels",
     "panelUnbindSuccess": "Panel unbound from template, you can now customize port layout",
-    "panelUnbindFailed": "Unbind failed",
     "deviceDeleteConfirm": "Are you sure to delete this device?",
     "deviceCreated": "Device created successfully",
     "deviceUpdated": "Device updated successfully",
     "deviceDeleted": "Device deleted successfully",
     "deviceTransferSuccess": "Device moved to new location",
-    "deviceTransferFailed": "Device transfer failed",
     "deviceCopySuccess": "Device copied successfully",
-    "deviceCopyFailed": "Device copy failed",
-    "positionOccupied": "Target position U{{uPosition}} is occupied",
-    "portPositionUpdated": "Port position updated",
-    "portPositionUpdateFailed": "Failed to update port position",
-    "deviceTypeError": "Please select device type"
+    "deviceTypeError": "Please select device type",
+    "dangling": "{{count}} cable ends are parked on this device without a port",
+    "danglingTag": "Loose {{count}}",
+    "outdated": "Template updated"
   },
   "validation": {
     "nameRequired": "Please enter cabinet name",
@@ -88,27 +79,20 @@
     "deviceCopy": "Copy",
     "confirmTransfer": "Confirm Transfer",
     "confirmCopy": "Confirm Copy",
-    "editDeviceButton": "Edit Device"
+    "editDeviceButton": "Edit Device",
+    "setUPosition": "Set U position"
   },
   "labels": {
     "cabinetName": "Cabinet Name",
-    "position": "Position",
+    "position": "Position code",
     "uHeight": "U Height",
     "selectRoom": "Room",
-    "deviceName": "Device Name",
-    "deviceType": "Device Type",
-    "deviceModel": "Model",
-    "serialNo": "Serial Number",
     "selectCabinet": "Cabinet",
-    "uPosition": "Start U Position",
-    "uHeight": "U Height",
     "targetCabinet": "Target Cabinet",
     "targetUPosition": "Target U Position",
-    "deviceType": "Device Type",
     "cabinetOverview": "Cabinet Overview",
     "selectCabinetPlaceholder": "Select or search cabinet",
-    "cabinetStats": "Cabinet Stats",
-    "devices": "devices"
+    "deviceCount": "{{count}} devices"
   },
   "deviceTypes": {
     "SERVER": "Server",
@@ -124,13 +108,11 @@
     "devicePanels": "Device Panels",
     "noPanels": "No panels for this device",
     "templateBound": "Template",
-    "customized": "Customized",
-    "templateAlert": "This panel uses template",
-    "templateAlertDesc": "This panel is created based on template, port layout is defined by template. You can customize port layout after unbinding.",
     "unbindConfirmTitle": "Confirm unbind template?",
     "unbindConfirmDesc": "You can customize port layout after unbinding, but will lose template updates.",
-    "portNumber": "Port",
-    "portStatus": "Status"
+    "unplacedDevices": "Devices without a U position ({{count}})",
+    "unplacedHint": "These devices are in the cabinet but have no U position, so the rack drawing leaves them out. Use the arrow button to set one.",
+    "noUPosition": "no U position"
   },
   "transfer": {
     "title": "Transfer Device",
@@ -143,7 +125,7 @@
   "views": {
     "2dFrontPanel": "2D Front Panel View",
     "3dView": "3D View",
-    "selectCabinet": "Select Cabinet"
+    "selectCabinet": "Select cabinet"
   },
   "descriptions": {
     "deviceType": "Device Type",
@@ -151,7 +133,13 @@
     "serialNo": "Serial Number",
     "uPosition": "U Position"
   },
-  "special": {
-    "visualize": "Visualize"
+  "visual": {
+    "type": "Type",
+    "model": "Model",
+    "position": "Position",
+    "serialNo": "Serial No.",
+    "ip": "IP",
+    "unknown": "Unknown",
+    "legend": "Device types"
   }
 }

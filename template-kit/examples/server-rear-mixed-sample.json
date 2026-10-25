@@ -1,0 +1,72 @@
+{
+  "format": "dcagent.panel-template",
+  "version": 1,
+  "templates": [
+    {
+      "name": "样例 服务器后面板 2SFP+BMC+2USB",
+      "type": "OTHER",
+      "face": "REAR",
+      "deviceModel": null,
+      "widthMm": 482.6,
+      "heightMm": 44.45,
+      "description": "样例：2 个 SFP 数据口、1 个 BMC、2 个 USB 的服务器后面板（逐口坐标写法）",
+      "ports": [
+        {
+          "number": "NIC1",
+          "sortIndex": 1,
+          "portType": "SFP",
+          "ifName": null,
+          "xMm": 40,
+          "yMm": 12,
+          "wMm": 14,
+          "hMm": 12,
+          "rotation": 0
+        },
+        {
+          "number": "NIC2",
+          "sortIndex": 2,
+          "portType": "SFP",
+          "ifName": null,
+          "xMm": 58,
+          "yMm": 12,
+          "wMm": 14,
+          "hMm": 12,
+          "rotation": 0
+        },
+        {
+          "number": "BMC",
+          "sortIndex": 3,
+          "portType": "RJ45",
+          "ifName": null,
+          "xMm": 100,
+          "yMm": 12,
+          "wMm": 14,
+          "hMm": 12,
+          "rotation": 0
+        },
+        {
+          "number": "USB1",
+          "sortIndex": 4,
+          "portType": "USB",
+          "ifName": null,
+          "xMm": 140,
+          "yMm": 14,
+          "wMm": 12,
+          "hMm": 8,
+          "rotation": 0
+        },
+        {
+          "number": "USB2",
+          "sortIndex": 5,
+          "portType": "USB",
+          "ifName": null,
+          "xMm": 156,
+          "yMm": 14,
+          "wMm": 12,
+          "hMm": 8,
+          "rotation": 0
+        }
+      ]
+    }
+  ]
+}

@@ -1,28 +1,20 @@
-import { PortType } from '@/constants/portSizes';
-import { getPortIcon } from '@/constants/portIcons';
+import type { PortType } from '@contracts/enums';
+import { PORT_ICONS } from '@/constants/portIcons';
 
 interface PortIconProps {
   portType: PortType;
-  size?: number; // 图标大小（像素）
+  /** pixels */
+  size?: number;
   className?: string;
 }
 
-/**
- * 端口图标组件
- * 用于显示各种端口类型的SVG图标
- */
+/** SVG icon of a port type, for menus and legends. */
 export function PortIcon({ portType, size = 24, className }: PortIconProps) {
-  const svgContent = getPortIcon(portType);
-
   return (
     <div
       className={className}
-      style={{
-        width: size,
-        height: size,
-        display: 'inline-block',
-      }}
-      dangerouslySetInnerHTML={{ __html: svgContent }}
+      style={{ width: size, height: size, display: 'inline-block' }}
+      dangerouslySetInnerHTML={{ __html: PORT_ICONS[portType] }}
     />
   );
 }

@@ -1,0 +1,116 @@
+{
+  "title": "标签管理",
+  "description": "机柜、面板和线缆端子必须贴标签。这里生成号段、建打印任务、作废损坏的标签，并检查缺标签的实体。",
+  "tabs": {
+    "labels": "标签",
+    "tasks": "打印任务",
+    "missing": "缺标签"
+  },
+  "fields": {
+    "shortId": "标签号",
+    "state": "状态",
+    "bound": "绑定到",
+    "batchNo": "批次号",
+    "printedAt": "打印时间",
+    "firstBoundAt": "首次绑定",
+    "boundAt": "最近绑定",
+    "notes": "备注",
+    "createdAt": "创建时间",
+    "completedAt": "完成时间",
+    "createdBy": "创建人",
+    "count": "数量",
+    "taskName": "任务名称",
+    "kind": "类型",
+    "name": "名称",
+    "location": "位置",
+    "actions": "操作"
+  },
+  "states": {
+    "GENERATED": "已生成",
+    "PRINTED": "已打印",
+    "VOID": "已作废"
+  },
+  "taskStatuses": {
+    "PENDING": "待打印",
+    "COMPLETED": "已完成",
+    "FAILED": "失败"
+  },
+  "bound": {
+    "yes": "已绑定",
+    "no": "未绑定"
+  },
+  "stats": {
+    "total": "总数",
+    "bound": "已绑定",
+    "allocatable": "可自动分配",
+    "toPrint": "已绑定未打印",
+    "void": "已作废",
+    "missing": "缺标签实体"
+  },
+  "actions": {
+    "generate": "生成号段",
+    "createPrintTask": "创建打印任务",
+    "batchVoid": "批量作废",
+    "void": "作废",
+    "exportCsv": "导出 CSV",
+    "complete": "标记完成",
+    "fail": "标记失败",
+    "refresh": "刷新"
+  },
+  "filters": {
+    "state": "状态",
+    "bound": "是否绑定",
+    "kind": "实体类型",
+    "range": "号段，如 1-5, 8"
+  },
+  "modals": {
+    "generate": "生成标签号",
+    "createPrintTask": "创建打印任务",
+    "batchVoid": "批量作废标签",
+    "void": "作废标签 {{display}}",
+    "confirmComplete": "确认打印完成？",
+    "rangeHelp": "单个：1 或 E-00001；范围：1-5 或 E-00001-E-00005；组合：1-5, 8, 10-12",
+    "modeCount": "按数量",
+    "modeRange": "按号段",
+    "modeBound": "已绑定未打印"
+  },
+  "form": {
+    "count": "数量",
+    "rangeExpr": "号段",
+    "batchNo": "批次号",
+    "taskName": "任务名称",
+    "createdBy": "创建人",
+    "notes": "备注",
+    "reason": "作废原因"
+  },
+  "placeholders": {
+    "batchNo": "可选",
+    "taskName": "如：2026 年第一批",
+    "createdBy": "可选",
+    "reason": "如：标签损坏、丢失",
+    "rangeExpr": "如：1-5, 8, E-00010-E-00012"
+  },
+  "validation": {
+    "countRequired": "请输入数量",
+    "rangeRequired": "请输入号段",
+    "taskNameRequired": "请输入任务名称",
+    "reasonRequired": "请输入作废原因"
+  },
+  "messages": {
+    "generated": "新建 {{created}} 个，已存在 {{existing}} 个",
+    "taskCreated": "打印任务已创建，共 {{count}} 张",
+    "taskCompleted": "打印任务已更新",
+    "voided": "已作废 {{count}} 个",
+    "voidPartial": "作废 {{ok}} 个，{{failed}} 个未处理",
+    "voidReasons": {
+      "NOT_FOUND": "不存在",
+      "BOUND": "已绑定",
+      "ALREADY_VOID": "已作废"
+    },
+    "exported": "已导出",
+    "noMissing": "没有缺标签的实体"
+  },
+  "pagination": {
+    "total": "共 {{total}} 条"
+  }
+}

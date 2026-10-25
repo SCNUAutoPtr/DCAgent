@@ -4,52 +4,43 @@
   "createTitle": "新建机柜",
   "editTitle": "编辑机柜",
   "fields": {
-    "id": "ID",
-    "shortId": "ID",
     "name": "机柜名称",
-    "position": "位置",
+    "position": "位号",
     "height": "U数",
     "room": "所属机房",
     "deviceCount": "设备数量",
     "portUtilization": "端口占用率",
     "createdAt": "创建时间",
-    "actions": "操作"
+    "actions": "操作",
+    "label": "标签",
+    "usedU": "已用 U"
   },
   "placeholders": {
     "name": "例如：A-01",
-    "position": "例如：第一排第三列",
-    "height": "输入U数",
+    "position": "例如：A-01",
     "room": "选择机房",
     "search": "搜索机柜名称"
   },
   "messages": {
     "deleteConfirm": "确定要删除这个机柜吗？",
-    "deleteWarning": "删除后将同时删除其下所有设备",
+    "deleteWarning": "机柜里还有设备时不能删除",
     "createSuccess": "机柜创建成功",
     "updateSuccess": "机柜更新成功",
     "deleteSuccess": "机柜删除成功",
-    "loadFailed": "加载机柜列表失败",
-    "updateFailed": "更新失败",
-    "createFailed": "创建失败",
-    "deleteFailed": "删除失败",
     "selectCabinet": "请选择一个机柜",
-    "selectCabinetVisual": "请从左侧选择一个机柜进行可视化展示",
+    "selectCabinetVisual": "请从左侧选择一个机柜",
     "noCabinets": "暂无机柜",
-    "panelLoadFailed": "加载设备面板失败",
     "panelUnbindSuccess": "面板已从模板解绑，现在可以自定义端口布局",
-    "panelUnbindFailed": "解绑失败",
     "deviceDeleteConfirm": "确定要删除这个设备吗？",
     "deviceCreated": "设备创建成功",
     "deviceUpdated": "设备更新成功",
     "deviceDeleted": "设备删除成功",
     "deviceTransferSuccess": "设备已移动到新位置",
-    "deviceTransferFailed": "设备移动失败",
     "deviceCopySuccess": "设备复制成功",
-    "deviceCopyFailed": "设备复制失败",
-    "positionOccupied": "目标位置 U{{uPosition}} 已被占用",
-    "portPositionUpdated": "端口位置已更新",
-    "portPositionUpdateFailed": "更新端口位置失败",
-    "deviceTypeError": "请选择设备类型"
+    "deviceTypeError": "请选择设备类型",
+    "dangling": "该设备有 {{count}} 根线挂在面板上但没接端口",
+    "danglingTag": "悬空 {{count}}",
+    "outdated": "模板已更新"
   },
   "validation": {
     "nameRequired": "请输入机柜名称",
@@ -88,27 +79,20 @@
     "deviceCopy": "复制",
     "confirmTransfer": "确认发送",
     "confirmCopy": "确认复制",
-    "editDeviceButton": "编辑设备"
+    "editDeviceButton": "编辑设备",
+    "setUPosition": "设置 U 位"
   },
   "labels": {
     "cabinetName": "机柜名称",
-    "position": "位置",
-    "uHeight": "U数",
-    "selectRoom": "所属机房",
-    "deviceName": "设备名称",
-    "deviceType": "设备类型",
-    "deviceModel": "型号",
-    "serialNo": "序列号",
-    "selectCabinet": "所属机柜",
-    "uPosition": "起始U位",
+    "position": "位号",
     "uHeight": "占用U数",
+    "selectRoom": "所属机房",
+    "selectCabinet": "所属机柜",
     "targetCabinet": "目标机柜",
     "targetUPosition": "目标U位",
-    "deviceType": "设备类型",
     "cabinetOverview": "机柜全览",
     "selectCabinetPlaceholder": "选择或搜索机柜",
-    "cabinetStats": "机柜统计",
-    "devices": "台设备"
+    "deviceCount": "{{count}} 台设备"
   },
   "deviceTypes": {
     "SERVER": "服务器",
@@ -124,13 +108,11 @@
     "devicePanels": "设备面板",
     "noPanels": "该设备暂无面板",
     "templateBound": "模板",
-    "customized": "已自定义",
-    "templateAlert": "此面板使用模板",
-    "templateAlertDesc": "该面板基于模板创建，端口布局由模板定义。解绑后可以自定义端口布局。",
     "unbindConfirmTitle": "确认解绑模板？",
     "unbindConfirmDesc": "解绑后可以自定义端口布局，但将失去模板更新。",
-    "portNumber": "端口",
-    "portStatus": "状态"
+    "unplacedDevices": "未设置 U 位的设备（{{count}}）",
+    "unplacedHint": "这些设备在机柜里但没有 U 位，不会画进机柜图。点上移图标设置 U 位。",
+    "noUPosition": "无 U 位"
   },
   "transfer": {
     "title": "设备移动",
@@ -151,7 +133,13 @@
     "serialNo": "序列号",
     "uPosition": "U位"
   },
-  "special": {
-    "visualize": "可视化"
+  "visual": {
+    "type": "类型",
+    "model": "型号",
+    "position": "位置",
+    "serialNo": "序列号",
+    "ip": "IP",
+    "unknown": "未知",
+    "legend": "设备类型"
   }
 }

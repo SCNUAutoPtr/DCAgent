@@ -1,9 +1,8 @@
 {
   "watch": ["src"],
   "ext": "ts,json",
-  "ignore": ["src/**/*.spec.ts", "node_modules", "dist"],
+  "ignore": ["src/**/*.test.ts", "node_modules", "dist"],
   "exec": "tsx src/index.ts",
   "signal": "SIGTERM",
-  "restartable": "rs",
   "delay": 1000
 }

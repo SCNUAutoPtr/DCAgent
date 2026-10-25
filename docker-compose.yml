@@ -1,91 +1,20 @@
-version: '3.8'
-
+# Local development database. Credentials come from .env next to this file:
+#   POSTGRES_PASSWORD=...   (required)
+# Backend and frontend run on the host (npm run dev); tests use the dcagent_test database
+# in the same container.
 services:
-  # Neo4j 图数据库
-  neo4j:
-    image: neo4j:5-community
-    container_name: dcagent-neo4j
-    ports:
-      - "7474:7474"  # HTTP
-      - "7687:7687"  # Bolt
-    environment:
-      - NEO4J_AUTH=neo4j/password
-      - NEO4J_PLUGINS=["apoc"]
-      - NEO4J_dbms_memory_heap_max__size=512M
-    volumes:
-      - neo4j_data:/data
-      - neo4j_logs:/logs
-    networks:
-      - dcagent-network
-    restart: unless-stopped
-
-  # PostgreSQL 关系数据库
   postgres:
     image: postgres:16-alpine
     container_name: dcagent-postgres
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
-      - POSTGRES_DB=dcagent
-      - POSTGRES_USER=dcagent
-      - POSTGRES_PASSWORD=dcagent_password
+      POSTGRES_DB: dcagent
+      POSTGRES_USER: dcagent
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - dcagent-network
     restart: unless-stopped
-
-  # 后端服务（开发模式）
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
-    container_name: dcagent-backend
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=development
-      - PORT=3000
-      - DATABASE_URL=postgresql://dcagent:dcagent_password@postgres:5432/dcagent?schema=public
-      - NEO4J_URI=bolt://neo4j:7687
-      - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=password
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
-    depends_on:
-      - neo4j
-      - postgres
-    networks:
-      - dcagent-network
-    restart: unless-stopped
-    command: npm run dev
-
-  # 前端服务（开发模式）
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-    container_name: dcagent-frontend
-    ports:
-      - "5173:5173"
-    environment:
-      - VITE_API_URL=http://localhost:3000/api
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    depends_on:
-      - backend
-    networks:
-      - dcagent-network
-    restart: unless-stopped
-    command: npm run dev
 
 volumes:
-  neo4j_data:
-  neo4j_logs:
   postgres_data:
-
-networks:
-  dcagent-network:
-    driver: bridge

@@ -23,7 +23,8 @@
     /* Path alias */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@contracts/*": ["../backend/src/contracts/*"]
     }
   },
   "include": ["src"],

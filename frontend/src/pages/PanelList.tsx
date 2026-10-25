@@ -1,261 +1,143 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Card,
-  Table,
-  Button,
-  Modal,
-  Form,
-  Input,
-  Select,
-  message,
-  Space,
-  Popconfirm,
-  Typography,
-  Tag,
-  InputNumber,
-} from 'antd';
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  ApartmentOutlined,
-  ScanOutlined,
-} from '@ant-design/icons';
-import { Panel, PanelType, Device } from '@/types';
-import { panelService } from '@/services/panelService';
+import { useNavigate } from 'react-router-dom';
+import { Button, Card, Form, Input, Modal, Select, Space, Table, Tag, Typography, message } from 'antd';
+import { ApartmentOutlined, DeleteOutlined, EditOutlined, NodeIndexOutlined, PlusOutlined } from '@ant-design/icons';
+import type { DeviceDto } from '@contracts/devices';
+import { PANEL_FACES, PANEL_TYPES, type PanelFace, type PanelType } from '@contracts/enums';
+import type { PanelDto } from '@contracts/panels';
+import { formatShortId } from '@contracts/shortId';
 import { deviceService } from '@/services/deviceService';
-import { ShortIdFormatter } from '@/utils/shortIdFormatter';
-import { shortIdPoolService } from '@/services/shortIdPoolService';
+import { panelService } from '@/services/panelService';
+import { LabelField } from '@/components/LabelField';
+import { parseLabelInput, rebindIfChanged } from '@/utils/labels';
+import { deleteWithForce } from '@/components/confirmForce';
+import { paths } from '@/routes';
+import { PANEL_TYPE_COLORS } from '@/constants/colors';
+import { SearchInput } from '@/components/SearchInput';
 
 const { Title, Text } = Typography;
-const { Search } = Input;
-const { Option } = Select;
 
-// 面板类型颜色映射
-const panelTypeColorMap: Record<PanelType, string> = {
-  ETHERNET: 'blue',
-  FIBER: 'cyan',
-  POWER: 'red',
-  SERIAL: 'orange',
-  USB: 'purple',
-  OTHER: 'default',
-};
+interface FormValues {
+  shortId?: string;
+  name: string;
+  type: PanelType;
+  face: PanelFace;
+  deviceId: string;
+  notes?: string | null;
+}
 
 export default function PanelList() {
-  const { t } = useTranslation('panel');
-  const [panels, setPanels] = useState<Panel[]>([]);
-  const [devices, setDevices] = useState<Device[]>([]);
+  const { t } = useTranslation(['panel', 'common']);
+  const navigate = useNavigate();
+  const [panels, setPanels] = useState<PanelDto[]>([]);
+  const [devices, setDevices] = useState<DeviceDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingPanel, setEditingPanel] = useState<Panel | null>(null);
-  const [selectedDevice, setSelectedDevice] = useState<string>();
-  const [selectedType, setSelectedType] = useState<PanelType>();
-  const [shortIdChecking, setShortIdChecking] = useState(false);
-  const [form] = Form.useForm();
+  const [filter, setFilter] = useState<{ deviceId?: string; type?: PanelType }>({});
+  const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState<PanelDto | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form] = Form.useForm<FormValues>();
 
-  // 加载设备列表
-  const loadDevices = async () => {
-    try {
-      const data = await deviceService.getAll();
-      setDevices(data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  // 加载面板列表
-  const loadPanels = async (searchQuery?: string, deviceId?: string, type?: PanelType) => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      let data;
-      if (searchQuery) {
-        data = await panelService.search(searchQuery);
-      } else if (deviceId) {
-        data = await panelService.getByDevice(deviceId);
-      } else if (type) {
-        data = await panelService.getByType(type);
-      } else {
-        data = await panelService.getAll();
-      }
-      setPanels(data);
-    } catch (error) {
-      message.error(t('messages.loadFailed'));
-      console.error(error);
+      setPanels(await panelService.list(filter));
+    } catch {
+      // reported by rpc
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
 
   useEffect(() => {
-    loadDevices();
-    loadPanels();
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    deviceService.list().then(setDevices, () => undefined);
   }, []);
 
-  // 打开创建/编辑对话框
-  const handleOpenModal = (panel?: Panel) => {
-    if (panel) {
-      setEditingPanel(panel);
-      form.setFieldsValue(panel);
-    } else {
-      setEditingPanel(null);
-      form.resetFields();
-    }
-    setModalVisible(true);
-  };
+  const shown = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return q ? panels.filter((p) => `${p.name} ${p.deviceName} ${p.label ? formatShortId(p.label.shortId) : ''}`.toLowerCase().includes(q)) : panels;
+  }, [panels, search]);
 
-  // 关闭对话框
-  const handleCloseModal = () => {
-    setModalVisible(false);
-    setEditingPanel(null);
+  const typeOptions = PANEL_TYPES.map((type) => ({ value: type, label: t(`panel:panelTypes.${type}`) }));
+
+  const open = (p?: PanelDto) => {
+    setEditing(p ?? null);
     form.resetFields();
+    form.setFieldsValue({
+      shortId: p?.label ? formatShortId(p.label.shortId) : '',
+      name: p?.name ?? '',
+      type: p?.type,
+      face: p?.face ?? 'FRONT',
+      deviceId: p?.deviceId ?? filter.deviceId,
+      notes: p?.notes ?? '',
+    });
+    setModalOpen(true);
   };
 
-  // 保存面板
-  const handleSave = async () => {
+  const save = async () => {
+    const v = await form.validateFields();
+    const shortId = parseLabelInput(v.shortId);
     try {
-      const values = await form.validateFields();
-      if (editingPanel) {
-        await panelService.update(editingPanel.id, values);
-        message.success(t('messages.updateSuccess'));
+      if (editing) {
+        await panelService.update({ id: editing.id, name: v.name, type: v.type, face: v.face, notes: v.notes });
+        await rebindIfChanged({ kind: 'PANEL', id: editing.id }, editing.label?.shortId, shortId);
+        message.success(t('panel:messages.updateSuccess'));
       } else {
-        await panelService.create(values);
-        message.success(t('messages.createSuccess'));
+        await panelService.create({ deviceId: v.deviceId, name: v.name, type: v.type, face: v.face, notes: v.notes, labelShortId: shortId });
+        message.success(t('panel:messages.createSuccess'));
       }
-      handleCloseModal();
-      loadPanels(undefined, selectedDevice, selectedType);
-    } catch (error: any) {
-      if (error.errorFields) {
-        return;
-      }
-      message.error(editingPanel ? t('messages.updateFailed') : t('messages.createFailed'));
-      console.error(error);
+      setModalOpen(false);
+      load();
+    } catch {
+      // reported by rpc
     }
   };
 
-  // 删除面板
-  const handleDelete = async (id: string) => {
-    try {
-      await panelService.delete(id);
-      message.success(t('messages.deleteSuccess'));
-      loadPanels(undefined, selectedDevice, selectedType);
-    } catch (error) {
-      message.error(t('messages.deleteFailed'));
-      console.error(error);
-    }
-  };
-
-  // 搜索
-  const handleSearch = (value: string) => {
-    loadPanels(value);
-  };
-
-  // 按设备过滤
-  const handleDeviceFilter = (value: string) => {
-    setSelectedDevice(value);
-    loadPanels(undefined, value);
-  };
-
-  // 按类型过滤
-  const handleTypeFilter = (value: PanelType) => {
-    setSelectedType(value);
-    loadPanels(undefined, undefined, value);
-  };
-
-  // 验证shortID是否可用
-  const validateShortId = async (_: any, value: number) => {
-    if (!value) {
-      return Promise.reject('请输入shortID');
-    }
-
-    // 如果是编辑模式且shortID未改变，跳过验证
-    if (editingPanel && editingPanel.shortId === value) {
-      return Promise.resolve();
-    }
-
-    setShortIdChecking(true);
-    try {
-      const result = await shortIdPoolService.checkShortIdExists(value);
-      if (result.exists) {
-        return Promise.reject(`shortID已被占用: ${result.usedBy === 'pool' ? '在标签池中' : '已绑定到实体'}`);
-      }
-      return Promise.resolve();
-    } catch (error) {
-      return Promise.reject('验证失败');
-    } finally {
-      setShortIdChecking(false);
+  const remove = async (p: PanelDto) => {
+    const ok = await deleteWithForce((force, opts) => panelService.delete({ id: p.id, force }, opts), {
+      code: 'PORT_HAS_DEPENDENTS',
+      title: t('panel:messages.forceDeleteTitle'),
+      content: t('panel:messages.forceDeleteContent'),
+      okText: t('common:actions.delete'),
+      cancelText: t('common:actions.cancel'),
+    });
+    if (ok) {
+      message.success(t('panel:messages.deleteSuccess'));
+      load();
     }
   };
 
   const columns = [
     {
-      title: t('fields.shortId'),
-      dataIndex: 'shortId',
-      key: 'shortId',
+      title: t('panel:fields.label'),
+      key: 'label',
       width: 120,
-      render: (shortId: number | undefined) =>
-        shortId ? <Text code>{ShortIdFormatter.toDisplayFormat(shortId)}</Text> : '-',
+      render: (_: unknown, p: PanelDto) => (p.label ? <Text code>{formatShortId(p.label.shortId)}</Text> : '-'),
     },
+    { title: t('panel:fields.name'), dataIndex: 'name', key: 'name' },
+    { title: t('panel:fields.type'), dataIndex: 'type', key: 'type', render: (type: PanelType) => <Tag color={PANEL_TYPE_COLORS[type]}>{t(`panel:panelTypes.${type}`)}</Tag> },
+    { title: t('panel:fields.face'), dataIndex: 'face', key: 'face', render: (f: PanelFace) => t(`panel:faces.${f}`) },
+    { title: t('panel:fields.device'), dataIndex: 'deviceName', key: 'deviceName', render: (v: string) => <Tag color="green">{v}</Tag> },
+    { title: t('panel:fields.portCount'), dataIndex: 'portCount', key: 'portCount', width: 80 },
+    { title: t('panel:fields.connected'), dataIndex: 'connectedCount', key: 'connectedCount', width: 80 },
     {
-      title: t('fields.name'),
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: t('fields.type'),
-      dataIndex: 'type',
-      key: 'type',
-      render: (type: PanelType) => {
-        const color = panelTypeColorMap[type];
-        return <Tag color={color}>{t(`panelTypes.${type}`)}</Tag>;
-      },
-    },
-    {
-      title: t('fields.device'),
-      dataIndex: 'deviceId',
-      key: 'deviceId',
-      render: (deviceId: string) => {
-        const device = devices.find((d) => d.id === deviceId);
-        return device ? <Tag color="green">{device.name}</Tag> : '-';
-      },
-    },
-    {
-      title: t('fields.portCount'),
-      dataIndex: 'ports',
-      key: 'ports',
-      render: (ports: any[]) => ports?.length || 0,
-    },
-    {
-      title: t('fields.createdAt'),
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (text: string) => new Date(text).toLocaleString('zh-CN'),
-    },
-    {
-      title: t('fields.actions'),
+      title: t('panel:fields.actions'),
       key: 'actions',
-      width: 150,
-      render: (_: any, record: Panel) => (
+      width: 240,
+      render: (_: unknown, p: PanelDto) => (
         <Space>
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleOpenModal(record)}
-          >
-            {t('buttons.edit')}
+          <Button type="link" size="small" icon={<NodeIndexOutlined />} onClick={() => navigate(paths.topologyPanel(p.id))} />
+          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => open(p)} data-testid="panel-edit-btn">
+            {t('panel:buttons.edit')}
           </Button>
-          <Popconfirm
-            title={t('messages.deleteConfirm')}
-            description={t('messages.deleteWarning')}
-            onConfirm={() => handleDelete(record.id)}
-            okText={t('buttons.confirm')}
-            cancelText={t('buttons.cancel')}
-          >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              {t('buttons.delete')}
-            </Button>
-          </Popconfirm>
+          <Button type="link" size="small" danger icon={<DeleteOutlined />} onClick={() => remove(p)} data-testid="panel-delete-btn">
+            {t('panel:buttons.delete')}
+          </Button>
         </Space>
       ),
     },
@@ -264,135 +146,80 @@ export default function PanelList() {
   return (
     <div>
       <Title level={2}>
-        <ApartmentOutlined /> {t('title')}
+        <ApartmentOutlined /> {t('panel:title')}
       </Title>
-      <p style={{ color: '#8c8c8c', marginBottom: 24 }}>
-        {t('description')}
-      </p>
-
+      <p style={{ color: '#8c8c8c', marginBottom: 24 }}>{t('panel:description')}</p>
       <Card>
         <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
-              {t('buttons.create')}
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => open()} data-testid="panel-create-btn">
+              {t('panel:buttons.create')}
             </Button>
             <Select
-              placeholder={t('filters.selectDevice')}
+              placeholder={t('panel:filters.selectDevice')}
               allowClear
-              style={{ width: 200 }}
-              onChange={handleDeviceFilter}
-              onClear={() => {
-                setSelectedDevice(undefined);
-                loadPanels();
-              }}
-            >
-              {devices.map((device) => (
-                <Option key={device.id} value={device.id}>
-                  {device.name}
-                </Option>
-              ))}
-            </Select>
+              showSearch
+              optionFilterProp="label"
+              style={{ width: 220 }}
+              options={devices.map((d) => ({ value: d.id, label: d.name }))}
+              onChange={(deviceId?: string) => setFilter((f) => ({ ...f, deviceId }))}
+            />
             <Select
-              placeholder={t('filters.selectType')}
+              placeholder={t('panel:filters.selectType')}
               allowClear
-              style={{ width: 120 }}
-              onChange={handleTypeFilter}
-              onClear={() => {
-                setSelectedType(undefined);
-                loadPanels();
-              }}
-            >
-              {Object.entries(panelTypeColorMap).map(([key]) => (
-                <Option key={key} value={key}>
-                  {t(`panelTypes.${key}`)}
-                </Option>
-              ))}
-            </Select>
+              style={{ width: 130 }}
+              options={typeOptions}
+              onChange={(type?: PanelType) => setFilter((f) => ({ ...f, type }))}
+            />
           </Space>
-          <Search
-            placeholder={t('placeholders.search')}
-            allowClear
-            onSearch={handleSearch}
-            style={{ width: 300 }}
-          />
+          <SearchInput placeholder={t('panel:placeholders.search')} onSearch={setSearch} style={{ width: 300 }} />
         </Space>
-
         <Table
           columns={columns}
-          dataSource={panels}
+          dataSource={shown}
           loading={loading}
           rowKey="id"
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => t('table.total', { total }),
-          }}
+          data-testid="panel-table"
+          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => t('panel:table.total', { total }) }}
         />
       </Card>
 
       <Modal
-        title={editingPanel ? t('editTitle') : t('createTitle')}
-        open={modalVisible}
-        onOk={handleSave}
-        onCancel={handleCloseModal}
-        okText={t('buttons.save')}
-        cancelText={t('buttons.cancel')}
+        title={editing ? t('panel:editTitle') : t('panel:createTitle')}
+        open={modalOpen}
+        onOk={save}
+        onCancel={() => setModalOpen(false)}
+        okText={t('panel:buttons.save')}
+        cancelText={t('panel:buttons.cancel')}
+        okButtonProps={{ 'data-testid': 'panel-save-btn' } as React.ComponentProps<typeof Button>}
+        forceRender
+        wrapProps={{ 'data-testid': 'panel-modal' }}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="shortId"
-            label={
-              <Space>
-                <ScanOutlined />
-                ShortID
-              </Space>
-            }
-            rules={[
-              { required: true, message: '请输入shortID' },
-              { validator: validateShortId },
-            ]}
-            validateTrigger="onBlur"
-            help={editingPanel ? '编辑时不可修改shortID' : '请扫码或手动输入shortID'}
-          >
-            <InputNumber
-              style={{ width: '100%' }}
-              placeholder="扫码或输入shortID（例如：1, 12345）"
-              disabled={!!editingPanel}
-              min={1}
+        <Form name="panel-list-form" form={form} layout="vertical" data-testid="panel-form">
+          <LabelField name="shortId" autoAllocate self={editing ? { kind: 'PANEL', id: editing.id } : undefined} testId="panel-shortid-input" />
+          <Form.Item name="name" label={t('panel:fields.name')} rules={[{ required: true, message: t('panel:validation.nameRequired') }]}>
+            <Input placeholder={t('panel:placeholders.name')} data-testid="panel-name-input" />
+          </Form.Item>
+          <Space style={{ width: '100%' }} align="start">
+            <Form.Item name="type" label={t('panel:fields.type')} rules={[{ required: true, message: t('panel:validation.typeRequired') }]} style={{ width: 220 }}>
+              <Select placeholder={t('panel:placeholders.type')} data-testid="panel-type-select" options={typeOptions} />
+            </Form.Item>
+            <Form.Item name="face" label={t('panel:fields.face')} style={{ width: 160 }}>
+              <Select options={PANEL_FACES.map((f) => ({ value: f, label: t(`panel:faces.${f}`) }))} />
+            </Form.Item>
+          </Space>
+          <Form.Item name="deviceId" label={t('panel:fields.device')} rules={[{ required: true, message: t('panel:validation.deviceRequired') }]}>
+            <Select
+              placeholder={t('panel:placeholders.device')}
+              showSearch
+              optionFilterProp="label"
+              disabled={!!editing}
+              data-testid="panel-device-select"
+              options={devices.map((d) => ({ value: d.id, label: `${d.name} (${d.type})` }))}
             />
           </Form.Item>
-          <Form.Item
-            name="name"
-            label={t('fields.name')}
-            rules={[{ required: true, message: t('validation.nameRequired') }]}
-          >
-            <Input placeholder={t('placeholders.name')} />
-          </Form.Item>
-          <Form.Item
-            name="type"
-            label={t('fields.type')}
-            rules={[{ required: true, message: t('validation.typeRequired') }]}
-          >
-            <Select placeholder={t('placeholders.type')}>
-              {Object.entries(panelTypeColorMap).map(([key]) => (
-                <Option key={key} value={key}>
-                  {t(`panelTypes.${key}`)}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item
-            name="deviceId"
-            label={t('fields.device')}
-            rules={[{ required: true, message: t('validation.deviceRequired') }]}
-          >
-            <Select placeholder={t('placeholders.device')} showSearch optionFilterProp="children">
-              {devices.map((device) => (
-                <Option key={device.id} value={device.id}>
-                  {device.name} ({device.type})
-                </Option>
-              ))}
-            </Select>
+          <Form.Item name="notes" label={t('panel:fields.notes')}>
+            <Input.TextArea rows={2} />
           </Form.Item>
         </Form>
       </Modal>

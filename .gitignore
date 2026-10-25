@@ -5,6 +5,9 @@ node_modules/
 
 # Testing
 coverage/
+playwright-report/
+test-results/
+test-data/
 
 # Production
 dist/
@@ -22,6 +25,7 @@ CLAUDE.md
 
 # Environment variables
 .env
+.env.test
 .env.local
 .env.*.local
 
@@ -29,6 +33,7 @@ CLAUDE.md
 .vscode/
 .idea/
 .claude/
+.mcp.json
 *.swp
 *.swo
 *~
@@ -42,6 +47,7 @@ CLAUDE.md
 # Database backups (should not be committed to Git)
 db-backups/
 *.sql
+!backend/prisma/migrations/**/migration.sql
 *.dump
 *_backup_*.sql
 *_backup_*.dump
@@ -52,3 +58,10 @@ prisma/migrations/
 
 # Neo4j
 neo4j_data/
+
+# Migration reports (contain real data)
+backend/migration-reports/
+backend/dev.log
+
+# Real network prefixes for the public-safety check (never commit)
+.public-safe.local

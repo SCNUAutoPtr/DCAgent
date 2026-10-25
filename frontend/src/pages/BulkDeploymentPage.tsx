@@ -1,506 +1,305 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Typography, Card, Alert, Tabs, Space, Button, Modal, Form, Select, message } from 'antd';
-import {
-  CloudUploadOutlined,
-  DatabaseOutlined,
-  ApartmentOutlined,
-  LinkOutlined,
-} from '@ant-design/icons';
-import { PanelTemplate, Device, Cabinet } from '@/types';
+import { Alert, Button, Card, Form, Modal, Select, Space, Tabs, Typography, message } from 'antd';
+import { ApartmentOutlined, CloudUploadOutlined, DatabaseOutlined, LinkOutlined } from '@ant-design/icons';
+import type { DeviceDto } from '@contracts/devices';
+import { CABLE_MEDIA, DEVICE_TYPES, type CableMedium, type DeviceType } from '@contracts/enums';
+import type { CabinetDto } from '@contracts/hierarchy';
+import type { PanelTemplateDto } from '@contracts/panelTemplates';
 import { panelTemplateService } from '@/services/panelTemplateService';
 import { deviceService } from '@/services/deviceService';
-import { cabinetService } from '@/services/cabinetService';
-import BulkImportModal, { BulkImportColumn } from '@/components/BulkImportModal';
-import PanelCanvasEditor from '@/components/PanelCanvasEditor';
+import { cabinetService } from '@/services/hierarchyService';
+import { cableService } from '@/services/cableService';
+import { ApiError, errorText } from '@/services/api';
+import BulkImportModal, { type BulkImportColumn, type Cell, type ImportRow } from '@/components/BulkImportModal';
+import { PanelView } from '@/components/panel/PanelView';
+import type management from '@/locales/zh-CN/management.json';
+import { parseLabelInput } from '@/utils/labels';
 
 const { Title, Paragraph } = Typography;
-const { TabPane } = Tabs;
 
-/**
- * 批量上架页面
- * 用于批量初始化新购买的服务器和设备
- */
+type BulkLocale = (typeof management)['bulkDeployment'];
+
+const str = (v: Cell) => (v === undefined || v === null ? undefined : String(v).trim() || undefined);
+const num = (v: Cell) => (v === undefined || v === null || v === '' ? undefined : Number(v));
+const labelOk = (v: Cell) => {
+  try {
+    parseLabelInput(v);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export default function BulkDeploymentPage() {
-  const { t } = useTranslation('management');
-  const [templates, setTemplates] = useState<PanelTemplate[]>([]);
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [cabinets, setCabinets] = useState<Cabinet[]>([]);
-  const [templateModalVisible, setTemplateModalVisible] = useState(false);
-  const [deviceImportVisible, setDeviceImportVisible] = useState(false);
-  const [cableImportVisible, setCableImportVisible] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<PanelTemplate | null>(null);
-  const [form] = Form.useForm();
+  const { t } = useTranslation(['management', 'device', 'cable', 'panel']);
+  const [templates, setTemplates] = useState<PanelTemplateDto[]>([]);
+  const [devices, setDevices] = useState<DeviceDto[]>([]);
+  const [cabinets, setCabinets] = useState<CabinetDto[]>([]);
+  const [templateOpen, setTemplateOpen] = useState(false);
+  const [deviceImportOpen, setDeviceImportOpen] = useState(false);
+  const [cableImportOpen, setCableImportOpen] = useState(false);
+  const [preview, setPreview] = useState<PanelTemplateDto | null>(null);
+  const [form] = Form.useForm<{ templateId: string; deviceId: string }>();
 
-  useEffect(() => {
-    loadTemplates();
-    loadDevices();
-    loadCabinets();
+  const load = useCallback(() => {
+    panelTemplateService.list().then(setTemplates, () => undefined);
+    deviceService.list().then(setDevices, () => undefined);
+    cabinetService.list().then(setCabinets, () => undefined);
   }, []);
 
-  const loadTemplates = async () => {
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // a cabinet can be given by id or by name
+  const cabinetByKey = useMemo(() => {
+    const m = new Map<string, CabinetDto>();
+    for (const c of cabinets) {
+      m.set(c.id, c);
+      m.set(c.name, c);
+    }
+    return m;
+  }, [cabinets]);
+
+  const pickTemplate = async (templateId: string) => {
     try {
-      const data = await panelTemplateService.getAll();
-      setTemplates(data);
-    } catch (error: any) {
-      message.error(t('bulkDeployment.messages.loadTemplatesFailed') + ': ' + error.message);
+      setPreview(await panelTemplateService.get({ id: templateId }));
+    } catch {
+      setPreview(null);
     }
   };
 
-  const loadDevices = async () => {
+  const createFromTemplate = async () => {
+    const v = await form.validateFields();
     try {
-      const data = await deviceService.getAll();
-      setDevices(data);
-    } catch (error: any) {
-      message.error(t('bulkDeployment.messages.loadDevicesFailed') + ': ' + error.message);
+      await panelTemplateService.createPanel({ templateId: v.templateId, deviceId: v.deviceId });
+      message.success(t('management:bulkDeployment.messages.createPanelSuccess'));
+      setTemplateOpen(false);
+    } catch {
+      // reported by rpc
     }
   };
 
-  const loadCabinets = async () => {
-    try {
-      const data = await cabinetService.getAll();
-      setCabinets(data);
-    } catch (error: any) {
-      message.error(t('bulkDeployment.messages.loadCabinetsFailed') + ': ' + error.message);
-    }
-  };
+  const f = (key: keyof BulkLocale['fields']) => t(`management:bulkDeployment.fields.${key}`);
+  const v = (key: keyof BulkLocale['validation'], opts?: Record<string, string>) => t(`management:bulkDeployment.validation.${key}`, opts);
 
-  const handleCreateFromTemplate = () => {
-    form.resetFields();
-    setSelectedTemplate(null);
-    setTemplateModalVisible(true);
-  };
-
-  const handleTemplateChange = (templateId: string) => {
-    const template = templates.find(t => t.id === templateId);
-    setSelectedTemplate(template || null);
-  };
-
-  const handleTemplateSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      const { templateId, deviceId } = values;
-
-      await panelTemplateService.createPanelFromTemplate(templateId, deviceId);
-      message.success(t('bulkDeployment.messages.createPanelSuccess'));
-      setTemplateModalVisible(false);
-      form.resetFields();
-    } catch (error: any) {
-      message.error(t('bulkDeployment.messages.createPanelFailed') + ': ' + error.message);
-    }
-  };
-
-  // 设备导入列配置
   const deviceColumns: BulkImportColumn[] = [
+    { title: f('deviceName'), dataIndex: 'name', required: true },
     {
-      title: t('bulkDeployment.fields.deviceName'),
-      dataIndex: 'name',
-      key: 'name',
-      required: true,
-      validator: (value) => {
-        if (typeof value !== 'string' || value.trim().length === 0) {
-          return t('bulkDeployment.validation.deviceNameRequired');
-        }
-        return null;
-      },
-    },
-    {
-      title: t('bulkDeployment.fields.deviceType'),
+      title: f('deviceType'),
       dataIndex: 'type',
-      key: 'type',
       required: true,
-      validator: (value) => {
-        const validTypes = ['SERVER', 'SWITCH', 'ROUTER', 'FIREWALL', 'STORAGE', 'PDU', 'OTHER'];
-        if (!validTypes.includes(value)) {
-          return t('bulkDeployment.validation.deviceTypeRequired', { types: validTypes.join(', ') });
-        }
-        return null;
-      },
+      validator: (x) => ((DEVICE_TYPES as readonly string[]).includes(String(x)) ? null : v('deviceTypeRequired', { types: DEVICE_TYPES.join(', ') })),
     },
-    {
-      title: t('bulkDeployment.fields.model'),
-      dataIndex: 'model',
-      key: 'model',
-      required: false,
-    },
-    {
-      title: t('bulkDeployment.fields.serialNo'),
-      dataIndex: 'serialNo',
-      key: 'serialNo',
-      required: false,
-    },
-    {
-      title: t('bulkDeployment.fields.cabinetId'),
-      dataIndex: 'cabinetId',
-      key: 'cabinetId',
-      required: true,
-      validator: (value) => {
-        if (!cabinets.find(c => c.id === value)) {
-          return t('bulkDeployment.validation.cabinetIdRequired');
-        }
-        return null;
-      },
-    },
-    {
-      title: t('bulkDeployment.fields.uPosition'),
-      dataIndex: 'uPosition',
-      key: 'uPosition',
-      required: false,
-      validator: (value) => {
-        if (value && (typeof value !== 'number' || value < 1 || value > 42)) {
-          return t('bulkDeployment.validation.uPositionInvalid');
-        }
-        return null;
-      },
-    },
-    {
-      title: t('bulkDeployment.fields.uHeight'),
-      dataIndex: 'uHeight',
-      key: 'uHeight',
-      required: false,
-      validator: (value) => {
-        if (value && (typeof value !== 'number' || value < 1)) {
-          return t('bulkDeployment.validation.uHeightInvalid');
-        }
-        return null;
-      },
-    },
+    { title: f('serialNo'), dataIndex: 'serialNo' },
+    { title: f('cabinetId'), dataIndex: 'cabinet', required: true, validator: (x) => (cabinetByKey.has(String(x)) ? null : v('cabinetIdRequired')) },
+    { title: f('uPosition'), dataIndex: 'uPosition', validator: (x) => (Number.isInteger(Number(x)) && Number(x) >= 1 && Number(x) <= 60 ? null : v('uPositionInvalid')) },
+    { title: f('uHeight'), dataIndex: 'uHeight', validator: (x) => (Number.isInteger(Number(x)) && Number(x) >= 1 ? null : v('uHeightInvalid')) },
+  ];
+  const deviceTemplateRows: ImportRow[] = [
+    { name: 'SV-001', type: 'SERVER', serialNo: 'SN123456', cabinet: cabinets[0]?.name ?? '', uPosition: 10, uHeight: 2 },
+    { name: 'SW-001', type: 'SWITCH', serialNo: 'SN789012', cabinet: cabinets[0]?.name ?? '', uPosition: 40, uHeight: 1 },
   ];
 
-  // 设备导入模板数据
-  const deviceTemplateData = [
-    {
-      设备名称: 'SV-001',
-      设备类型: 'SERVER',
-      型号: 'Dell PowerEdge R740',
-      序列号: 'SN123456',
-      机柜ID: cabinets[0]?.id || '请填写有效的机柜ID',
-      U位位置: 10,
-      U高度: 2,
-    },
-    {
-      设备名称: 'SW-001',
-      设备类型: 'SWITCH',
-      型号: 'Cisco Catalyst 9300',
-      序列号: 'SN789012',
-      机柜ID: cabinets[0]?.id || '请填写有效的机柜ID',
-      U位位置: 40,
-      U高度: 1,
-    },
-  ];
-
-  // 线缆导入列配置
   const cableColumns: BulkImportColumn[] = [
+    { title: f('cableLabel'), dataIndex: 'label' },
     {
-      title: t('bulkDeployment.fields.cableLabel'),
-      dataIndex: 'label',
-      key: 'label',
-      required: false,
-    },
-    {
-      title: t('bulkDeployment.fields.cableType'),
-      dataIndex: 'type',
-      key: 'type',
+      title: f('cableType'),
+      dataIndex: 'medium',
       required: true,
-      validator: (value) => {
-        const validTypes = ['CAT5E', 'CAT6', 'CAT6A', 'FIBER_SM', 'FIBER_MM', 'DAC', 'AOC', 'QSFP', 'OTHER'];
-        if (!validTypes.includes(value)) {
-          return t('bulkDeployment.validation.cableTypeRequired', { types: validTypes.join(', ') });
-        }
-        return null;
-      },
+      validator: (x) => ((CABLE_MEDIA as readonly string[]).includes(String(x)) ? null : v('cableTypeRequired', { types: CABLE_MEDIA.join(', ') })),
     },
-    {
-      title: t('bulkDeployment.fields.cableLength'),
-      dataIndex: 'length',
-      key: 'length',
-      required: false,
-      validator: (value) => {
-        if (value && (typeof value !== 'number' || value <= 0)) {
-          return t('bulkDeployment.validation.cableLengthInvalid');
-        }
-        return null;
-      },
-    },
-    {
-      title: t('bulkDeployment.fields.cableColor'),
-      dataIndex: 'color',
-      key: 'color',
-      required: false,
-    },
-    {
-      title: t('bulkDeployment.fields.notes'),
-      dataIndex: 'notes',
-      key: 'notes',
-      required: false,
-    },
-    {
-      title: t('bulkDeployment.fields.portAId'),
-      dataIndex: 'portAId',
-      key: 'portAId',
-      required: true,
-    },
-    {
-      title: t('bulkDeployment.fields.portBId'),
-      dataIndex: 'portBId',
-      key: 'portBId',
-      required: true,
-    },
+    { title: f('cableLength'), dataIndex: 'lengthM', validator: (x) => (Number(x) > 0 ? null : v('cableLengthInvalid')) },
+    { title: f('cableColor'), dataIndex: 'color' },
+    { title: f('notes'), dataIndex: 'notes' },
+    { title: f('portAId'), dataIndex: 'portA', required: true },
+    { title: f('labelA'), dataIndex: 'labelA', validator: (x) => (labelOk(x) ? null : v('labelInvalid')) },
+    { title: f('portBId'), dataIndex: 'portB', required: true },
+    { title: f('labelB'), dataIndex: 'labelB', validator: (x) => (labelOk(x) ? null : v('labelInvalid')) },
   ];
+  const cableTemplateRows: ImportRow[] = [{ label: 'CABLE-001', medium: 'CAT6', lengthM: 3, color: 'blue', notes: '', portA: '', labelA: '', portB: '', labelB: '' }];
 
-  // 线缆导入模板数据
-  const cableTemplateData = [
-    {
-      标签: 'CABLE-001',
-      线缆类型: 'CAT6',
-      '长度(米)': 3,
-      颜色: '蓝色',
-      备注: '服务器到交换机',
-      '端口A ID': '请填写有效的端口ID',
-      '端口B ID': '请填写有效的端口ID',
-    },
-  ];
+  /** One transaction on the server: all devices or none. */
+  const importDevices = async (rows: ImportRow[]) => {
+    await deviceService.bulkCreate({
+      devices: rows.map((r) => ({
+        name: str(r.name)!,
+        type: str(r.type) as DeviceType,
+        serialNo: str(r.serialNo),
+        cabinetId: cabinetByKey.get(String(r.cabinet))!.id,
+        uPosition: num(r.uPosition),
+        uHeight: num(r.uHeight),
+      })),
+    });
+    message.success(t('management:bulkDeployment.messages.importSuccess'));
+    load();
+  };
 
-  // 处理设备批量导入
-  const handleDeviceImport = async (data: any[]) => {
-    try {
-      const result = await deviceService.bulkCreate(data);
-
-      if (result.data.failed.length > 0) {
-        Modal.warning({
-          title: t('bulkDeployment.messages.partialImportFailed'),
-          content: (
-            <div>
-              <p>{t('bulkDeployment.table.successCount', { count: result.data.success.length })}</p>
-              <p>{t('bulkDeployment.table.failedCount', { count: result.data.failed.length })}</p>
-              <ul>
-                {result.data.failed.map((f: any) => (
-                  <li key={f.index}>
-                    {t('bulkDeployment.table.rowError', { row: f.index, error: f.error })}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ),
-        });
+  /** Cables go one by one so one bad row does not block the rest; failures are listed. */
+  const importCables = async (rows: ImportRow[]) => {
+    const failed: { row: number; error: string }[] = [];
+    for (const [i, r] of rows.entries()) {
+      try {
+        await cableService.create(
+          {
+            medium: str(r.medium) as CableMedium,
+            label: str(r.label),
+            lengthM: num(r.lengthM),
+            color: str(r.color),
+            notes: str(r.notes),
+            ends: {
+              A: { portId: str(r.portA), labelShortId: parseLabelInput(r.labelA) },
+              B: { portId: str(r.portB), labelShortId: parseLabelInput(r.labelB) },
+            },
+          },
+          { silent: true },
+        );
+      } catch (e) {
+        failed.push({ row: i + 1, error: e instanceof ApiError ? errorText(e) : String(e) });
       }
-
-      await loadDevices();
-    } catch (error: any) {
-      throw new Error(error.response?.data?.error || error.message);
     }
+    const ok = rows.length - failed.length;
+    if (failed.length) {
+      Modal.warning({
+        title: t('management:bulkDeployment.messages.cablesImported', { ok, failed: failed.length }),
+        content: (
+          <ul>
+            {failed.map((x) => (
+              <li key={x.row}>{t('management:bulkDeployment.table.rowError', { row: x.row, error: x.error })}</li>
+            ))}
+          </ul>
+        ),
+      });
+    } else message.success(t('management:bulkDeployment.messages.cablesImported', { ok, failed: 0 }));
   };
 
-  // 处理线缆批量导入（待实现后端API）
-  const handleCableImport = async (data: any[]) => {
-    message.info(t('bulkDeployment.messages.importDevicesCablesDeveloping'));
-    console.log('Cable import data:', data);
-  };
+  const features = (key: 'devicesFeatures' | 'panelsFeatures' | 'cablesFeatures') => t(`management:bulkDeployment.sections.${key}`, { returnObjects: true });
+
+  const section = (key: 'devices' | 'panels' | 'cables', action: React.ReactNode) => (
+    <Card>
+      <Title level={4}>{t(`management:bulkDeployment.sections.${key}Title`)}</Title>
+      <Paragraph>{t(`management:bulkDeployment.sections.${key}Description`)}</Paragraph>
+      <ul>
+        {features(`${key}Features`).map((x) => (
+          <li key={x}>{x}</li>
+        ))}
+      </ul>
+      {action}
+    </Card>
+  );
 
   return (
     <div>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         <div>
           <Title level={2}>
-            <CloudUploadOutlined /> {t('bulkDeployment.title')}
+            <CloudUploadOutlined /> {t('management:bulkDeployment.title')}
           </Title>
-          <Paragraph type="secondary">
-            {t('bulkDeployment.description')}
-          </Paragraph>
+          <Paragraph type="secondary">{t('management:bulkDeployment.description')}</Paragraph>
         </div>
-
-        <Alert
-          message={t('bulkDeployment.alerts.assistantTitle')}
-          description={t('bulkDeployment.alerts.assistantDescription')}
-          type="info"
-          showIcon
+        <Alert message={t('management:bulkDeployment.alerts.assistantTitle')} description={t('management:bulkDeployment.alerts.assistantDescription')} type="info" showIcon />
+        <Tabs
+          defaultActiveKey="devices"
+          type="card"
+          items={[
+            {
+              key: 'devices',
+              label: (
+                <span>
+                  <DatabaseOutlined /> {t('management:bulkDeployment.tabs.devices')}
+                </span>
+              ),
+              children: section(
+                'devices',
+                <Button type="primary" onClick={() => setDeviceImportOpen(true)}>
+                  {t('management:bulkDeployment.actions.importDevices')}
+                </Button>,
+              ),
+            },
+            {
+              key: 'panels',
+              label: (
+                <span>
+                  <ApartmentOutlined /> {t('management:bulkDeployment.tabs.panels')}
+                </span>
+              ),
+              children: section(
+                'panels',
+                <Button
+                  type="primary"
+                  onClick={() => {
+                    form.resetFields();
+                    setPreview(null);
+                    setTemplateOpen(true);
+                  }}
+                >
+                  {t('management:bulkDeployment.actions.createFromTemplate')}
+                </Button>,
+              ),
+            },
+            {
+              key: 'cables',
+              label: (
+                <span>
+                  <LinkOutlined /> {t('management:bulkDeployment.tabs.cables')}
+                </span>
+              ),
+              children: section(
+                'cables',
+                <Button type="primary" onClick={() => setCableImportOpen(true)}>
+                  {t('management:bulkDeployment.actions.importCables')}
+                </Button>,
+              ),
+            },
+          ]}
         />
-
-        <Tabs defaultActiveKey="devices" type="card">
-          <TabPane
-            tab={
-              <span>
-                <DatabaseOutlined />
-                {t('bulkDeployment.tabs.devices')}
-              </span>
-            }
-            key="devices"
-          >
-            <Card>
-              <Title level={4}>{t('bulkDeployment.sections.devicesTitle')}</Title>
-              <Paragraph>
-                {t('bulkDeployment.sections.devicesDescription')}
-              </Paragraph>
-              <ul>
-                {t('bulkDeployment.sections.devicesFeatures', { returnObjects: true }).map((feature: string, idx: number) => (
-                  <li key={idx}>{feature}</li>
-                ))}
-              </ul>
-              <Button
-                type="primary"
-                onClick={() => setDeviceImportVisible(true)}
-              >
-                {t('bulkDeployment.actions.importDevices')}
-              </Button>
-            </Card>
-          </TabPane>
-
-          <TabPane
-            tab={
-              <span>
-                <ApartmentOutlined />
-                {t('bulkDeployment.tabs.panels')}
-              </span>
-            }
-            key="panels"
-          >
-            <Card>
-              <Title level={4}>{t('bulkDeployment.sections.panelsTitle')}</Title>
-              <Paragraph>
-                {t('bulkDeployment.sections.panelsDescription')}
-              </Paragraph>
-              <ul>
-                {t('bulkDeployment.sections.panelsFeatures', { returnObjects: true }).map((feature: string, idx: number) => (
-                  <li key={idx}>{feature}</li>
-                ))}
-              </ul>
-              <Button type="primary" onClick={handleCreateFromTemplate}>
-                {t('bulkDeployment.actions.createFromTemplate')}
-              </Button>
-            </Card>
-          </TabPane>
-
-          <TabPane
-            tab={
-              <span>
-                <LinkOutlined />
-                {t('bulkDeployment.tabs.cables')}
-              </span>
-            }
-            key="cables"
-          >
-            <Card>
-              <Title level={4}>{t('bulkDeployment.sections.cablesTitle')}</Title>
-              <Paragraph>
-                {t('bulkDeployment.sections.cablesDescription')}
-              </Paragraph>
-              <ul>
-                {t('bulkDeployment.sections.cablesFeatures', { returnObjects: true }).map((feature: string, idx: number) => (
-                  <li key={idx}>{feature}</li>
-                ))}
-              </ul>
-              <Button
-                type="primary"
-                onClick={() => setCableImportVisible(true)}
-              >
-                {t('bulkDeployment.actions.importCables')}
-              </Button>
-            </Card>
-          </TabPane>
-        </Tabs>
-
-        <Alert
-          message={t('bulkDeployment.alerts.tipsTitle')}
-          description={t('bulkDeployment.alerts.tipsDescription')}
-          type="warning"
-          showIcon
-        />
+        <Alert message={t('management:bulkDeployment.alerts.tipsTitle')} description={t('management:bulkDeployment.alerts.tipsDescription')} type="warning" showIcon />
       </Space>
 
-      {/* 从模板创建面板 Modal */}
       <Modal
-        title={t('bulkDeployment.modals.createFromTemplate')}
-        open={templateModalVisible}
-        onOk={handleTemplateSubmit}
-        onCancel={() => {
-          setTemplateModalVisible(false);
-          setSelectedTemplate(null);
-        }}
-        width={800}
+        title={t('management:bulkDeployment.modals.createFromTemplate')}
+        open={templateOpen}
+        onOk={createFromTemplate}
+        onCancel={() => setTemplateOpen(false)}
+        width={900}
+        forceRender
       >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="templateId"
-            label={t('bulkDeployment.formLabels.selectTemplate')}
-            rules={[{ required: true, message: t('bulkDeployment.formLabels.selectTemplate') }]}
-          >
+        <Form name="bulk-deployment-page-form" form={form} layout="vertical">
+          <Form.Item name="templateId" label={t('management:bulkDeployment.formLabels.selectTemplate')} rules={[{ required: true }]}>
             <Select
-              placeholder={t('bulkDeployment.formPlaceholders.selectTemplate')}
-              onChange={handleTemplateChange}
-            >
-              {templates.map((template) => (
-                <Select.Option key={template.id} value={template.id}>
-                  {template.name} ({template.type} - {template.portCount}口)
-                </Select.Option>
-              ))}
-            </Select>
+              placeholder={t('management:bulkDeployment.formPlaceholders.selectTemplate')}
+              onChange={pickTemplate}
+              options={templates.map((x) => ({ value: x.id, label: `${x.name} (${t(`panel:panelTypes.${x.type}`)}, ${x.portCount})` }))}
+            />
           </Form.Item>
-
-          <Form.Item
-            name="deviceId"
-            label={t('bulkDeployment.formLabels.selectDevice')}
-            rules={[{ required: true, message: t('bulkDeployment.formLabels.selectDevice') }]}
-          >
-            <Select placeholder={t('bulkDeployment.formPlaceholders.selectDevice')}>
-              {devices.map((device) => (
-                <Select.Option key={device.id} value={device.id}>
-                  {device.name} ({device.type})
-                </Select.Option>
-              ))}
-            </Select>
+          <Form.Item name="deviceId" label={t('management:bulkDeployment.formLabels.selectDevice')} rules={[{ required: true }]}>
+            <Select
+              showSearch
+              optionFilterProp="label"
+              placeholder={t('management:bulkDeployment.formPlaceholders.selectDevice')}
+              options={devices.map((d) => ({ value: d.id, label: `${d.name} (${t(`device:deviceTypes.${d.type}`)})` }))}
+            />
           </Form.Item>
-
-          {/* 模板预览 */}
-          {selectedTemplate && (
-            <Card title="模板预览" size="small" style={{ marginTop: 16 }}>
-              <Alert
-                message={`${selectedTemplate.name} - ${selectedTemplate.portCount}口`}
-                description={selectedTemplate.description || '无描述'}
-                type="info"
-                showIcon
-                style={{ marginBottom: 16 }}
-              />
-              <PanelCanvasEditor
-                width={selectedTemplate.width || 482.6}
-                height={selectedTemplate.height || 44.45}
-                backgroundColor={selectedTemplate.backgroundColor || '#FFFFFF'}
-                initialPorts={
-                  selectedTemplate.portDefinitions?.map((portDef) => ({
-                    id: `preview-${portDef.number}`,
-                    number: portDef.number,
-                    portType: portDef.portType || 'RJ45',
-                    position: portDef.position || { x: 0, y: 0 },
-                    size: portDef.size || { width: 15, height: 12 },
-                    label: portDef.label,
-                    rotation: 0,
-                  })) || []
-                }
-                onPortsChange={() => {}}
-                readOnly={true}
-              />
-            </Card>
-          )}
         </Form>
+        {preview && <PanelView panel={{ name: preview.name, widthMm: preview.widthMm, heightMm: preview.heightMm }} ports={preview.ports ?? []} showLegend={false} scale={1.5} />}
       </Modal>
 
-      {/* 设备批量导入 Modal */}
       <BulkImportModal
-        visible={deviceImportVisible}
-        title={t('bulkDeployment.modals.importDevices')}
+        open={deviceImportOpen}
+        title={t('management:bulkDeployment.modals.importDevices')}
         columns={deviceColumns}
-        templateData={deviceTemplateData}
-        onCancel={() => setDeviceImportVisible(false)}
-        onSubmit={handleDeviceImport}
+        templateRows={deviceTemplateRows}
+        onCancel={() => setDeviceImportOpen(false)}
+        onSubmit={importDevices}
       />
-
-      {/* 线缆批量导入 Modal */}
       <BulkImportModal
-        visible={cableImportVisible}
-        title={t('bulkDeployment.modals.importCables')}
+        open={cableImportOpen}
+        title={t('management:bulkDeployment.modals.importCables')}
         columns={cableColumns}
-        templateData={cableTemplateData}
-        onCancel={() => setCableImportVisible(false)}
-        onSubmit={handleCableImport}
+        templateRows={cableTemplateRows}
+        onCancel={() => setCableImportOpen(false)}
+        onSubmit={importCables}
       />
     </div>
   );

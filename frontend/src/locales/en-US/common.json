@@ -1,5 +1,4 @@
 {
-  "appName": "Data Center Asset Management System",
   "actions": {
     "create": "Create",
     "edit": "Edit",
@@ -7,15 +6,14 @@
     "save": "Save",
     "cancel": "Cancel",
     "confirm": "Confirm",
-    "search": "Search",
     "reset": "Reset",
-    "submit": "Submit",
-    "back": "Back",
     "view": "View",
     "export": "Export",
     "import": "Import",
     "refresh": "Refresh",
-    "visualize": "Visualize"
+    "deckMode": "Deck Mode",
+    "deckModeOn": "Deck mode on",
+    "deckModeOff": "Deck mode off"
   },
   "status": {
     "success": "Success",
@@ -38,8 +36,85 @@
     "updateFailed": "Update failed",
     "loadFailed": "Load failed, please try again later",
     "operationSuccess": "Operation succeeded",
-    "operationFailed": "Operation failed"
+    "operationFailed": "Operation failed",
+    "saveSuccess": "Save successful",
+    "saveFailed": "Save failed"
   },
   "searchPlaceholder": "Search or scan QR code...",
-  "searchFailed": "Search failed, please try again later"
+  "searchFailed": "Search failed, please try again later",
+  "entityKinds": {
+    "DATACENTER": "Data center",
+    "ROOM": "Room",
+    "CABINET": "Cabinet",
+    "DEVICE": "Device",
+    "PANEL": "Panel",
+    "PORT": "Port",
+    "CABLE": "Cable",
+    "CABLE_ENDPOINT": "Cable end",
+    "WORKSTATION": "Workstation",
+    "IP_ADDRESS": "IP address"
+  },
+  "scan": {
+    "unknown": "Label {{display}} does not exist",
+    "unbound": "Label {{display}} is not bound to anything",
+    "void": "Label {{display}} is void"
+  },
+  "tagline": "見えない線を、見える化へ",
+  "label": {
+    "field": "Label",
+    "placeholder": "Scan or type, e.g. E-00001",
+    "placeholderAuto": "Scan or type; empty allocates one",
+    "invalid": "Invalid label, use E-XXXXX or digits",
+    "bound": "Label is already bound to {{name}}",
+    "void": "Label is void"
+  },
+  "portPicker": {
+    "selectDevice": "Select device",
+    "selectPanel": "Select panel",
+    "selectPort": "Select port",
+    "busy": "in use"
+  },
+  "bulkImport": {
+    "downloadTemplate": "Download template",
+    "templateDownloaded": "Template downloaded",
+    "templateSuffix": "template",
+    "dragText": "Click or drag a file here",
+    "dragHint": "Excel (.xlsx, .xls) and CSV are supported",
+    "parsed": "{{count}} rows parsed",
+    "parseFailed": "Could not read the file",
+    "hasErrors": "Some rows are invalid; fix them and try again",
+    "noData": "Nothing to import",
+    "row": "Row",
+    "status": "Status",
+    "ok": "OK",
+    "errorCount": "Errors ({{count}})",
+    "errorsFound": "{{count}} rows have errors",
+    "errorsHint": "Check the rows marked as errors, fix the file and upload it again",
+    "errorDetails": "Error details",
+    "required": "{{field}} is required",
+    "clear": "Clear",
+    "submit": "Import ({{count}})"
+  },
+  "palette": {
+    "open": "Command palette",
+    "placeholder": "Search pages, assets, or type a label number...",
+    "empty": "No matches",
+    "groups": {
+      "assets": "Assets",
+      "pages": "Pages",
+      "actions": "Actions"
+    },
+    "hintMove": "select",
+    "hintOpen": "open",
+    "hintClose": "close",
+    "themeKeywords": "theme dark light night mode"
+  },
+  "theme": {
+    "toDark": "Switch to dark theme",
+    "toLight": "Switch to light theme"
+  },
+  "breadcrumb": {
+    "detail": "Details",
+    "page": "Page"
+  }
 }

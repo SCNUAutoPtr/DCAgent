@@ -1,41 +1,80 @@
 {
   "title": "システム概要",
-  "description": "データセンター全ライフサイクル管理 - デバイス、ケーブル、接続関係が一目瞭然",
-  "statistics": {
-    "totalDevices": "デバイス総数",
-    "cableConnections": "ケーブル接続",
-    "cabinetCount": "キャビネット数",
-    "portOccupancy": "ポート使用率"
+  "description": "データセンターのライフサイクル管理：機器・ケーブル・接続関係をひと目で",
+  "refresh": "更新",
+  "updatedAt": "{{time}} に更新",
+  "emptyState": "データがありません",
+  "paletteHint": "{{key}} でいつでも検索",
+  "hero": {
+    "portUsage": "ポート使用率",
+    "cablesInUse": "使用中ケーブル",
+    "workstationsOnline": "オンライン端末"
+  },
+  "stats": {
+    "devices": "機器",
+    "cabinets": "ラック",
+    "panels": "パネル",
+    "ports": "ポート使用",
+    "cables": "ケーブル",
+    "opticalModules": "光モジュール",
+    "ipAddresses": "割当済み IP",
+    "workstations": "オンライン端末"
+  },
+  "sub": {
+    "devices": "{{rooms}} 室 / {{dataCenters}} データセンター",
+    "cabinets": "ラベル未設定 {{missing}}",
+    "panels": "ポート計 {{ports}}",
+    "ports": "接続済み {{connected}} / {{total}}",
+    "cables": "使用中 {{inUse}} / 在庫 {{stock}}",
+    "opticalModules": "取付済み {{installed}} / 計 {{total}}",
+    "ipAddresses": "サブネット {{subnets}} 個",
+    "workstations": "計 {{total}} 台"
   },
   "cards": {
-    "recentDevices": "最近追加されたデバイス",
-    "cableStatus": "ケーブル接続状態",
-    "roadmap": "機能ロードマップ"
+    "ports": "ポート使用状況",
+    "deviceTypes": "機器種別",
+    "inventory": "ケーブルと光モジュール",
+    "subnets": "サブネット使用率",
+    "health": "データの健全性",
+    "recentDevices": "最近追加された機器",
+    "datacenter3d": "3D ルーム"
   },
-  "roadmap": {
-    "implemented": "実装済み",
-    "inDevelopment": "開発中",
-    "planned": "計画中",
-    "items": {
-      "implemented": [
-        "デバイス管理（データセンター→機械室→キャビネット→デバイス）",
-        "ケーブル接続追跡（ポート間）",
-        "グラフデータベース統合（Neo4j）"
-      ],
-      "inDevelopment": [
-        "Uスペース詳細管理と可視化",
-        "IPアドレス管理とポートマッピング",
-        "電力管理（フェーズ、商用電源/UPS）",
-        "メッシュトポロジー可視化"
-      ],
-      "planned": [
-        "SNMP/IPMI監視統合",
-        "デバイスヘルス追跡",
-        "資産棚卸機能",
-        "AI最適レイアウト提案",
-        "QRコード/RFIDラベル管理"
-      ]
-    }
+  "ports": {
+    "connected": "接続済み",
+    "free": "空き",
+    "reserved": "予約",
+    "faulty": "故障",
+    "usage": "使用率"
   },
-  "emptyState": "データなし"
+  "cableStatus": {
+    "STOCK": "在庫",
+    "IN_USE": "使用中"
+  },
+  "inventory": {
+    "cables": "ケーブル",
+    "opticalModules": "光モジュール"
+  },
+  "subnets": {
+    "empty": "サブネットはまだありません",
+    "more": "ほか {{count}} 個のサブネット",
+    "usage": "{{allocated}} / {{usable}} 割当済み"
+  },
+  "health": {
+    "labelsMissing": "ラベル未設定",
+    "labelsToPrint": "印刷待ちラベル",
+    "observationUnmatched": "未割当の収集データ",
+    "ok": "正常",
+    "attention": "要対応"
+  },
+  "datacenter3d": {
+    "title": "3D ルーム",
+    "description": "ラック・機器・端末の配置と接続状態を 3D で見渡す",
+    "enter": "3D ビューを開く"
+  },
+  "fields": {
+    "device": "機器",
+    "type": "種別",
+    "location": "場所",
+    "createdAt": "追加日時"
+  }
 }

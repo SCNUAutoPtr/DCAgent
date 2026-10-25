@@ -1,41 +1,80 @@
 {
-  "title": "System Overview",
-  "description": "Data Center Lifecycle Management - Device, Cable, and Connection Overview",
-  "statistics": {
-    "totalDevices": "Total Devices",
-    "cableConnections": "Cable Connections",
-    "cabinetCount": "Cabinet Count",
-    "portOccupancy": "Port Occupancy"
+  "title": "Overview",
+  "description": "Full lifecycle of your data center: devices, cables and connections at a glance",
+  "refresh": "Refresh",
+  "updatedAt": "Updated {{time}}",
+  "emptyState": "No data",
+  "paletteHint": "Press {{key}} to find anything",
+  "hero": {
+    "portUsage": "Port usage",
+    "cablesInUse": "Cables in use",
+    "workstationsOnline": "Workstations online"
+  },
+  "stats": {
+    "devices": "Devices",
+    "cabinets": "Cabinets",
+    "panels": "Panels",
+    "ports": "Port usage",
+    "cables": "Cables",
+    "opticalModules": "Optical modules",
+    "ipAddresses": "Allocated IPs",
+    "workstations": "Workstations online"
+  },
+  "sub": {
+    "devices": "{{rooms}} rooms / {{dataCenters}} data centers",
+    "cabinets": "{{missing}} missing labels",
+    "panels": "{{ports}} ports in total",
+    "ports": "{{connected}} of {{total}} connected",
+    "cables": "{{inUse}} in use / {{stock}} in stock",
+    "opticalModules": "{{installed}} installed of {{total}}",
+    "ipAddresses": "{{subnets}} subnets",
+    "workstations": "{{total}} in total"
   },
   "cards": {
-    "recentDevices": "Recently Added Devices",
-    "cableStatus": "Cable Connection Status",
-    "roadmap": "Feature Roadmap"
+    "ports": "Port usage",
+    "deviceTypes": "Devices by type",
+    "inventory": "Cables and modules",
+    "subnets": "Subnet utilization",
+    "health": "Data health",
+    "recentDevices": "Recently added devices",
+    "datacenter3d": "3D room"
   },
-  "roadmap": {
-    "implemented": "Implemented",
-    "inDevelopment": "In Development",
-    "planned": "Planned",
-    "items": {
-      "implemented": [
-        "Device Management (Data Center → Room → Cabinet → Device)",
-        "Cable Connection Tracking (Port to Port)",
-        "Graph Database Integration (Neo4j)"
-      ],
-      "inDevelopment": [
-        "U Position Detailed Management and Visualization",
-        "IP Address Management and Port Mapping",
-        "Power Management (Phase, Grid/UPS)",
-        "Network Topology Visualization"
-      ],
-      "planned": [
-        "SNMP/IPMI Monitoring Integration",
-        "Device Health Tracking",
-        "Asset Inventory Function",
-        "AI Layout Optimization Suggestions",
-        "QR Code/RFID Label Management"
-      ]
-    }
+  "ports": {
+    "connected": "Connected",
+    "free": "Free",
+    "reserved": "Reserved",
+    "faulty": "Faulty",
+    "usage": "Usage"
   },
-  "emptyState": "No Data"
+  "cableStatus": {
+    "STOCK": "In stock",
+    "IN_USE": "In use"
+  },
+  "inventory": {
+    "cables": "Cables",
+    "opticalModules": "Optical modules"
+  },
+  "subnets": {
+    "empty": "No subnets yet",
+    "more": "{{count}} more subnets",
+    "usage": "{{allocated}} / {{usable}} allocated"
+  },
+  "health": {
+    "labelsMissing": "Missing labels",
+    "labelsToPrint": "Labels to print",
+    "observationUnmatched": "Unclaimed observations",
+    "ok": "OK",
+    "attention": "Needs attention"
+  },
+  "datacenter3d": {
+    "title": "3D room",
+    "description": "Walk through cabinets, devices and workstations in three dimensions",
+    "enter": "Open 3D view"
+  },
+  "fields": {
+    "device": "Device",
+    "type": "Type",
+    "location": "Location",
+    "createdAt": "Added"
+  }
 }

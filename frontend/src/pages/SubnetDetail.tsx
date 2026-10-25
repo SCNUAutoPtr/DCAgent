@@ -1,508 +1,430 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Card,
-  Table,
-  Button,
-  Modal,
-  Form,
-  Input,
-  Select,
-  message,
-  Space,
-  Typography,
-  Tag,
-  Row,
-  Col,
-  Descriptions,
-  Progress,
-  Tooltip,
-  Divider,
-  Popconfirm,
-} from 'antd';
-import {
-  ArrowLeftOutlined,
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  ReloadOutlined,
-  ExclamationCircleOutlined,
-} from '@ant-design/icons';
-import ipService, { IpAddress, IpSubnet } from '@/services/ipService';
-import { portService } from '@/services/portService';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Alert, Button, Card, Col, Descriptions, Divider, Form, Input, InputNumber, Modal, Popconfirm, Progress, Row, Select, Space, Table, Tag, Typography, message } from 'antd';
+import { ArrowLeftOutlined, EditOutlined, PlusOutlined, ReloadOutlined, WarningOutlined } from '@ant-design/icons';
+import type { DeviceDto } from '@contracts/devices';
+import { IP_STATUSES, type IpStatus } from '@contracts/enums';
+import type { IpAddressDto, IpConflict, SubnetDto } from '@contracts/ip';
+import { ipv4ToInt } from '@contracts/ipv4';
+import type { PanelDto } from '@contracts/panels';
+import { ipAddressService, subnetService } from '@/services/ipService';
 import { deviceService } from '@/services/deviceService';
+import { panelService } from '@/services/panelService';
+import { paths } from '@/routes';
+import { SearchInput } from '@/components/SearchInput';
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 
-// IP状态颜色映射
-const IP_STATUS_COLORS = {
-  FREE: '#52c41a',
-  ALLOCATED: '#1890ff',
-  RESERVED: '#faad14',
-  BLOCKED: '#d9d9d9',
-};
+const STATUS_COLORS: Record<IpStatus, string> = { ALLOCATED: 'processing', RESERVED: 'warning', BLOCKED: 'default' };
+type OwnerKind = 'NONE' | 'PORT' | 'DEVICE';
+
+interface FormValues {
+  address?: string;
+  status: IpStatus;
+  ownerKind: OwnerKind;
+  deviceId?: string;
+  panelId?: string;
+  portId?: string;
+  hostname?: string;
+  macAddress?: string;
+  description?: string;
+}
 
 export default function SubnetDetail() {
   const { id } = useParams<{ id: string }>();
-  const { t } = useTranslation('ip');
+  const { t } = useTranslation(['ip', 'common']);
   const navigate = useNavigate();
-
-  const [subnet, setSubnet] = useState<IpSubnet | null>(null);
-  const [ipAddresses, setIpAddresses] = useState<IpAddress[]>([]);
-  const [ports, setPorts] = useState<any[]>([]);
-  const [devices, setDevices] = useState<any[]>([]);
+  const [subnet, setSubnet] = useState<SubnetDto | null>(null);
+  const [rows, setRows] = useState<IpAddressDto[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState({ current: 1, pageSize: 50 });
+  const [filter, setFilter] = useState<{ status?: IpStatus; search?: string }>({});
   const [loading, setLoading] = useState(false);
-  const [allocateModalVisible, setAllocateModalVisible] = useState(false);
-  const [selectedIp, setSelectedIp] = useState<IpAddress | null>(null);
-  const [form] = Form.useForm();
-  const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>();
+  const [conflicts, setConflicts] = useState<IpConflict[] | null>(null);
+  const [devices, setDevices] = useState<DeviceDto[]>([]);
+  const [panels, setPanels] = useState<PanelDto[]>([]);
+  const [editing, setEditing] = useState<IpAddressDto | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [nextFree, setNextFree] = useState<string | null>(null);
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [batchCount, setBatchCount] = useState<number | null>(1);
+  const [form] = Form.useForm<FormValues>();
+  const ownerKind: OwnerKind = Form.useWatch('ownerKind', form) ?? 'NONE';
+  const deviceId = Form.useWatch('deviceId', form);
+  const panelId = Form.useWatch('panelId', form);
 
-  useEffect(() => {
-    if (id) {
-      loadSubnet();
-      loadPorts();
-      loadDevices();
-    }
-  }, [id]);
-
-  const loadSubnet = async () => {
+  const load = useCallback(async () => {
+    if (!id) return;
     setLoading(true);
     try {
-      const data = await ipService.getSubnetById(id!);
-      setSubnet(data);
-      setIpAddresses(data.ipAddresses || []);
-    } catch (error: any) {
-      message.error(t('subnet.messages.loadDetailFailed') + ': ' + error.message);
+      const [s, list] = await Promise.all([
+        subnetService.get({ id }),
+        ipAddressService.list({ subnetId: id, ...filter, take: page.pageSize, skip: (page.current - 1) * page.pageSize }),
+      ]);
+      setSubnet(s);
+      setRows(list.items);
+      setTotal(list.total);
+    } catch {
+      // reported by rpc
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, filter, page]);
 
-  const loadPorts = async () => {
-    try {
-      const data = await portService.getAll();
-      setPorts(data);
-    } catch (error) {
-      console.error('Failed to load ports:', error);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    deviceService.list().then(setDevices, () => undefined);
+  }, []);
+
+  // ports of the chosen device, loaded in one request
+  useEffect(() => {
+    if (!deviceId || ownerKind !== 'PORT') {
+      setPanels([]);
+      return;
     }
-  };
+    panelService.list({ deviceId, includePorts: true }).then(setPanels, () => setPanels([]));
+  }, [deviceId, ownerKind]);
 
-  const loadDevices = async () => {
-    try {
-      const data = await deviceService.getAll();
-      setDevices(data);
-    } catch (error) {
-      console.error('Failed to load devices:', error);
-    }
-  };
-
-  const handleAllocate = (ip: IpAddress) => {
-    setSelectedIp(ip);
+  const open = async (ip?: IpAddressDto) => {
+    setEditing(ip ?? null);
     form.resetFields();
-    setAllocateModalVisible(true);
-  };
-
-  const handleAllocateSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      await ipService.allocateIp({
-        ipAddressId: selectedIp!.id,
-        portId: values.portId,
-        deviceId: values.deviceId,
-        hostname: values.hostname,
-        macAddress: values.macAddress,
-        description: values.description,
-      });
-      message.success(t('ipAddress.messages.allocateSuccess'));
-      setAllocateModalVisible(false);
-      loadSubnet();
-    } catch (error: any) {
-      message.error(t('ipAddress.messages.allocateFailed') + ': ' + error.message);
+    const kind: OwnerKind = ip?.portId ? 'PORT' : ip?.deviceId ? 'DEVICE' : 'NONE';
+    form.setFieldsValue({
+      address: ip?.address ?? '',
+      status: ip?.status ?? 'ALLOCATED',
+      ownerKind: kind,
+      deviceId: ip?.owner?.deviceId ?? ip?.deviceId ?? undefined,
+      portId: ip?.portId ?? undefined,
+      hostname: ip?.hostname ?? '',
+      macAddress: ip?.macAddress ?? '',
+      description: ip?.description ?? '',
+    });
+    setNextFree(null);
+    setModalOpen(true);
+    if (!ip && id) {
+      try {
+        const r = await ipAddressService.nextAvailable({ subnetId: id });
+        setNextFree(r.addresses[0] ?? null);
+      } catch {
+        // reported by rpc
+      }
     }
   };
 
-  const handleRelease = async (ipId: string) => {
-    try {
-      await ipService.releaseIp(ipId);
-      message.success(t('ipAddress.messages.releaseSuccess'));
-      loadSubnet();
-    } catch (error: any) {
-      message.error(t('ipAddress.messages.releaseFailed') + ': ' + error.message);
+  // a port's panel is only known once panels are loaded
+  useEffect(() => {
+    const portId = form.getFieldValue('portId');
+    if (portId && !panelId) {
+      const p = panels.find((x) => x.ports?.some((port) => port.id === portId));
+      if (p) form.setFieldValue('panelId', p.id);
     }
-  };
+  }, [panels, panelId, form]);
 
-  const getStatusTag = (status: string) => {
-    const colorMap: Record<string, string> = {
-      FREE: 'success',
-      ALLOCATED: 'processing',
-      RESERVED: 'warning',
-      BLOCKED: 'default',
+  const save = async () => {
+    const v = await form.validateFields();
+    const owner = {
+      portId: v.ownerKind === 'PORT' ? v.portId ?? null : null,
+      deviceId: v.ownerKind === 'DEVICE' ? v.deviceId ?? null : null,
     };
-    return (
-      <Tag color={colorMap[status] || 'default'}>
-        {t(`ipAddress.status.${status}`)}
+    const extra = { status: v.status, hostname: v.hostname, macAddress: v.macAddress || null, description: v.description };
+    try {
+      if (editing) await ipAddressService.update({ id: editing.id, ...owner, ...extra });
+      else await ipAddressService.allocate({ subnetId: id!, address: v.address || undefined, ...owner, ...extra });
+      message.success(t(editing ? 'ip:ipAddress.messages.updateSuccess' : 'ip:ipAddress.messages.allocateSuccess'));
+      setModalOpen(false);
+      load();
+    } catch {
+      // reported by rpc
+    }
+  };
+
+  const release = async (ip: IpAddressDto) => {
+    try {
+      await ipAddressService.release({ id: ip.id });
+      message.success(t('ip:ipAddress.messages.releaseSuccess'));
+      load();
+    } catch {
+      // reported by rpc
+    }
+  };
+
+  const reserveBlock = async () => {
+    if (!id || !batchCount) return;
+    try {
+      const r = await ipAddressService.batchAllocate({ subnetId: id, count: batchCount, status: 'RESERVED' });
+      message.success(t('ip:ipAddress.messages.batchReserveSuccess', { count: r.addresses.length }));
+      setBatchOpen(false);
+      load();
+    } catch {
+      // reported by rpc
+    }
+  };
+
+  const checkConflicts = async () => {
+    try {
+      setConflicts(await ipAddressService.checkConflicts({ subnetId: id }));
+    } catch {
+      // reported by rpc
+    }
+  };
+
+  const ownerCell = (ip: IpAddressDto) => {
+    if (!ip.owner) return '-';
+    const color = ip.owner.kind === 'PORT' ? 'blue' : ip.owner.kind === 'DEVICE' ? 'green' : 'purple';
+    const label = `${t(`ip:ipAddress.ownerKinds.${ip.owner.kind}`)}: ${ip.owner.name}`;
+    return ip.owner.kind === 'PORT' ? (
+      <Tag color={color} style={{ cursor: 'pointer' }} onClick={() => navigate(paths.port(ip.owner!.id))}>
+        {label}
       </Tag>
+    ) : (
+      <Tag color={color}>{label}</Tag>
     );
   };
 
-  const filteredIpAddresses = ipAddresses.filter((ip) => {
-    const matchesSearch = !searchText ||
-      ip.address.includes(searchText) ||
-      ip.hostname?.includes(searchText) ||
-      ip.macAddress?.includes(searchText);
-    const matchesStatus = !statusFilter || ip.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
   const columns = [
+    { title: t('ip:ipAddress.fields.address'), dataIndex: 'address', key: 'address', render: (v: string) => <Text code>{v}</Text> },
+    { title: t('ip:ipAddress.fields.status'), dataIndex: 'status', key: 'status', render: (s: IpStatus) => <Tag color={STATUS_COLORS[s]}>{t(`ip:ipAddress.status.${s}`)}</Tag> },
+    { title: t('ip:ipAddress.fields.owner'), key: 'owner', render: (_: unknown, ip: IpAddressDto) => ownerCell(ip) },
+    { title: t('ip:ipAddress.fields.hostname'), dataIndex: 'hostname', key: 'hostname', render: (v: string | null) => v || '-' },
+    { title: t('ip:ipAddress.fields.macAddress'), dataIndex: 'macAddress', key: 'macAddress', render: (v: string | null) => (v ? <Text code>{v}</Text> : '-') },
+    { title: t('ip:ipAddress.fields.description'), dataIndex: 'description', key: 'description', ellipsis: true, render: (v: string | null) => v || '-' },
     {
-      title: t('ipAddress.fields.address'),
-      dataIndex: 'address',
-      key: 'address',
-      render: (text: string) => <Text code>{text}</Text>,
-      sorter: (a: IpAddress, b: IpAddress) => {
-        const aNum = a.address.split('.').map((n: string) => parseInt(n)).reduce((acc: number, n: number) => acc * 256 + n, 0);
-        const bNum = b.address.split('.').map((n: string) => parseInt(n)).reduce((acc: number, n: number) => acc * 256 + n, 0);
-        return aNum - bNum;
-      },
-      defaultSortOrder: 'ascend' as const,
-    },
-    {
-      title: t('ipAddress.fields.status'),
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => getStatusTag(status),
-      filters: [
-        { text: t('ipAddress.status.FREE'), value: 'FREE' },
-        { text: t('ipAddress.status.ALLOCATED'), value: 'ALLOCATED' },
-        { text: t('ipAddress.status.RESERVED'), value: 'RESERVED' },
-        { text: t('ipAddress.status.BLOCKED'), value: 'BLOCKED' },
-      ],
-      onFilter: (value: any, record: IpAddress) => record.status === value,
-    },
-    {
-      title: t('ipAddress.fields.hostname'),
-      dataIndex: 'hostname',
-      key: 'hostname',
-      render: (text: string) => text || '-',
-    },
-    {
-      title: t('ipAddress.fields.macAddress'),
-      dataIndex: 'macAddress',
-      key: 'macAddress',
-      render: (text: string) => text ? <Text code>{text}</Text> : '-',
-    },
-    {
-      title: t('ipAddress.fields.bindingTarget'),
-      key: 'binding',
-      render: (record: IpAddress) => {
-        if (record.port) {
-          return (
-            <Tooltip title={`面板: ${record.port.panel?.name || '-'}`}>
-              <Tag color="blue">端口: {record.port.label || record.port.number}</Tag>
-            </Tooltip>
-          );
-        }
-        if (record.device) {
-          return (
-            <Tag color="green">设备: {record.device.name}</Tag>
-          );
-        }
-        return '-';
-      },
-    },
-    {
-      title: t('ipAddress.fields.description'),
-      dataIndex: 'description',
-      key: 'description',
-      ellipsis: true,
-      render: (text: string) => text || '-',
-    },
-    {
-      title: t('buttons.actions'),
+      title: t('ip:buttons.actions'),
       key: 'actions',
       fixed: 'right' as const,
-      width: 150,
-      render: (record: IpAddress) => {
-        if (record.status === 'FREE') {
-          return (
-            <Button
-              type="primary"
-              size="small"
-              icon={<PlusOutlined />}
-              onClick={() => handleAllocate(record)}
-            >
-              {t('buttons.allocate')}
+      width: 170,
+      render: (_: unknown, ip: IpAddressDto) => (
+        <Space>
+          <Button size="small" icon={<EditOutlined />} onClick={() => open(ip)} />
+          <Popconfirm title={t('ip:ipAddress.messages.releaseConfirm')} onConfirm={() => release(ip)} okText={t('ip:buttons.confirm')} cancelText={t('ip:buttons.cancel')}>
+            <Button size="small" danger>
+              {t('ip:buttons.release')}
             </Button>
-          );
-        }
-        if (record.status === 'ALLOCATED') {
-          return (
-            <Popconfirm
-              title={t('ipAddress.messages.releaseConfirm')}
-              onConfirm={() => handleRelease(record.id)}
-              okText={t('buttons.confirm')}
-              cancelText={t('buttons.cancel')}
-            >
-              <Button size="small" danger>
-                {t('buttons.release')}
-              </Button>
-            </Popconfirm>
-          );
-        }
-        return '-';
-      },
+          </Popconfirm>
+        </Space>
+      ),
     },
   ];
 
   if (!subnet) {
-    return <div style={{ padding: 24 }}>Loading...</div>;
+    return <Card loading />;
   }
 
-  const utilizationRate = parseFloat(subnet.stats?.utilizationRate || '0');
+  const ports = panels.find((p) => p.id === panelId)?.ports ?? [];
 
   return (
-    <div style={{ padding: '24px' }}>
-      {/* 标题和返回按钮 */}
+    <div>
       <Space style={{ marginBottom: 24 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/ip-management')}>
-          {t('buttons.back')}
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(paths.ipManagement())}>
+          {t('ip:buttons.back')}
         </Button>
         <Title level={2} style={{ margin: 0 }}>
           {subnet.name}
         </Title>
       </Space>
 
-      {/* 子网信息卡片 */}
-      <Card title={t('subnet.detailTitle')} style={{ marginBottom: 24 }}>
+      <Card title={t('ip:subnet.detailTitle')} style={{ marginBottom: 24 }}>
         <Descriptions column={3} bordered>
-          <Descriptions.Item label={t('subnet.fields.network')}>
-            <Text code>{subnet.network}/{subnet.cidr}</Text>
+          <Descriptions.Item label={t('ip:subnet.fields.network')}>
+            <Text code>{subnet.network}</Text>
           </Descriptions.Item>
-          <Descriptions.Item label={t('subnet.fields.gateway')}>
-            {subnet.gateway ? <Text code>{subnet.gateway}</Text> : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('subnet.fields.vlan')}>
-            {subnet.vlan ? <Tag color="blue">{subnet.vlan}</Tag> : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('subnet.fields.room')}>
-            {subnet.room ? `${subnet.room.name} (${subnet.room.dataCenter?.name})` : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('subnet.fields.dnsServers')}>
-            {subnet.dnsServers && subnet.dnsServers.length > 0
-              ? subnet.dnsServers.map((dns: string) => <Tag key={dns}>{dns}</Tag>)
-              : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('subnet.fields.description')}>
-            {subnet.description || '-'}
-          </Descriptions.Item>
+          <Descriptions.Item label={t('ip:subnet.fields.gateway')}>{subnet.gateway ? <Text code>{subnet.gateway}</Text> : '-'}</Descriptions.Item>
+          <Descriptions.Item label={t('ip:subnet.fields.vlan')}>{subnet.vlan ? <Tag color="blue">{subnet.vlan}</Tag> : '-'}</Descriptions.Item>
+          <Descriptions.Item label={t('ip:subnet.fields.room')}>{subnet.roomName ?? '-'}</Descriptions.Item>
+          <Descriptions.Item label={t('ip:subnet.fields.dnsServers')}>{subnet.dnsServers.length ? subnet.dnsServers.map((d) => <Tag key={d}>{d}</Tag>) : '-'}</Descriptions.Item>
+          <Descriptions.Item label={t('ip:subnet.fields.description')}>{subnet.description || '-'}</Descriptions.Item>
         </Descriptions>
-
         <Divider />
-
-        {/* 使用率统计 */}
         <Row gutter={16}>
-          <Col span={6}>
-            <Card>
-              <div style={{ textAlign: 'center' }}>
-                <Text type="secondary">{t('subnet.fields.totalIps')}</Text>
-                <Title level={3} style={{ margin: '8px 0' }}>{subnet.stats?.total || 0}</Title>
-              </div>
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <div style={{ textAlign: 'center' }}>
-                <Text type="secondary">{t('subnet.fields.freeIps')}</Text>
-                <Title level={3} style={{ margin: '8px 0', color: '#52c41a' }}>
-                  {subnet.stats?.free || 0}
+          {(
+            [
+              ['capacity', subnet.usage.capacity, undefined],
+              ['freeIps', subnet.usage.free, '#52c41a'],
+              ['allocatedIps', subnet.usage.allocated, '#1890ff'],
+              ['reservedIps', subnet.usage.reserved, '#faad14'],
+            ] as const
+          ).map(([key, value, color]) => (
+            <Col span={5} key={key}>
+              <Card size="small" style={{ textAlign: 'center' }}>
+                <Text type="secondary">{t(`ip:subnet.fields.${key}`)}</Text>
+                <Title level={3} style={{ margin: '8px 0', color }}>
+                  {value}
                 </Title>
-              </div>
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <div style={{ textAlign: 'center' }}>
-                <Text type="secondary">{t('subnet.fields.allocatedIps')}</Text>
-                <Title level={3} style={{ margin: '8px 0', color: '#1890ff' }}>
-                  {subnet.stats?.allocated || 0}
-                </Title>
-              </div>
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <div style={{ textAlign: 'center' }}>
-                <Text type="secondary">{t('subnet.fields.utilizationRate')}</Text>
-                <Title level={3} style={{ margin: '8px 0' }}>{utilizationRate.toFixed(2)}%</Title>
-                <Progress
-                  percent={utilizationRate}
-                  showInfo={false}
-                  strokeColor={utilizationRate > 80 ? '#ff4d4f' : '#52c41a'}
-                />
-              </div>
+              </Card>
+            </Col>
+          ))}
+          <Col span={4}>
+            <Card size="small" style={{ textAlign: 'center' }}>
+              <Text type="secondary">{t('ip:subnet.fields.utilizationRate')}</Text>
+              <Title level={3} style={{ margin: '8px 0' }}>
+                {subnet.usage.utilization.toFixed(2)}%
+              </Title>
+              <Progress percent={subnet.usage.utilization} showInfo={false} strokeColor={subnet.usage.utilization > 80 ? '#ff4d4f' : '#52c41a'} />
             </Card>
           </Col>
         </Row>
       </Card>
 
-      {/* IP地址列表 */}
+      {conflicts && (
+        <Alert
+          style={{ marginBottom: 16 }}
+          type={conflicts.length ? 'warning' : 'success'}
+          showIcon
+          closable
+          onClose={() => setConflicts(null)}
+          message={conflicts.length ? t('ip:conflicts.foundConflicts', { count: conflicts.length }) : t('ip:conflicts.noConflicts')}
+          description={
+            conflicts.length ? (
+              <ul style={{ margin: 0 }}>
+                {conflicts.map((c) => (
+                  <li key={`${c.kind}-${c.value}`}>
+                    {t(`ip:conflicts.kinds.${c.kind}`)}: <Text code>{c.value}</Text> ({c.ipAddressIds.length})
+                  </li>
+                ))}
+              </ul>
+            ) : undefined
+          }
+        />
+      )}
+
       <Card
-        title={t('ipAddress.title')}
+        title={t('ip:ipAddress.title')}
         extra={
-          <Space>
-            <Input.Search
-              placeholder={t('ipAddress.placeholders.search')}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+          <Space wrap>
+            <SearchInput
+              placeholder={t('ip:ipAddress.placeholders.search')}
+              onSearch={(search) => {
+                setFilter((f) => ({ ...f, search: search || undefined }));
+                setPage((p) => ({ ...p, current: 1 }));
+              }}
               style={{ width: 250 }}
-              allowClear
             />
             <Select
-              placeholder={t('filters.status')}
-              value={statusFilter}
-              onChange={setStatusFilter}
-              style={{ width: 120 }}
+              placeholder={t('ip:filters.status')}
               allowClear
-            >
-              <Option value="FREE">{t('ipAddress.status.FREE')}</Option>
-              <Option value="ALLOCATED">{t('ipAddress.status.ALLOCATED')}</Option>
-              <Option value="RESERVED">{t('ipAddress.status.RESERVED')}</Option>
-              <Option value="BLOCKED">{t('ipAddress.status.BLOCKED')}</Option>
-            </Select>
-            <Button icon={<ReloadOutlined />} onClick={loadSubnet}>
-              {t('buttons.refresh')}
+              style={{ width: 120 }}
+              options={IP_STATUSES.map((s) => ({ value: s, label: t(`ip:ipAddress.status.${s}`) }))}
+              onChange={(status?: IpStatus) => {
+                setFilter((f) => ({ ...f, status }));
+                setPage((p) => ({ ...p, current: 1 }));
+              }}
+            />
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => open()}>
+              {t('ip:ipAddress.allocate')}
+            </Button>
+            <Button onClick={() => setBatchOpen(true)}>{t('ip:ipAddress.batchReserve')}</Button>
+            <Button icon={<WarningOutlined />} onClick={checkConflicts}>
+              {t('ip:buttons.checkConflicts')}
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={load}>
+              {t('ip:buttons.refresh')}
             </Button>
           </Space>
         }
       >
         <Table
           columns={columns}
-          dataSource={filteredIpAddresses}
+          dataSource={rows}
           rowKey="id"
           loading={loading}
           scroll={{ x: 1200 }}
+          locale={{ emptyText: t('ip:noData.noIpAddresses') }}
           pagination={{
+            ...page,
+            total,
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 个IP地址`,
-            pageSize: 50,
-          }}
-          locale={{
-            emptyText: t('noData.noIpAddresses'),
+            showTotal: (n) => t('ip:ipAddress.total', { total: n }),
+            onChange: (current, pageSize) => setPage({ current, pageSize }),
           }}
         />
       </Card>
 
-      {/* 分配IP模态框 */}
       <Modal
-        title={`${t('ipAddress.allocate')} - ${selectedIp?.address}`}
-        open={allocateModalVisible}
-        onOk={handleAllocateSubmit}
-        onCancel={() => setAllocateModalVisible(false)}
+        title={editing ? t('ip:ipAddress.editTitle', { address: editing.address }) : t('ip:ipAddress.allocate')}
+        open={modalOpen}
+        onOk={save}
+        onCancel={() => setModalOpen(false)}
         width={600}
-        okText={t('buttons.allocate')}
-        cancelText={t('buttons.cancel')}
+        okText={t('ip:buttons.save')}
+        cancelText={t('ip:buttons.cancel')}
+        forceRender
       >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            label={t('ipAddress.fields.bindingType')}
-            required
-            help={t('ipAddress.messages.selectBindingTarget')}
-          >
-            <Space>
-              <Text type="secondary">选择端口或设备（二选一）</Text>
+        <Form name="subnet-detail-form" form={form} layout="vertical">
+          {!editing && (
+            <Form.Item
+              label={t('ip:ipAddress.fields.address')}
+              name="address"
+              extra={nextFree ? t('ip:ipAddress.messages.nextAvailable', { address: nextFree }) : undefined}
+              rules={[{ validator: (_: unknown, v?: string) => (!v || ipv4ToInt(v) !== null ? Promise.resolve() : Promise.reject(new Error(t('ip:ipAddress.validation.invalidAddress')))) }]}
+            >
+              <Input placeholder={t('ip:ipAddress.placeholders.address')} />
+            </Form.Item>
+          )}
+          <Form.Item label={t('ip:ipAddress.fields.status')} name="status">
+            <Select options={IP_STATUSES.map((s) => ({ value: s, label: t(`ip:ipAddress.status.${s}`) }))} />
+          </Form.Item>
+          <Form.Item label={t('ip:ipAddress.fields.ownerKind')} name="ownerKind">
+            <Select
+              disabled={!!editing?.workstationId}
+              options={(['NONE', 'PORT', 'DEVICE'] as const).map((k) => ({ value: k, label: t(`ip:ipAddress.ownerKinds.${k}`) }))}
+            />
+          </Form.Item>
+          {ownerKind !== 'NONE' && (
+            <Form.Item label={t('ip:ipAddress.fields.device')} name="deviceId" rules={[{ required: true }]}>
+              <Select
+                showSearch
+                optionFilterProp="label"
+                placeholder={t('ip:ipAddress.placeholders.selectDevice')}
+                options={devices.map((d) => ({ value: d.id, label: `${d.name} (${d.type})` }))}
+                onChange={() => form.setFieldsValue({ panelId: undefined, portId: undefined })}
+              />
+            </Form.Item>
+          )}
+          {ownerKind === 'PORT' && (
+            <Space style={{ width: '100%' }} align="start">
+              <Form.Item label={t('ip:ipAddress.fields.panel')} name="panelId" style={{ width: 260 }}>
+                <Select
+                  placeholder={t('ip:ipAddress.placeholders.selectPanel')}
+                  options={panels.map((p) => ({ value: p.id, label: p.name }))}
+                  onChange={() => form.setFieldValue('portId', undefined)}
+                />
+              </Form.Item>
+              <Form.Item label={t('ip:ipAddress.fields.port')} name="portId" rules={[{ required: true }]} style={{ width: 260 }}>
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder={t('ip:ipAddress.placeholders.selectPort')}
+                  options={ports.map((p) => ({ value: p.id, label: p.ifName ? `${p.number} (${p.ifName})` : p.number }))}
+                />
+              </Form.Item>
             </Space>
-          </Form.Item>
-
-          <Form.Item
-            label={t('ipAddress.fields.port')}
-            name="portId"
-            rules={[
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value && !getFieldValue('deviceId')) {
-                    return Promise.reject(new Error(t('ipAddress.validation.bindingTargetRequired')));
-                  }
-                  if (value && getFieldValue('deviceId')) {
-                    return Promise.reject(new Error(t('ipAddress.messages.cannotBindBoth')));
-                  }
-                  return Promise.resolve();
-                },
-              }),
-            ]}
-          >
-            <Select
-              showSearch
-              placeholder={t('ipAddress.placeholders.selectPort')}
-              optionFilterProp="children"
-              filterOption={(input, option: any) =>
-                option.children.toLowerCase().includes(input.toLowerCase())
-              }
-            >
-              {ports.map((port) => (
-                <Option key={port.id} value={port.id}>
-                  {port.panel?.name || 'Unknown Panel'} - {port.label || port.number}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            label={t('ipAddress.fields.device')}
-            name="deviceId"
-            rules={[
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value && !getFieldValue('portId')) {
-                    return Promise.reject(new Error(t('ipAddress.validation.bindingTargetRequired')));
-                  }
-                  if (value && getFieldValue('portId')) {
-                    return Promise.reject(new Error(t('ipAddress.messages.cannotBindBoth')));
-                  }
-                  return Promise.resolve();
-                },
-              }),
-            ]}
-          >
-            <Select
-              showSearch
-              placeholder={t('ipAddress.placeholders.selectDevice')}
-              optionFilterProp="children"
-              filterOption={(input, option: any) =>
-                option.children.toLowerCase().includes(input.toLowerCase())
-              }
-            >
-              {devices.map((device) => (
-                <Option key={device.id} value={device.id}>
-                  {device.name} ({device.type})
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
+          )}
           <Divider />
-
-          <Form.Item label={t('ipAddress.fields.hostname')} name="hostname">
-            <Input placeholder={t('ipAddress.placeholders.hostname')} />
+          <Form.Item label={t('ip:ipAddress.fields.hostname')} name="hostname">
+            <Input placeholder={t('ip:ipAddress.placeholders.hostname')} />
           </Form.Item>
-
           <Form.Item
-            label={t('ipAddress.fields.macAddress')}
+            label={t('ip:ipAddress.fields.macAddress')}
             name="macAddress"
-            rules={[
-              { pattern: /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/, message: t('ipAddress.validation.invalidMacAddress') },
-            ]}
+            rules={[{ pattern: /^[0-9A-Fa-f]{2}([:-]?[0-9A-Fa-f]{2}){5}$/, message: t('ip:ipAddress.validation.invalidMacAddress') }]}
           >
-            <Input placeholder={t('ipAddress.placeholders.macAddress')} />
+            <Input placeholder={t('ip:ipAddress.placeholders.macAddress')} />
           </Form.Item>
-
-          <Form.Item label={t('ipAddress.fields.description')} name="description">
-            <Input.TextArea rows={3} placeholder={t('ipAddress.placeholders.description')} />
+          <Form.Item label={t('ip:ipAddress.fields.description')} name="description">
+            <Input.TextArea rows={2} placeholder={t('ip:ipAddress.placeholders.description')} />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal title={t('ip:ipAddress.batchReserve')} open={batchOpen} onOk={reserveBlock} onCancel={() => setBatchOpen(false)}>
+        <Space>
+          <Text>{t('ip:ipAddress.fields.count')}</Text>
+          <InputNumber min={1} max={1024} value={batchCount} onChange={setBatchCount} />
+        </Space>
       </Modal>
     </div>
   );

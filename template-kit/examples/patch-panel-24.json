@@ -1,0 +1,27 @@
+{
+  "format": "dcagent.panel-template",
+  "version": 1,
+  "templates": [
+    {
+      "name": "样例 24 口配线架",
+      "type": "NETWORK",
+      "face": "FRONT",
+      "deviceModel": null,
+      "widthMm": 482.6,
+      "heightMm": 44.45,
+      "description": "样例：1U 24 口 RJ45 配线架，单行 1-24",
+      "generator": {
+        "version": 1,
+        "groups": [
+          {
+            "portType": "RJ45",
+            "count": 24,
+            "rows": 1,
+            "xMm": 30,
+            "pitchXMm": 17.5
+          }
+        ]
+      }
+    }
+  ]
+}

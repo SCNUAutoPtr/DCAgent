@@ -1,0 +1,83 @@
+{
+  "format": "dcagent.panel-template",
+  "version": 1,
+  "templates": [
+    {
+      "name": "样例 路由器后面板 4RJ45+2SFP",
+      "type": "OTHER",
+      "face": "REAR",
+      "deviceModel": null,
+      "widthMm": 482.6,
+      "heightMm": 44.45,
+      "description": "样例：4 个 RJ45、2 个 SFP、USB 和 Console 的路由器后面板（逐口坐标写法）",
+      "ports": [
+        {
+          "number": "GE0/0/8",
+          "sortIndex": 1,
+          "portType": "RJ45",
+          "ifName": "GigabitEthernet0/0/8",
+          "xMm": 40,
+          "yMm": 12,
+          "wMm": 14,
+          "hMm": 12,
+          "rotation": 0
+        },
+        {
+          "number": "GE0/0/9",
+          "sortIndex": 2,
+          "portType": "RJ45",
+          "ifName": "GigabitEthernet0/0/9",
+          "xMm": 58,
+          "yMm": 12,
+          "wMm": 14,
+          "hMm": 12,
+          "rotation": 0
+        },
+        {
+          "number": "GE0/0/10",
+          "sortIndex": 3,
+          "portType": "SFP",
+          "ifName": "GigabitEthernet0/0/10",
+          "xMm": 88,
+          "yMm": 12,
+          "wMm": 14,
+          "hMm": 12,
+          "rotation": 0
+        },
+        {
+          "number": "GE0/0/11",
+          "sortIndex": 4,
+          "portType": "SFP",
+          "ifName": "GigabitEthernet0/0/11",
+          "xMm": 106,
+          "yMm": 12,
+          "wMm": 14,
+          "hMm": 12,
+          "rotation": 0
+        },
+        {
+          "number": "USB1",
+          "sortIndex": 5,
+          "portType": "USB",
+          "ifName": null,
+          "xMm": 150,
+          "yMm": 14,
+          "wMm": 12,
+          "hMm": 8,
+          "rotation": 0
+        },
+        {
+          "number": "CONSOLE",
+          "sortIndex": 6,
+          "portType": "CONSOLE",
+          "ifName": null,
+          "xMm": 176,
+          "yMm": 12,
+          "wMm": 14,
+          "hMm": 12,
+          "rotation": 0
+        }
+      ]
+    }
+  ]
+}

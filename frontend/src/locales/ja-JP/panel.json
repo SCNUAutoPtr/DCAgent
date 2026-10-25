@@ -5,21 +5,22 @@
   "editTitle": "パネルを編集",
   "fields": {
     "id": "ID",
-    "shortId": "shortID",
     "name": "パネル名",
     "type": "タイプ",
     "device": "所属デバイス",
     "template": "テンプレート",
-    "isCustomized": "カスタマイズ",
     "portCount": "ポート数",
     "createdAt": "作成日時",
-    "actions": "操作"
+    "actions": "操作",
+    "label": "ラベル",
+    "face": "面",
+    "connected": "接続済み",
+    "notes": "備考"
   },
   "panelTypes": {
-    "ETHERNET": "イーサネットポート",
-    "FIBER": "光ファイバー",
+    "NETWORK": "ネットワーク",
     "POWER": "電源",
-    "SERIAL": "シリアルポート",
+    "CONSOLE": "コンソール",
     "USB": "USB",
     "OTHER": "その他"
   },
@@ -27,19 +28,16 @@
     "name": "例: eth0",
     "type": "パネルタイプを選択",
     "device": "デバイスを選択",
-    "template": "テンプレートを選択",
     "search": "パネル名で検索"
   },
   "messages": {
     "deleteConfirm": "このパネルを削除してもよろしいですか?",
-    "deleteWarning": "削除すると、このパネル配下のすべてのポートも削除されます",
+    "deleteWarning": "ケーブル、モジュール、IP が残るポートがあると再確認します",
     "createSuccess": "パネルが正常に作成されました",
     "updateSuccess": "パネルが正常に更新されました",
     "deleteSuccess": "パネルが正常に削除されました",
-    "loadFailed": "パネルリストの読み込みに失敗しました",
-    "updateFailed": "更新に失敗しました",
-    "createFailed": "作成に失敗しました",
-    "deleteFailed": "削除に失敗しました"
+    "forceDeleteTitle": "パネルのポートが使用中です",
+    "forceDeleteContent": "強制削除するとポートに挿さったケーブル端子は未接続になり、IP の割り当ても解除されます。光モジュールが入っているポートは先に取り外してください。"
   },
   "validation": {
     "nameRequired": "パネル名を入力してください",
@@ -48,10 +46,6 @@
   },
   "table": {
     "total": "全 {{total}} 件"
-  },
-  "labels": {
-    "customized": "カスタマイズ",
-    "fromTemplate": "テンプレートから"
   },
   "buttons": {
     "create": "新しいパネルを作成",
@@ -64,5 +58,213 @@
   "filters": {
     "selectDevice": "デバイスを選択",
     "selectType": "タイプを選択"
+  },
+  "faces": {
+    "FRONT": "前面",
+    "REAR": "背面"
+  },
+  "view": {
+    "size": "サイズ {{w}} × {{h}} mm",
+    "noPorts": "ポートなし",
+    "number": "番号",
+    "type": "種類",
+    "state": "状態",
+    "plug": "プラグ",
+    "ifName": "インターフェース",
+    "module": "光モジュール",
+    "yes": "あり",
+    "portStates": {
+      "FREE": "空き",
+      "CONNECTED": "接続済み",
+      "RESERVED": "予約",
+      "FAULTY": "故障"
+    }
+  },
+  "portTypes": {
+    "RJ45": "イーサネット (銅線)",
+    "SFP": "SFP 光 (1G)",
+    "SFP_PLUS": "SFP+ 光 (10G)",
+    "SFP28": "SFP28 光 (25G)",
+    "QSFP": "QSFP 光 (40G)",
+    "QSFP28": "QSFP28 光 (100G)",
+    "QSFP_DD": "QSFP-DD 光 (400G)",
+    "CONSOLE": "コンソール",
+    "USB": "USB",
+    "POWER": "電源",
+    "OTHER": "その他"
+  },
+  "adminStates": {
+    "NORMAL": "正常",
+    "RESERVED": "予約",
+    "FAULTY": "故障"
+  },
+  "editor": {
+    "createTitle": "機器パネルを作成",
+    "editTitle": "機器パネルを編集",
+    "device": "機器",
+    "deviceType": "機器種別",
+    "model": "型番",
+    "uPosition": "U 位置",
+    "widthMm": "幅 (mm)",
+    "heightMm": "高さ (mm)",
+    "heightHint": "機器 {{u}}U = {{mm}} mm、19 インチラック幅は 482.6 mm",
+    "template": "テンプレート",
+    "noTemplate": "テンプレートなし",
+    "templateInfo": "ポート {{count}} 個、r{{revision}}",
+    "templateOutdated": "テンプレートが r{{revision}} に更新されました。再適用できます",
+    "applyTemplate": "テンプレートを適用",
+    "ports": "ポート配置",
+    "portsHint": "ポートをドラッグして移動します。保存時は変更されたポートのみ書き戻します",
+    "saved": "パネルを保存しました",
+    "deleted": "パネルを削除しました",
+    "delete": "パネルを削除",
+    "placeholders": {
+      "name": "例：前面"
+    },
+    "templatesForModel": "この機種のテンプレート",
+    "otherTemplates": "その他のテンプレート"
+  },
+  "generator": {
+    "outside": "パネルからはみ出しています",
+    "auto": "自動",
+    "dragHint": "{{count}} ポート。ドラッグで個別に微調整、Shift を押しながらでグループごと移動",
+    "clearOverrides": "手動調整 {{count}} 件をクリア",
+    "issuesTitle": "ジェネレーターに問題があります。修正してから保存してください",
+    "issues": {
+      "DUPLICATE_NUMBER": "ポート番号が重複しています: {{value}}",
+      "DUPLICATE_IFNAME": "インターフェース名が重複しています: {{value}}",
+      "NAMES_COUNT_MISMATCH": "グループ {{value}}: 名前の数がポート数と一致しません",
+      "UNKNOWN_OVERRIDE": "存在しないポートへの調整があります: {{value}}"
+    },
+    "group": "ポートグループ {{n}}",
+    "moveUp": "上へ",
+    "moveDown": "下へ",
+    "removeGroup": "グループを削除",
+    "portType": "ポート種別",
+    "count": "数",
+    "numbering": "番号の付け方",
+    "numberingPrefix": "接頭辞 + 連番",
+    "numberingNames": "個別に命名",
+    "names": "番号（カンマ区切り）",
+    "prefix": "番号の接頭辞",
+    "start": "開始番号",
+    "step": "増分",
+    "ifName": "インターフェース名（{n} は連番）",
+    "rows": "行数",
+    "order": "並び順",
+    "orders": {
+      "ROW_MAJOR": "行ごとに順番",
+      "COLUMN_MAJOR": "奇数上・偶数下（列ごと）"
+    },
+    "gap": "前のグループとの間隔 (mm)",
+    "xMm": "X (mm)",
+    "yMm": "Y (mm)",
+    "geometry": "サイズとピッチ",
+    "pitchX": "列ピッチ (mm)",
+    "pitchY": "行ピッチ (mm)",
+    "wMm": "ポート幅 (mm)",
+    "hMm": "ポート高さ (mm)",
+    "rotation": "回転",
+    "addGroup": "ポートグループを追加",
+    "presets": {
+      "switch48ge4xge": "48 RJ45 + 4 SFP+ スイッチ（奇数上・偶数下）",
+      "switch24ge4xge": "24 RJ45 + 4 SFP+ スイッチ（奇数上・偶数下）",
+      "patchPanel24": "24 ポート パッチパネル",
+      "serverRear": "サーバー背面: 電源 2 + NIC 4 + BMC + USB 2 + VGA"
+    }
+  },
+  "apply": {
+    "title": "テンプレートを適用",
+    "confirm": "適用する",
+    "done": "テンプレートを適用しました",
+    "create": "追加 {{count}}",
+    "update": "更新 {{count}}",
+    "delete": "削除予定 {{count}}",
+    "kept": "保持 {{count}}",
+    "reasons": {
+      "CABLE": "ケーブル接続",
+      "MODULE": "光モジュール装着",
+      "IP": "IP 割り当て",
+      "WORKSTATION": "ワークステーション接続",
+      "OBSERVATION": "観測記録あり",
+      "ADMIN_STATE": "予約または故障",
+      "LABEL": "ラベルあり",
+      "NOTES": "メモあり"
+    },
+    "conflictsTitle": "競合があるため適用できません",
+    "conflicts": {
+      "IFNAME_TAKEN": "ポート {{number}} は使用中で、テンプレートが必要とするインターフェース名 {{value}} を使っています",
+      "MODULE_DOES_NOT_FIT": "ポート {{number}} の光モジュールは新しいポート種別 {{value}} に合いません。先に取り外してください"
+    },
+    "untouched": "ポートは番号で照合します。既存ポートの状態・ラベル・メモ・接続は変更しません。テンプレートにないポートも、使用中か状態・ラベル・メモが入っていれば削除せずに保持します。"
+  },
+  "batch": {
+    "title": "一括適用: {{name}}",
+    "confirm": "{{count}} 台に適用",
+    "done": "{{count}} 台に適用しました",
+    "noModel": "テンプレートに機種が関連付けられていないため一括適用できません",
+    "hint": "機種 {{model}} の機器 {{count}} 台。選択した機器は 1 つのトランザクションで適用し、競合が 1 つでもあれば何も実行しません。",
+    "device": "機器",
+    "panel": "対象パネル",
+    "newPanel": "新規パネル",
+    "newPanelDetail": "この機器には該当する面のパネルがないため、テンプレートから新規作成します（ラベルは自動割り当て）。",
+    "summary": "変更",
+    "conflicts": "競合 {{count}} 件"
+  },
+  "suggest": {
+    "title": "この機種のパネルテンプレート {{count}} 件",
+    "hint": "チェックしたテンプレートは機器作成後にパネルとポートとして生成されます。"
+  },
+  "templates": {
+    "title": "パネルテンプレート",
+    "description": "パラメトリック生成またはポート配置でパネルを定義します。機種に関連付けると、機器作成時に提案され、同じ機種へ一括適用できます。",
+    "createTitle": "パネルテンプレートを作成",
+    "editTitle": "テンプレートを編集: {{name}}",
+    "viewTitle": "テンプレートのプレビュー",
+    "fields": {
+      "name": "名前",
+      "type": "パネル種別",
+      "face": "向き",
+      "deviceModel": "機種",
+      "widthMm": "幅 (mm)",
+      "heightMm": "高さ (mm)",
+      "description": "説明",
+      "size": "サイズ",
+      "source": "定義方法",
+      "portCount": "ポート数",
+      "panelCount": "適用済みパネル",
+      "revision": "リビジョン"
+    },
+    "validation": {
+      "nameRequired": "テンプレート名を入力してください"
+    },
+    "deviceModelHint": "関連付けると、この機種の機器作成時に提案され、一括適用できます",
+    "heightHint": "約 {{u}}U",
+    "modeGenerator": "パラメトリック",
+    "modeManual": "手動配置",
+    "startFromPreset": "プリセットから開始...",
+    "revisionHint": "{{count}} 枚のパネルがこのテンプレートを使用中です。ポートを変更するとリビジョンが上がり、再適用可能と表示されます",
+    "manualHint": "手動配置で保存するとジェネレーターのパラメーターは破棄されます。",
+    "toGeneratorTitle": "パラメトリック生成に戻しますか？",
+    "toGeneratorContent": "手動で配置した位置はジェネレーターの結果で置き換えられます。",
+    "created": "テンプレートを作成しました",
+    "updated": "テンプレートを保存しました",
+    "deleted": "テンプレートを削除しました",
+    "deleteConfirm": "このテンプレートを削除しますか？",
+    "deleteConfirmDescription": "適用済みの {{count}} 枚のパネルとポートはそのまま残り、テンプレートとの関連だけが解除されます。",
+    "imported": "インポート完了: 追加 {{created}}、更新 {{updated}}、変更なし {{unchanged}}",
+    "exported": "{{count}} 件のテンプレートをエクスポートしました",
+    "importInvalid": "ファイルが {{format}} 形式ではありません",
+    "panelCount": "{{count}} 枚のパネルがこのテンプレートを使用中",
+    "actions": {
+      "view": "プレビュー",
+      "edit": "編集",
+      "batchApply": "一括適用",
+      "delete": "削除",
+      "importPresets": "プリセットをインポート",
+      "import": "JSON をインポート",
+      "export": "JSON をエクスポート",
+      "create": "テンプレートを作成"
+    }
   }
 }

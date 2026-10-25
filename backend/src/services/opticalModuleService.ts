@@ -1,690 +1,188 @@
-import prisma from '../utils/prisma';
-import { ModuleStatus, MovementType } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
+import type { z } from 'zod';
+import type { Db } from '../utils/prisma';
+import { AppError, invalid, must } from '../http/errors';
+import { MODULE_STATUSES, TRANSCEIVER_FORMS } from '../contracts/enums';
+import type { ModuleStatus, MovementType, TransceiverForm } from '../contracts/enums';
+import {
+  MODULE_FITS,
+  type ModuleDto,
+  type ModuleMovementDto,
+  type ModuleStatistics,
+  moduleCreateSchema,
+  moduleListSchema,
+  moduleUpdateSchema,
+} from '../contracts/opticalModules';
+import type { Paged } from '../contracts/common';
+import { iso, isoOrNull } from './shared';
 
-export interface CreateOpticalModuleDto {
-  serialNo: string;
-  model: string;
-  vendor: string;
-  moduleType: string; // SFP, SFP_PLUS, QSFP, QSFP28, QSFP_DD
-  wavelength?: string;
-  distance?: string;
-  ddmSupport?: boolean;
-  supplier?: string;
-  purchaseDate?: Date;
-  price?: number;
-  warrantyExpiry?: Date;
-  notes?: string;
+const moduleInclude = {
+  currentPort: { select: { id: true, number: true, panelId: true, panel: { select: { name: true, device: { select: { id: true, name: true } } } } } },
+} as const satisfies Prisma.OpticalModuleInclude;
+type ModuleRow = Prisma.OpticalModuleGetPayload<{ include: typeof moduleInclude }>;
+
+function dto(m: ModuleRow): ModuleDto {
+  const p = m.currentPort;
+  return {
+    id: m.id,
+    serialNo: m.serialNo,
+    model: m.model,
+    vendor: m.vendor,
+    moduleType: m.moduleType,
+    wavelength: m.wavelength,
+    distance: m.distance,
+    ddmSupport: m.ddmSupport,
+    supplier: m.supplier,
+    purchaseDate: isoOrNull(m.purchaseDate),
+    price: m.price,
+    warrantyExpiry: isoOrNull(m.warrantyExpiry),
+    status: m.status,
+    currentPortId: m.currentPortId,
+    currentPort: p ? { id: p.id, number: p.number, panelId: p.panelId, panelName: p.panel.name, deviceId: p.panel.device.id, deviceName: p.panel.device.name } : null,
+    notes: m.notes,
+    createdAt: iso(m.createdAt),
+    updatedAt: iso(m.updatedAt),
+  };
 }
 
-export interface UpdateOpticalModuleDto {
-  model?: string;
-  vendor?: string;
-  moduleType?: string;
-  wavelength?: string;
-  distance?: string;
-  ddmSupport?: boolean;
-  supplier?: string;
-  purchaseDate?: Date;
-  price?: number;
-  warrantyExpiry?: Date;
-  notes?: string;
+async function get(db: Db, id: string) {
+  return dto(must(await db.opticalModule.findUnique({ where: { id }, include: moduleInclude }), 'optical module', { id }));
 }
 
-export interface InstallModuleDto {
-  portId: string;
-  operator?: string;
-  notes?: string;
+async function load(db: Db, id: string) {
+  return must(await db.opticalModule.findUnique({ where: { id } }), 'optical module', { id });
 }
 
-export interface TransferModuleDto {
-  targetPortId: string;
-  operator?: string;
-  notes?: string;
+/** Target port must exist, be empty and accept the module form. */
+async function checkTarget(db: Db, portId: string, form: TransceiverForm) {
+  const port = must(await db.port.findUnique({ where: { id: portId }, include: { opticalModule: { select: { id: true } } } }), 'port', { id: portId });
+  if (port.opticalModule) throw new AppError('INVALID_STATE', 'port already holds a module', { portId });
+  if (!(MODULE_FITS[port.portType] ?? []).includes(form)) throw invalid(`module ${form} does not fit a ${port.portType} port`, { portType: port.portType, moduleType: form });
 }
 
-export interface ScrapModuleDto {
-  operator?: string;
-  notes?: string;
+/** "device panel port" of a port right now; stored on the movement so the history outlives the port. */
+async function portPathText(db: Db, portId: string | null): Promise<string | null> {
+  if (!portId) return null;
+  const p = await db.port.findUnique({ where: { id: portId }, select: { number: true, panel: { select: { name: true, device: { select: { name: true } } } } } });
+  return p ? `${p.panel.device.name} ${p.panel.name} ${p.number}` : null;
 }
 
-export interface ListModulesQuery {
-  status?: ModuleStatus;
-  moduleType?: string;
-  vendor?: string;
-  isInstalled?: boolean;
-  search?: string;
+async function log(db: Db, moduleId: string, movementType: MovementType, fromPortId: string | null, toPortId: string | null, op: { operator?: string | null; notes?: string | null }) {
+  await db.moduleMovement.create({
+    data: {
+      moduleId,
+      movementType,
+      fromPortId,
+      fromPortPath: await portPathText(db, fromPortId),
+      toPortId,
+      toPortPath: await portPathText(db, toPortId),
+      operator: op.operator ?? null,
+      notes: op.notes ?? null,
+    },
+  });
 }
 
-class OpticalModuleService {
-  /**
-   * 采购入库：创建新的光模块记录
-   */
-  async createModule(data: CreateOpticalModuleDto) {
-    // 检查序列号是否已存在
-    const existing = await prisma.opticalModule.findUnique({
-      where: { serialNo: data.serialNo },
-    });
-
-    if (existing) {
-      throw new Error(`序列号 ${data.serialNo} 已存在`);
-    }
-
-    // 创建光模块记录
-    const module = await prisma.opticalModule.create({
-      data: {
-        ...data,
-        status: 'IN_STOCK', // 采购入库，默认状态为在库
-      },
-    });
-
-    // 创建移动历史：采购入库
-    await prisma.moduleMovement.create({
-      data: {
-        moduleId: module.id,
-        movementType: 'PURCHASE',
-        toPortId: null,
-        operator: data.supplier, // 将供应商信息记录为操作人
-        notes: `采购入库 - ${data.notes || ''}`,
-      },
-    });
-
-    return module;
-  }
-
-  /**
-   * 安装光模块到端口
-   */
-  async installModule(moduleId: string, installData: InstallModuleDto) {
-    const { portId, operator, notes } = installData;
-
-    // 查询光模块
-    const module = await prisma.opticalModule.findUnique({
-      where: { id: moduleId },
-    });
-
-    if (!module) {
-      throw new Error('光模块不存在');
-    }
-
-    // 检查光模块状态
-    if (module.status === 'INSTALLED') {
-      throw new Error('光模块已安装，请先卸下');
-    }
-
-    if (module.status === 'SCRAPPED') {
-      throw new Error('光模块已报废，无法安装');
-    }
-
-    // 查询目标端口
-    const port = await prisma.port.findUnique({
-      where: { id: portId },
-      include: {
-        opticalModule: true,
-        cableEndpoints: true,
-      },
-    });
-
-    if (!port) {
-      throw new Error('端口不存在');
-    }
-
-    // 检查端口是否已安装光模块
-    if (port.opticalModule) {
-      throw new Error('端口已安装光模块，请先卸下现有模块');
-    }
-
-    // 检查端口类型和光模块类型是否匹配
-    if (port.portType && !this.isModuleTypeCompatible(port.portType, module.moduleType)) {
-      throw new Error(`光模块类型 ${module.moduleType} 与端口类型 ${port.portType} 不兼容`);
-    }
-
-    // 在事务中执行安装操作
-    const result = await prisma.$transaction(async (tx) => {
-      // 更新光模块状态和位置
-      const updatedModule = await tx.opticalModule.update({
-        where: { id: moduleId },
-        data: {
-          status: 'INSTALLED',
-          currentPortId: portId,
-        },
-      });
-
-      // 更新端口物理状态
-      const hasConnectedCable = port.cableEndpoints.length > 0;
-      await tx.port.update({
-        where: { id: portId },
-        data: {
-          physicalStatus: hasConnectedCable ? 'CONNECTED' : 'MODULE_ONLY',
-        },
-      });
-
-      // 创建移动历史
-      await tx.moduleMovement.create({
-        data: {
-          moduleId,
-          movementType: 'INSTALL',
-          fromPortId: module.currentPortId,
-          toPortId: portId,
-          operator,
-          notes,
-        },
-      });
-
-      return updatedModule;
-    });
-
-    return result;
-  }
-
-  /**
-   * 从端口卸下光模块
-   */
-  async uninstallModule(moduleId: string, operator?: string, notes?: string) {
-    // 查询光模块
-    const module = await prisma.opticalModule.findUnique({
-      where: { id: moduleId },
-      include: {
-        currentPort: {
-          include: {
-            cableEndpoints: true,
-          },
-        },
-      },
-    });
-
-    if (!module) {
-      throw new Error('光模块不存在');
-    }
-
-    if (module.status !== 'INSTALLED' || !module.currentPortId) {
-      throw new Error('光模块未安装，无需卸下');
-    }
-
-    // 检查端口是否已连接线缆
-    if (module.currentPort?.cableEndpoints && module.currentPort.cableEndpoints.length > 0) {
-      throw new Error('端口已连接线缆，请先断开线缆再卸下光模块');
-    }
-
-    // 在事务中执行卸下操作
-    const result = await prisma.$transaction(async (tx) => {
-      // 更新光模块状态
-      const updatedModule = await tx.opticalModule.update({
-        where: { id: moduleId },
-        data: {
-          status: 'IN_STOCK',
-          currentPortId: null,
-        },
-      });
-
-      // 更新端口物理状态
-      if (module.currentPortId) {
-        await tx.port.update({
-          where: { id: module.currentPortId },
-          data: {
-            physicalStatus: 'EMPTY',
-          },
-        });
-      }
-
-      // 创建移动历史
-      await tx.moduleMovement.create({
-        data: {
-          moduleId,
-          movementType: 'UNINSTALL',
-          fromPortId: module.currentPortId,
-          toPortId: null,
-          operator,
-          notes,
-        },
-      });
-
-      return updatedModule;
-    });
-
-    return result;
-  }
-
-  /**
-   * 转移光模块到其他端口
-   */
-  async transferModule(moduleId: string, transferData: TransferModuleDto) {
-    const { targetPortId, operator, notes } = transferData;
-
-    // 查询光模块
-    const module = await prisma.opticalModule.findUnique({
-      where: { id: moduleId },
-      include: {
-        currentPort: {
-          include: {
-            cableEndpoints: true,
-          },
-        },
-      },
-    });
-
-    if (!module) {
-      throw new Error('光模块不存在');
-    }
-
-    if (module.status !== 'INSTALLED' || !module.currentPortId) {
-      throw new Error('光模块未安装，无法转移');
-    }
-
-    if (module.currentPortId === targetPortId) {
-      throw new Error('目标端口与当前端口相同');
-    }
-
-    // 检查当前端口是否已连接线缆
-    if (module.currentPort?.cableEndpoints && module.currentPort.cableEndpoints.length > 0) {
-      throw new Error('端口已连接线缆，请先断开线缆再转移光模块');
-    }
-
-    // 查询目标端口
-    const targetPort = await prisma.port.findUnique({
-      where: { id: targetPortId },
-      include: {
-        opticalModule: true,
-      },
-    });
-
-    if (!targetPort) {
-      throw new Error('目标端口不存在');
-    }
-
-    if (targetPort.opticalModule) {
-      throw new Error('目标端口已安装光模块');
-    }
-
-    // 检查端口类型兼容性
-    if (targetPort.portType && !this.isModuleTypeCompatible(targetPort.portType, module.moduleType)) {
-      throw new Error(`光模块类型 ${module.moduleType} 与目标端口类型 ${targetPort.portType} 不兼容`);
-    }
-
-    // 在事务中执行转移操作
-    const result = await prisma.$transaction(async (tx) => {
-      // 更新光模块位置
-      const updatedModule = await tx.opticalModule.update({
-        where: { id: moduleId },
-        data: {
-          currentPortId: targetPortId,
-        },
-      });
-
-      // 更新原端口物理状态
-      await tx.port.update({
-        where: { id: module.currentPortId! },
-        data: {
-          physicalStatus: 'EMPTY',
-        },
-      });
-
-      // 更新目标端口物理状态
-      await tx.port.update({
-        where: { id: targetPortId },
-        data: {
-          physicalStatus: 'MODULE_ONLY',
-        },
-      });
-
-      // 创建移动历史
-      await tx.moduleMovement.create({
-        data: {
-          moduleId,
-          movementType: 'TRANSFER',
-          fromPortId: module.currentPortId,
-          toPortId: targetPortId,
-          operator,
-          notes,
-        },
-      });
-
-      return updatedModule;
-    });
-
-    return result;
-  }
-
-  /**
-   * 报废光模块
-   */
-  async scrapModule(moduleId: string, scrapData: ScrapModuleDto) {
-    const { operator, notes } = scrapData;
-
-    // 查询光模块
-    const module = await prisma.opticalModule.findUnique({
-      where: { id: moduleId },
-      include: {
-        currentPort: {
-          include: {
-            cableEndpoints: true,
-          },
-        },
-      },
-    });
-
-    if (!module) {
-      throw new Error('光模块不存在');
-    }
-
-    if (module.status === 'SCRAPPED') {
-      throw new Error('光模块已报废');
-    }
-
-    // 如果已安装，检查是否有连接线缆
-    if (module.status === 'INSTALLED' && module.currentPort?.cableEndpoints && module.currentPort.cableEndpoints.length > 0) {
-      throw new Error('光模块已连接线缆，请先断开线缆再报废');
-    }
-
-    // 在事务中执行报废操作
-    const result = await prisma.$transaction(async (tx) => {
-      // 更新光模块状态
-      const updatedModule = await tx.opticalModule.update({
-        where: { id: moduleId },
-        data: {
-          status: 'SCRAPPED',
-          currentPortId: null,
-        },
-      });
-
-      // 如果有安装在端口上，更新端口状态
-      if (module.currentPortId) {
-        await tx.port.update({
-          where: { id: module.currentPortId },
-          data: {
-            physicalStatus: 'EMPTY',
-          },
-        });
-      }
-
-      // 创建移动历史
-      await tx.moduleMovement.create({
-        data: {
-          moduleId,
-          movementType: 'SCRAP',
-          fromPortId: module.currentPortId,
-          toPortId: null,
-          operator,
-          notes,
-        },
-      });
-
-      return updatedModule;
-    });
-
-    return result;
-  }
-
-  /**
-   * 更新光模块信息
-   */
-  async updateModule(moduleId: string, data: UpdateOpticalModuleDto) {
-    const module = await prisma.opticalModule.update({
-      where: { id: moduleId },
-      data,
-    });
-
-    return module;
-  }
-
-  /**
-   * 根据ID获取光模块详情
-   */
-  async getModuleById(moduleId: string) {
-    const module = await prisma.opticalModule.findUnique({
-      where: { id: moduleId },
-      include: {
-        currentPort: {
-          include: {
-            panel: {
-              include: {
-                device: {
-                  include: {
-                    cabinet: {
-                      include: {
-                        room: {
-                          include: {
-                            dataCenter: true,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    return module;
-  }
-
-  /**
-   * 根据序列号获取光模块
-   */
-  async getModuleBySerialNo(serialNo: string) {
-    const module = await prisma.opticalModule.findUnique({
-      where: { serialNo },
-      include: {
-        currentPort: {
-          include: {
-            panel: {
-              include: {
-                device: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    return module;
-  }
-
-  /**
-   * 查询光模块列表
-   */
-  async listModules(query: ListModulesQuery = {}) {
-    const { status, moduleType, vendor, isInstalled, search } = query;
-
-    const where: any = {};
-
-    if (status) {
-      where.status = status;
-    }
-
-    if (moduleType) {
-      where.moduleType = moduleType;
-    }
-
-    if (vendor) {
-      where.vendor = { contains: vendor, mode: 'insensitive' };
-    }
-
-    if (isInstalled !== undefined) {
-      where.currentPortId = isInstalled ? { not: null } : null;
-    }
-
-    if (search) {
-      where.OR = [
-        { serialNo: { contains: search, mode: 'insensitive' } },
-        { model: { contains: search, mode: 'insensitive' } },
-        { vendor: { contains: search, mode: 'insensitive' } },
-        { notes: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    const modules = await prisma.opticalModule.findMany({
-      where,
-      include: {
-        currentPort: {
-          include: {
-            panel: {
-              include: {
-                device: {
-                  include: {
-                    cabinet: {
-                      include: {
-                        room: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
-    return modules;
-  }
-
-  /**
-   * 获取光模块的移动历史
-   */
-  async getModuleHistory(moduleId: string) {
-    const movements = await prisma.moduleMovement.findMany({
-      where: { moduleId },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
-    // 为每个移动记录补充端口信息
-    const enrichedMovements = await Promise.all(
-      movements.map(async (movement) => {
-        const fromPort = movement.fromPortId
-          ? await prisma.port.findUnique({
-              where: { id: movement.fromPortId },
-              include: {
-                panel: {
-                  include: {
-                    device: true,
-                  },
-                },
-              },
-            })
-          : null;
-
-        const toPort = movement.toPortId
-          ? await prisma.port.findUnique({
-              where: { id: movement.toPortId },
-              include: {
-                panel: {
-                  include: {
-                    device: true,
-                  },
-                },
-              },
-            })
-          : null;
-
-        return {
-          ...movement,
-          fromPort,
-          toPort,
-        };
-      })
-    );
-
-    return enrichedMovements;
-  }
-
-  /**
-   * 删除光模块（仅限未安装的光模块）
-   */
-  async deleteModule(moduleId: string) {
-    const module = await prisma.opticalModule.findUnique({
-      where: { id: moduleId },
-    });
-
-    if (!module) {
-      throw new Error('光模块不存在');
-    }
-
-    if (module.status === 'INSTALLED') {
-      throw new Error('光模块已安装，无法删除');
-    }
-
-    // 删除光模块（会级联删除移动历史）
-    return await prisma.opticalModule.delete({
-      where: { id: moduleId },
-    });
-  }
-
-  /**
-   * 检查光模块类型和端口类型是否兼容
-   */
-  private isModuleTypeCompatible(portType: string, moduleType: string): boolean {
-    // 标准化类型名称
-    const normalizedPortType = portType.toUpperCase().replace(/[^A-Z0-9]/g, '_');
-    const normalizedModuleType = moduleType.toUpperCase().replace(/[^A-Z0-9]/g, '_');
-
-    // 精确匹配
-    if (normalizedPortType === normalizedModuleType) {
-      return true;
-    }
-
-    // 兼容性规则
-    const compatibilityMap: Record<string, string[]> = {
-      SFP: ['SFP'],
-      SFP_PLUS: ['SFP_PLUS', 'SFP'], // SFP+端口可以使用SFP模块（向下兼容）
-      QSFP: ['QSFP'],
-      QSFP28: ['QSFP28', 'QSFP'], // QSFP28端口可以使用QSFP模块
-      QSFP_DD: ['QSFP_DD'],
+export const opticalModuleService = {
+  async list(db: Db, input: z.infer<typeof moduleListSchema>): Promise<Paged<ModuleDto>> {
+    const s = input.search ? { contains: input.search, mode: 'insensitive' as const } : undefined;
+    const where: Prisma.OpticalModuleWhereInput = {
+      status: input.status,
+      moduleType: input.moduleType,
+      ...(s ? { OR: [{ serialNo: s }, { model: s }, { vendor: s }, { notes: s }] } : {}),
     };
-
-    const allowedModules = compatibilityMap[normalizedPortType] || [];
-    return allowedModules.includes(normalizedModuleType);
-  }
-
-  /**
-   * 获取统计信息
-   */
-  async getStatistics() {
-    const [total, inStock, installed, faulty, scrapped] = await Promise.all([
-      prisma.opticalModule.count(),
-      prisma.opticalModule.count({ where: { status: 'IN_STOCK' } }),
-      prisma.opticalModule.count({ where: { status: 'INSTALLED' } }),
-      prisma.opticalModule.count({ where: { status: 'FAULTY' } }),
-      prisma.opticalModule.count({ where: { status: 'SCRAPPED' } }),
+    const [rows, total] = await Promise.all([
+      db.opticalModule.findMany({ where, include: moduleInclude, orderBy: { createdAt: 'desc' }, take: input.take, skip: input.skip }),
+      db.opticalModule.count({ where }),
     ]);
+    return { items: rows.map(dto), total };
+  },
+  get,
+  async bySerial(db: Db, serialNo: string) {
+    return dto(must(await db.opticalModule.findUnique({ where: { serialNo }, include: moduleInclude }), 'optical module', { serialNo }));
+  },
+  async create(db: Db, { operator, ...data }: z.infer<typeof moduleCreateSchema>) {
+    const m = await db.opticalModule.create({ data: { ...data, status: 'IN_STOCK' } });
+    await log(db, m.id, 'PURCHASE', null, null, { operator, notes: data.notes });
+    return get(db, m.id);
+  },
+  async update(db: Db, { id, ...data }: z.infer<typeof moduleUpdateSchema>) {
+    const m = await load(db, id);
+    if (data.status && (m.status === 'INSTALLED' || m.status === 'SCRAPPED')) {
+      throw new AppError('INVALID_STATE', `status of an ${m.status} module cannot be set directly`, { status: m.status });
+    }
+    if (data.moduleType && m.currentPortId) await checkTargetForm(db, m.currentPortId, data.moduleType);
+    await db.opticalModule.update({ where: { id }, data });
+    return get(db, id);
+  },
+  async install(db: Db, input: { id: string; portId: string; operator?: string | null; notes?: string | null }) {
+    const m = await load(db, input.id);
+    if (m.status === 'INSTALLED') throw new AppError('INVALID_STATE', 'module is installed, uninstall or transfer it', { portId: m.currentPortId });
+    if (m.status === 'SCRAPPED') throw new AppError('INVALID_STATE', 'module is scrapped');
+    await checkTarget(db, input.portId, m.moduleType);
+    await db.opticalModule.update({ where: { id: m.id }, data: { status: 'INSTALLED', currentPortId: input.portId } });
+    await log(db, m.id, 'INSTALL', null, input.portId, input);
+    return get(db, m.id);
+  },
+  async uninstall(db: Db, input: { id: string; operator?: string | null; notes?: string | null }) {
+    const m = await load(db, input.id);
+    if (m.status !== 'INSTALLED') throw new AppError('INVALID_STATE', 'module is not installed');
+    await db.opticalModule.update({ where: { id: m.id }, data: { status: 'IN_STOCK', currentPortId: null } });
+    await log(db, m.id, 'UNINSTALL', m.currentPortId, null, input);
+    return get(db, m.id);
+  },
+  async transfer(db: Db, input: { id: string; toPortId: string; operator?: string | null; notes?: string | null }) {
+    const m = await load(db, input.id);
+    if (m.status !== 'INSTALLED') throw new AppError('INVALID_STATE', 'only an installed module can be transferred');
+    if (m.currentPortId === input.toPortId) throw invalid('module is already in this port');
+    await checkTarget(db, input.toPortId, m.moduleType);
+    await db.opticalModule.update({ where: { id: m.id }, data: { currentPortId: input.toPortId } });
+    await log(db, m.id, 'TRANSFER', m.currentPortId, input.toPortId, input);
+    return get(db, m.id);
+  },
+  async scrap(db: Db, input: { id: string; operator?: string | null; notes?: string | null }) {
+    const m = await load(db, input.id);
+    if (m.status === 'SCRAPPED') throw new AppError('INVALID_STATE', 'module is already scrapped');
+    await db.opticalModule.update({ where: { id: m.id }, data: { status: 'SCRAPPED', currentPortId: null } });
+    await log(db, m.id, 'SCRAP', m.currentPortId, null, input);
+    return get(db, m.id);
+  },
+  async history(db: Db, id: string): Promise<ModuleMovementDto[]> {
+    await load(db, id);
+    const rows = await db.moduleMovement.findMany({ where: { moduleId: id }, orderBy: { createdAt: 'desc' } });
+    // where the module was at the time of the movement (the port may be renamed or deleted since)
+    return rows.map((r) => ({
+      id: r.id,
+      movementType: r.movementType,
+      fromPortId: r.fromPortId,
+      toPortId: r.toPortId,
+      fromPort: r.fromPortPath,
+      toPort: r.toPortPath,
+      operator: r.operator,
+      notes: r.notes,
+      createdAt: iso(r.createdAt),
+    }));
+  },
+  async delete(db: Db, id: string) {
+    const m = await load(db, id);
+    if (m.status === 'INSTALLED') throw new AppError('INVALID_STATE', 'uninstall the module before deleting it');
+    await db.opticalModule.delete({ where: { id } });
+    return { ok: true as const };
+  },
+  async statistics(db: Db): Promise<ModuleStatistics> {
+    const [byS, byT, total] = await Promise.all([
+      db.opticalModule.groupBy({ by: ['status'], _count: { _all: true } }),
+      db.opticalModule.groupBy({ by: ['moduleType'], _count: { _all: true } }),
+      db.opticalModule.count(),
+    ]);
+    const byStatus = Object.fromEntries(MODULE_STATUSES.map((s) => [s, 0])) as Record<ModuleStatus, number>;
+    const byType = Object.fromEntries(TRANSCEIVER_FORMS.map((s) => [s, 0])) as Record<TransceiverForm, number>;
+    for (const r of byS) byStatus[r.status] = r._count._all;
+    for (const r of byT) byType[r.moduleType] = r._count._all;
+    return { total, byStatus, byType };
+  },
+};
 
-    // 按类型统计
-    const byType = await prisma.opticalModule.groupBy({
-      by: ['moduleType'],
-      _count: true,
-    });
-
-    // 按厂商统计
-    const byVendor = await prisma.opticalModule.groupBy({
-      by: ['vendor'],
-      _count: true,
-    });
-
-    return {
-      total,
-      byStatus: {
-        inStock,
-        installed,
-        faulty,
-        scrapped,
-      },
-      byType: byType.map((item) => ({
-        moduleType: item.moduleType,
-        count: item._count,
-      })),
-      byVendor: byVendor.map((item) => ({
-        vendor: item.vendor,
-        count: item._count,
-      })),
-    };
-  }
+async function checkTargetForm(db: Db, portId: string, form: TransceiverForm) {
+  const port = must(await db.port.findUnique({ where: { id: portId }, select: { portType: true } }), 'port', { id: portId });
+  if (!(MODULE_FITS[port.portType] ?? []).includes(form)) throw invalid(`module ${form} does not fit a ${port.portType} port`);
 }
-
-export default new OpticalModuleService();

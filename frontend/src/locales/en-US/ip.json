@@ -1,17 +1,13 @@
 {
   "title": "IP Management",
   "description": "Manage IP subnets and address allocation",
-  "subnetManagement": "Subnet Management",
-  "ipAddressManagement": "IP Address Management",
   "subnet": {
-    "title": "Subnet Management",
     "createTitle": "Create Subnet",
     "editTitle": "Edit Subnet",
     "detailTitle": "Subnet Details",
-    "list": "Subnet List",
     "fields": {
       "name": "Subnet Name",
-      "network": "Network Address",
+      "network": "Network",
       "cidr": "CIDR Prefix",
       "subnetMask": "Subnet Mask",
       "gateway": "Gateway",
@@ -22,20 +18,18 @@
       "totalIps": "Total IPs",
       "freeIps": "Free IPs",
       "allocatedIps": "Allocated",
-      "reservedIps": "Reserved",
+      "reservedIps": "Reserved IP Addresses",
       "blockedIps": "Blocked",
       "usableIps": "Usable IPs",
       "utilizationRate": "Utilization Rate",
-      "autoGenerateIps": "Auto Generate IP Pool",
-      "reservedIps": "Reserved IP Addresses",
-      "createdAt": "Created At"
+      "createdAt": "Created At",
+      "capacity": "Capacity"
     },
     "placeholders": {
       "name": "e.g. Room A Management Network",
-      "network": "e.g. 192.168.1.0",
-      "cidr": "e.g. 24",
+      "network": "e.g. 192.168.1.0/24",
       "gateway": "e.g. 192.168.1.1",
-      "vlan": "e.g. VLAN100",
+      "vlan": "e.g. 100",
       "dnsServers": "e.g. 8.8.8.8, 8.8.4.4",
       "description": "Subnet purpose description",
       "search": "Search subnet name, network address"
@@ -44,22 +38,15 @@
       "createSuccess": "Subnet created successfully",
       "updateSuccess": "Subnet updated successfully",
       "deleteSuccess": "Subnet deleted successfully",
-      "deleteConfirm": "Are you sure you want to delete this subnet?",
-      "deleteWarning": "Deleting subnet will also delete all IP addresses",
-      "allocatedIpsWarning": "Cannot delete subnet with allocated IPs",
-      "loadFailed": "Failed to load subnet list",
-      "loadDetailFailed": "Failed to load subnet details",
-      "createFailed": "Failed to create subnet",
-      "updateFailed": "Failed to update subnet",
-      "deleteFailed": "Failed to delete subnet"
+      "forceDeleteTitle": "The subnet still has addresses",
+      "forceDeleteContent": "Delete it together with these address records?"
     },
     "validation": {
       "nameRequired": "Please enter subnet name",
       "networkRequired": "Please enter network address",
-      "cidrRequired": "Please enter CIDR prefix",
-      "invalidNetwork": "Invalid network address format",
-      "invalidCidr": "CIDR must be between 0-32",
-      "invalidGateway": "Invalid gateway address format"
+      "invalidNetwork": "Use a.b.c.d/nn with zero host bits",
+      "invalidGateway": "Invalid gateway address format",
+      "invalidDns": "DNS must be comma separated IPv4 addresses"
     },
     "calculation": {
       "title": "Subnet Calculation",
@@ -76,99 +63,75 @@
   "ipAddress": {
     "title": "IP Addresses",
     "allocate": "Allocate IP",
-    "release": "Release IP",
-    "batchAllocate": "Batch Allocate",
     "fields": {
       "address": "IP Address",
       "status": "Status",
-      "subnet": "Subnet",
       "hostname": "Hostname",
       "macAddress": "MAC Address",
       "description": "Description",
-      "bindingType": "Binding Type",
-      "bindingTarget": "Binding Target",
       "port": "Port",
       "device": "Device",
-      "createdAt": "Created At"
+      "owner": "Owner",
+      "ownerKind": "Owner kind",
+      "panel": "Panel",
+      "count": "Count"
     },
     "status": {
-      "FREE": "Free",
       "ALLOCATED": "Allocated",
       "RESERVED": "Reserved",
       "BLOCKED": "Blocked"
     },
-    "bindingTypes": {
-      "port": "Port",
-      "device": "Device"
-    },
     "placeholders": {
-      "address": "e.g. 192.168.1.100",
+      "address": "Empty: next free address",
       "hostname": "e.g. server-01",
       "macAddress": "e.g. 00:11:22:33:44:55",
       "description": "IP usage description",
       "search": "Search IP address, hostname, MAC address",
       "selectPort": "Select port",
-      "selectDevice": "Select device"
+      "selectDevice": "Select device",
+      "selectPanel": "Select panel"
     },
     "messages": {
       "allocateSuccess": "IP allocated successfully",
       "releaseSuccess": "IP released successfully",
       "updateSuccess": "IP updated successfully",
-      "deleteSuccess": "IP deleted successfully",
-      "batchAllocateSuccess": "Batch allocation successful",
-      "allocateConfirm": "Are you sure you want to allocate this IP address?",
       "releaseConfirm": "Are you sure you want to release this IP address?",
-      "deleteConfirm": "Are you sure you want to delete this IP address?",
-      "selectBindingTarget": "Please select port or device",
-      "cannotBindBoth": "Cannot bind port and device at the same time",
-      "noAvailableIp": "No available IP addresses in subnet",
-      "loadFailed": "Failed to load IP addresses",
-      "allocateFailed": "Failed to allocate IP",
-      "releaseFailed": "Failed to release IP",
-      "updateFailed": "Failed to update IP",
-      "deleteFailed": "Failed to delete IP"
+      "nextAvailable": "Next free: {{address}}",
+      "batchReserveSuccess": "{{count}} addresses reserved"
     },
     "validation": {
-      "addressRequired": "Please enter IP address",
       "invalidAddress": "Invalid IP address format",
-      "invalidMacAddress": "Invalid MAC address format",
-      "bindingTargetRequired": "Please select binding port or device"
+      "invalidMacAddress": "Invalid MAC address format"
     },
-    "grid": {
-      "title": "IP Address Grid View",
-      "legend": {
-        "free": "Free",
-        "allocated": "Allocated",
-        "reserved": "Reserved",
-        "blocked": "Blocked"
-      }
-    }
+    "editTitle": "Edit IP {{address}}",
+    "batchReserve": "Reserve block",
+    "ownerKinds": {
+      "NONE": "None",
+      "PORT": "Port",
+      "DEVICE": "Device (management)",
+      "WORKSTATION": "Workstation"
+    },
+    "total": "{{total}} addresses"
   },
   "conflicts": {
-    "title": "IP Conflict Detection",
-    "check": "Check Conflicts",
     "noConflicts": "No conflicts found",
-    "foundConflicts": "Found {count} MAC address conflicts",
-    "macAddress": "MAC Address",
-    "conflictingIps": "Conflicting IP Addresses"
+    "foundConflicts": "{{count}} conflicts found",
+    "kinds": {
+      "ADDRESS_IN_MULTIPLE_SUBNETS": "Address in several subnets",
+      "DUPLICATE_MAC": "Duplicate MAC address"
+    }
   },
   "statistics": {
-    "title": "Statistics",
     "totalSubnets": "Total Subnets",
-    "totalIps": "Total IPs",
+    "totalIps": "Capacity",
     "freeIps": "Free",
-    "allocatedIps": "Allocated",
-    "reservedIps": "Reserved",
     "utilizationRate": "Utilization Rate"
   },
   "filters": {
     "search": "Search",
-    "subnet": "Subnet",
     "status": "Status",
     "room": "Room",
-    "vlan": "VLAN",
-    "applyFilter": "Apply Filter",
-    "reset": "Reset"
+    "vlan": "VLAN"
   },
   "buttons": {
     "create": "Create",
@@ -184,16 +147,11 @@
     "release": "Release",
     "calculate": "Calculate",
     "checkConflicts": "Check Conflicts",
-    "refresh": "Refresh"
-  },
-  "tabs": {
-    "subnets": "Subnet List",
-    "ipAddresses": "IP Addresses",
-    "statistics": "Statistics"
+    "refresh": "Refresh",
+    "actions": "Actions"
   },
   "noData": {
     "noSubnets": "No subnets",
-    "noIpAddresses": "No IP addresses",
-    "createFirst": "Click button above to create"
+    "noIpAddresses": "No IP addresses"
   }
 }

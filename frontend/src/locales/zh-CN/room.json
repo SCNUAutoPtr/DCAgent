@@ -4,14 +4,14 @@
   "createTitle": "新建机房",
   "editTitle": "编辑机房",
   "fields": {
-    "id": "ID",
-    "shortId": "ID",
     "name": "机房名称",
     "floor": "楼层",
     "dataCenter": "所属数据中心",
     "cabinetCount": "机柜数",
     "createdAt": "创建时间",
-    "actions": "操作"
+    "actions": "操作",
+    "label": "标签",
+    "workstationCount": "工作站数"
   },
   "placeholders": {
     "name": "例如：A区机房",
@@ -21,14 +21,10 @@
   },
   "messages": {
     "deleteConfirm": "确定要删除这个机房吗？",
-    "deleteWarning": "删除后将同时删除其下所有机柜和设备",
+    "deleteWarning": "机房下还有机柜、设备或工作站时不能删除",
     "createSuccess": "机房创建成功",
     "updateSuccess": "机房更新成功",
-    "deleteSuccess": "机房删除成功",
-    "loadFailed": "加载机房列表失败",
-    "updateFailed": "更新失败",
-    "createFailed": "创建失败",
-    "deleteFailed": "删除失败"
+    "deleteSuccess": "机房删除成功"
   },
   "validation": {
     "nameRequired": "请输入机房名称",
@@ -36,5 +32,51 @@
   },
   "table": {
     "total": "共 {{total}} 条"
+  },
+  "actions": {
+    "floorPlan": "平面图"
+  },
+  "floorPlan": {
+    "title": "平面图",
+    "cabinet": "机柜",
+    "workstation": "工作站",
+    "width": "宽",
+    "height": "长",
+    "unit": "m",
+    "editHint": "拖动机柜或工作站调整位置，吸附精度 0.1m",
+    "deviceCount": "设备数",
+    "overview": "机房概览",
+    "area": "面积",
+    "totalDevices": "设备总数",
+    "selectHint": "点击机柜或工作站查看详情",
+    "newCabinet": "新建机柜",
+    "cabinetName": "机柜名称",
+    "cabinetNamePlaceholder": "例如：A-01",
+    "shortId": "ShortID",
+    "shortIdPlaceholder": "留空自动分配",
+    "cabinetHeight": "U 数",
+    "create": "创建",
+    "createSuccess": "机柜创建成功",
+    "nameRequired": "请输入机柜名称",
+    "shortIdInvalid": "ShortID 格式无效，请使用 E-XXXXX 或纯数字",
+    "position": "位置",
+    "size": "尺寸",
+    "status": "状态",
+    "assignedTo": "使用人",
+    "ipAddress": "IP 地址",
+    "devices": "设备",
+    "noDevices": "暂无设备",
+    "moreDevices": "还有 {{count}} 个设备",
+    "viewDetail": "查看详情",
+    "workstationStatus": {
+      "ONLINE": "在线",
+      "OFFLINE": "离线",
+      "MAINTENANCE": "维护中",
+      "FAULTY": "故障",
+      "RETIRED": "已退役"
+    },
+    "deviceBadge": "设备 {{count}}",
+    "code": "编号",
+    "attachedPort": "接入端口"
   }
 }

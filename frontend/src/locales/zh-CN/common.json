@@ -1,5 +1,4 @@
 {
-  "appName": "数据中心资产管理系统",
   "actions": {
     "create": "新建",
     "edit": "编辑",
@@ -7,15 +6,14 @@
     "save": "保存",
     "cancel": "取消",
     "confirm": "确定",
-    "search": "搜索",
     "reset": "重置",
-    "submit": "提交",
-    "back": "返回",
     "view": "查看",
     "export": "导出",
     "import": "导入",
     "refresh": "刷新",
-    "visualize": "可视化"
+    "deckMode": "Deck 模式",
+    "deckModeOn": "已开启 Deck 模式",
+    "deckModeOff": "已退出 Deck 模式"
   },
   "status": {
     "success": "成功",
@@ -38,8 +36,85 @@
     "updateFailed": "更新失败",
     "loadFailed": "加载失败，请稍后重试",
     "operationSuccess": "操作成功",
-    "operationFailed": "操作失败"
+    "operationFailed": "操作失败",
+    "saveSuccess": "保存成功",
+    "saveFailed": "保存失败"
   },
   "searchPlaceholder": "搜索或扫描二维码...",
-  "searchFailed": "搜索失败，请稍后重试"
+  "searchFailed": "搜索失败，请稍后重试",
+  "entityKinds": {
+    "DATACENTER": "数据中心",
+    "ROOM": "机房",
+    "CABINET": "机柜",
+    "DEVICE": "设备",
+    "PANEL": "面板",
+    "PORT": "端口",
+    "CABLE": "线缆",
+    "CABLE_ENDPOINT": "线缆端子",
+    "WORKSTATION": "工作站",
+    "IP_ADDRESS": "IP 地址"
+  },
+  "scan": {
+    "unknown": "标签 {{display}} 不存在",
+    "unbound": "标签 {{display}} 尚未绑定任何实体",
+    "void": "标签 {{display}} 已作废"
+  },
+  "tagline": "見えない線を、見える化へ",
+  "label": {
+    "field": "标签",
+    "placeholder": "扫码或输入，例如 E-00001",
+    "placeholderAuto": "扫码或输入，留空自动分配",
+    "invalid": "标签格式无效，请使用 E-XXXXX 或纯数字",
+    "bound": "标签已绑定到 {{name}}",
+    "void": "标签已作废"
+  },
+  "portPicker": {
+    "selectDevice": "选择设备",
+    "selectPanel": "选择面板",
+    "selectPort": "选择端口",
+    "busy": "已占用"
+  },
+  "bulkImport": {
+    "downloadTemplate": "下载导入模板",
+    "templateDownloaded": "模板已下载",
+    "templateSuffix": "模板",
+    "dragText": "点击或拖拽文件到此区域上传",
+    "dragHint": "支持 Excel (.xlsx, .xls) 和 CSV 文件",
+    "parsed": "解析出 {{count}} 条记录",
+    "parseFailed": "文件解析失败",
+    "hasErrors": "存在校验错误，请修正后重试",
+    "noData": "没有可导入的数据",
+    "row": "行号",
+    "status": "状态",
+    "ok": "正常",
+    "errorCount": "错误 ({{count}})",
+    "errorsFound": "发现 {{count}} 条记录有错误",
+    "errorsHint": "请检查表格中标记为错误的行，修正后重新上传",
+    "errorDetails": "错误详情",
+    "required": "{{field}} 是必填项",
+    "clear": "清空",
+    "submit": "导入 ({{count}} 条)"
+  },
+  "palette": {
+    "open": "命令面板",
+    "placeholder": "搜索页面、资产，或输入标签号...",
+    "empty": "没有匹配结果",
+    "groups": {
+      "assets": "资产",
+      "pages": "页面",
+      "actions": "操作"
+    },
+    "hintMove": "选择",
+    "hintOpen": "打开",
+    "hintClose": "关闭",
+    "themeKeywords": "主题 暗色 亮色 夜间 theme dark light"
+  },
+  "theme": {
+    "toDark": "切换到暗色主题",
+    "toLight": "切换到亮色主题"
+  },
+  "breadcrumb": {
+    "detail": "详情",
+    "page": "页面"
+  }
 }

@@ -1,0 +1,44 @@
+########## display transceiver diagnosis interface XGigabitEthernet0/0/1
+display transceiver diagnosis interface XGigabitEthernet0/0/1
+
+Port XGigabitEthernet0/0/1 transceiver diagnostic information:
+--------------------------------------------------------------------------------------
+Item                   Value   HighAlarm    HighWarn    LowAlarm     LowWarn    Status
+--------------------------------------------------------------------------------------
+TxPower(dBm)           -2.65        2.50        0.50      -10.20       -8.20    Normal
+RxPower(dBm)          -16.90        2.50        0.50      -16.40      -14.40    Abnormal
+Current(mA)            37.12       90.00       80.00        2.00        3.00    Normal
+Temperature(C)         40.00       80.00       70.00      -10.00        0.00    Normal
+Voltage(V)              3.33        3.63        3.47        2.97        3.13    Normal
+LaserTemp(C)               -           -           -           -           -    -
+TecCurrent(mA)             -           -           -           -           -    -
+MediaSNR(dB)               -           -           -           -           -    -
+--------------------------------------------------------------------------------------
+
+Versatile Diagnostics Monitoring:
+---------------------------------------------------------------------
+Item          Minimum     Maximum     Average     Current PriorPeriod
+---------------------------------------------------------------------
+Ber                 -           -           -           -           -
+Fer                 -           -           -           -           -
+---------------------------------------------------------------------
+<445A-U6>
+########## display transceiver diagnosis interface XGigabitEthernet0/0/2
+display transceiver diagnosis interface XGigabitEthernet0/0/2
+
+Port XGigabitEthernet0/0/2 transceiver diagnostic information:
+--------------------------------------------------------------------------------------
+Item                   Value   HighAlarm    HighWarn    LowAlarm     LowWarn    Status
+--------------------------------------------------------------------------------------
+TxPower(dBm)           -2.50        2.50        0.50      -10.20       -8.20    Normal
+RxPower(dBm)           -2.51        2.50        0.50      -16.40      -14.40    Normal
+Current(mA)            37.38       90.00       80.00        2.00        3.00    Normal
+Temperature(C)         39.17       80.00       70.00      -10.00        0.00    Normal
+Voltage(V)              3.31        3.63        3.47        2.97        3.13    Normal
+LaserTemp(C)               -           -           -           -           -    -
+TecCurrent(mA)             -           -           -           -           -    -
+MediaSNR(dB)               -           -           -           -           -    -
+--------------------------------------------------------------------------------------
+
+Versatile Diagnostics Monitoring:
+---------------------------------------------------------------------

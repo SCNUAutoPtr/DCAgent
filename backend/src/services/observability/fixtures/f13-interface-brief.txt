@@ -1,0 +1,35 @@
+Interface                   PHY   Protocol  InUti OutUti   inErrors  outErrors
+GigabitEthernet0/0/1        up    up        0.02%  0.73%          0          0
+GigabitEthernet0/0/2        up    up        0.01%     0%          0          0
+GigabitEthernet0/0/3        up    up           0%     0%          0          0
+GigabitEthernet0/0/4        up    up           0%     0%          0          0
+GigabitEthernet0/0/5        up    up        0.38%  0.03%          0          0
+GigabitEthernet0/0/6        down  down         0%     0%          0          0
+GigabitEthernet0/0/7        up    up        0.59%  1.06%          0          0
+GigabitEthernet0/0/8        down  down         0%     0%          0          0
+GigabitEthernet0/0/9        down  down         0%     0%          0          0
+GigabitEthernet0/0/10       down  down         0%     0%          0          0
+GigabitEthernet0/0/11       up    up           0%     0%          0          0
+GigabitEthernet0/0/12       up    up           0%     0%          0          0
+GigabitEthernet0/0/13       up    up           0%     0%          0          0
+GigabitEthernet0/0/14       up    up           0%     0%          0          0
+GigabitEthernet0/0/15       up    up           0%     0%          0          0
+GigabitEthernet0/0/16       down  down         0%     0%          0          0
+GigabitEthernet0/0/17       up    up           0%     0%          0          0
+GigabitEthernet0/0/18       up    up           0%     0%          0          0
+GigabitEthernet0/0/19       up    up           0%     0%          0          0
+GigabitEthernet0/0/20       down  down         0%     0%          0          0
+GigabitEthernet0/0/21       up    up           0%     0%          0          0
+GigabitEthernet0/0/22       up    up           0%     0%          0          0
+GigabitEthernet0/0/23       up    up           0%     0%          0          0
+GigabitEthernet0/0/24       up    up           0%     0%          0          0
+NULL0                       up    up(s)        0%     0%          0          0
+Vlanif1                     up    up           --     --          0          0
+Vlanif3010                  up    up           --     --          0          0
+Vlanif3020                  up    up           --     --          0          0
+XGigabitEthernet0/0/1       up    up           0%     0%          4          0
+XGigabitEthernet0/0/2       up    up           0%     0%       2731          0
+XGigabitEthernet0/0/3       up    up        0.07%     0%          0          0
+XGigabitEthernet0/0/4       up    up        0.07%  0.06%          0          0
+<445C-F13>display cpu-usage | include CPU Usage|five
+CPU Usage Stat. Cycle: 60 (Second)

@@ -1,0 +1,46 @@
+{
+  "format": "dcagent.panel-template",
+  "version": 1,
+  "templates": [
+    {
+      "name": "华为 S5735S-L24T4X-QA2 前面板",
+      "type": "NETWORK",
+      "face": "FRONT",
+      "deviceModel": {
+        "vendor": "",
+        "name": "S5735S-L24T4X-QA2",
+        "deviceType": "SWITCH"
+      },
+      "widthMm": 442,
+      "heightMm": 43.6,
+      "description": "24 个千兆电口 + 4 个万兆 SFP+，两行奇上偶下；编号沿用库里的 ge/xge 写法，接口名为华为长格式。几何为估计值，可在编辑器里拖动微调",
+      "generator": {
+        "version": 1,
+        "groups": [
+          {
+            "portType": "RJ45",
+            "count": 24,
+            "numberPrefix": "ge",
+            "ifNamePattern": "GigabitEthernet0/0/{n}",
+            "rows": 2,
+            "order": "COLUMN_MAJOR",
+            "xMm": 60,
+            "pitchXMm": 16.5,
+            "pitchYMm": 15.5
+          },
+          {
+            "portType": "SFP_PLUS",
+            "count": 4,
+            "numberPrefix": "xge",
+            "ifNamePattern": "XGigabitEthernet0/0/{n}",
+            "rows": 2,
+            "order": "COLUMN_MAJOR",
+            "gapMm": 18,
+            "pitchXMm": 15,
+            "pitchYMm": 13
+          }
+        ]
+      }
+    }
+  ]
+}

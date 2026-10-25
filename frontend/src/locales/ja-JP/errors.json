@@ -1,0 +1,23 @@
+{
+  "VALIDATION_ERROR": "送信されたデータが不正です",
+  "NOT_FOUND": "レコードが存在しないか、削除されています",
+  "UNIQUE_VIOLATION": "同じレコードが既に存在します",
+  "LABEL_NOT_AVAILABLE": "このラベルは使用できません（使用中または無効）",
+  "LABEL_REQUIRED": "ラック、パネル、ケーブル端子にはラベルが必要です",
+  "PORT_OCCUPIED": "ポートは既に別のケーブルで使用中です",
+  "PORT_HAS_DEPENDENTS": "ポートはケーブル、モジュール、IP、または端末で使用中です",
+  "NOT_EMPTY": "中身が残っています。空にしてから削除してください",
+  "U_SPACE_CONFLICT": "U 位置が既存の機器と重なっています",
+  "U_OUT_OF_RANGE": "U 位置がラックの高さを超えています",
+  "IP_OUT_OF_SUBNET": "IP アドレスがサブネット外です",
+  "IP_CONFLICT": "IP アドレスが競合しています",
+  "TEMPLATE_REVISION_MISMATCH": "テンプレートが変更されました。再読み込みしてやり直してください",
+  "TEMPLATE_CONFLICT": "テンプレートが使用中のポートと競合するため、変更は行われませんでした",
+  "INVALID_STATE": "現在の状態ではこの操作はできません",
+  "INTERNAL": "サーバー内部エラー",
+  "NETWORK": "サーバーに接続できません",
+  "detail": {
+    "field": "項目：{{fields}}",
+    "items": "対象：{{items}}"
+  }
+}

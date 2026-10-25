@@ -4,14 +4,14 @@
   "createTitle": "Create Room",
   "editTitle": "Edit Room",
   "fields": {
-    "id": "ID",
-    "shortId": "ID",
     "name": "Room Name",
     "floor": "Floor",
     "dataCenter": "Data Center",
     "cabinetCount": "Cabinet Count",
     "createdAt": "Created At",
-    "actions": "Actions"
+    "actions": "Actions",
+    "label": "Label",
+    "workstationCount": "Workstations"
   },
   "placeholders": {
     "name": "e.g.: Room A",
@@ -21,14 +21,10 @@
   },
   "messages": {
     "deleteConfirm": "Are you sure to delete this room?",
-    "deleteWarning": "All cabinets and devices under it will be deleted",
+    "deleteWarning": "A room that still has cabinets, devices or workstations cannot be deleted",
     "createSuccess": "Room created successfully",
     "updateSuccess": "Room updated successfully",
-    "deleteSuccess": "Room deleted successfully",
-    "loadFailed": "Failed to load room list",
-    "updateFailed": "Update failed",
-    "createFailed": "Create failed",
-    "deleteFailed": "Delete failed"
+    "deleteSuccess": "Room deleted successfully"
   },
   "validation": {
     "nameRequired": "Please enter room name",
@@ -36,5 +32,51 @@
   },
   "table": {
     "total": "Total {{total}} items"
+  },
+  "actions": {
+    "floorPlan": "Floor Plan"
+  },
+  "floorPlan": {
+    "title": "Floor Plan",
+    "cabinet": "Cabinet",
+    "workstation": "Workstation",
+    "width": "Width",
+    "height": "Depth",
+    "unit": "m",
+    "editHint": "Drag cabinets or workstations to reposition, snapped to 0.1m",
+    "deviceCount": "Devices",
+    "overview": "Room Overview",
+    "area": "Area",
+    "totalDevices": "Devices",
+    "selectHint": "Click a cabinet or workstation to see its details",
+    "newCabinet": "New Cabinet",
+    "cabinetName": "Cabinet Name",
+    "cabinetNamePlaceholder": "e.g.: A-01",
+    "shortId": "ShortID",
+    "shortIdPlaceholder": "Leave empty to allocate",
+    "cabinetHeight": "Height (U)",
+    "create": "Create",
+    "createSuccess": "Cabinet created",
+    "nameRequired": "Cabinet name is required",
+    "shortIdInvalid": "Invalid ShortID, use E-XXXXX or digits",
+    "position": "Position",
+    "size": "Size",
+    "status": "Status",
+    "assignedTo": "Assigned To",
+    "ipAddress": "IP Address",
+    "devices": "Devices",
+    "noDevices": "No devices",
+    "moreDevices": "{{count}} more devices",
+    "viewDetail": "View Details",
+    "workstationStatus": {
+      "ONLINE": "Online",
+      "OFFLINE": "Offline",
+      "MAINTENANCE": "Maintenance",
+      "FAULTY": "Faulty",
+      "RETIRED": "Retired"
+    },
+    "deviceBadge": "{{count}} dev",
+    "code": "Code",
+    "attachedPort": "Switch port"
   }
 }

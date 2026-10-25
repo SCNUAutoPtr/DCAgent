@@ -24,7 +24,10 @@
     "notes": "Notes",
     "operator": "Operator",
     "createdAt": "Created At",
-    "actions": "Actions"
+    "actions": "Actions",
+    "device": "Device",
+    "panel": "Panel",
+    "port": "Port"
   },
   "moduleStatus": {
     "IN_STOCK": "In Stock",
@@ -38,7 +41,9 @@
     "SFP_PLUS": "SFP+ (10G)",
     "QSFP": "QSFP (40G)",
     "QSFP28": "QSFP28 (100G)",
-    "QSFP_DD": "QSFP-DD (400G)"
+    "QSFP_DD": "QSFP-DD (400G)",
+    "SFP28": "SFP28 (25G)",
+    "OTHER": "Other"
   },
   "movementTypes": {
     "PURCHASE": "Purchase",
@@ -52,18 +57,19 @@
   "placeholders": {
     "serialNo": "Enter optical module serial number",
     "model": "e.g., SFP-10G-LR",
-    "vendor": "Select vendor",
+    "vendor": "Select or type a vendor",
     "moduleType": "Select module type",
     "wavelength": "e.g., 850nm, 1310nm",
     "distance": "e.g., 300m, 10km",
     "supplier": "Supplier",
     "price": "Unit: RMB",
     "notes": "Additional notes",
-    "portId": "Port UUID",
-    "targetPortId": "Target Port UUID",
     "operator": "Optional",
     "scrappingReason": "Please explain the reason for scrapping",
-    "search": "Search by serial number, model, or vendor"
+    "search": "Search by serial number, model, or vendor",
+    "selectDevice": "Select device",
+    "selectPanel": "Select panel",
+    "selectPort": "Select port"
   },
   "messages": {
     "deleteConfirm": "Are you sure to delete this optical module?",
@@ -75,25 +81,15 @@
     "installSuccess": "Installed successfully",
     "uninstallSuccess": "Uninstalled successfully",
     "transferSuccess": "Transferred successfully",
-    "scrapSuccess": "Scrapped successfully",
-    "loadFailed": "Failed to load optical module list",
-    "loadDetailFailed": "Failed to load optical module information",
-    "loadHistoryFailed": "Failed to load movement history",
-    "updateFailed": "Update failed",
-    "createFailed": "Create failed",
-    "deleteFailed": "Delete failed",
-    "installFailed": "Installation failed",
-    "uninstallFailed": "Uninstall failed",
-    "transferFailed": "Transfer failed",
-    "scrapFailed": "Scrap failed"
+    "scrapSuccess": "Scrapped successfully"
   },
   "validation": {
     "serialNoRequired": "Please enter serial number",
     "modelRequired": "Please enter model",
     "vendorRequired": "Please select vendor",
     "moduleTypeRequired": "Please select module type",
-    "portIdRequired": "Please enter port ID",
-    "targetPortIdRequired": "Please enter target port ID",
+    "portIdRequired": "Select a port",
+    "targetPortIdRequired": "Select the target port",
     "notesRequired": "Please explain the reason for scrapping"
   },
   "tabs": {
@@ -115,26 +111,21 @@
     "scrap": "Scrap",
     "viewHistory": "View History",
     "viewDetail": "Details",
-    "back": "Back to List",
-    "editInfo": "Edit Information"
+    "back": "Back to List"
   },
   "filters": {
     "search": "Search by serial number, model, or vendor",
     "status": "Status",
-    "moduleType": "Module Type",
-    "applyFilter": "Apply Filter",
-    "reset": "Reset"
+    "moduleType": "Module Type"
   },
   "statistics": {
     "total": "Total",
     "inStock": "In Stock",
     "installed": "Installed",
-    "reserved": "Reserved",
-    "faulty": "Faulty",
-    "scrapped": "Scrapped"
+    "faulty": "Faulty"
   },
   "alerts": {
-    "installInfo": "Please enter the target port ID. After installation, the module status will change to 'Installed'.",
+    "installInfo": "Pick the port to install into. Only free ports whose cage fits the module are listed.",
     "uninstallWarning": "Before uninstalling, ensure the port is not connected to any cables. After uninstall, the module will return to stock.",
     "transferWarning": "Before transferring, ensure the current port is not connected to any cables.",
     "scrappingWarning": "This operation cannot be undone. Please confirm that this module needs to be scrapped."
@@ -143,5 +134,16 @@
     "noHistory": "No movement history",
     "noLocation": "In Stock",
     "moduleNotFound": "Optical module not found"
+  },
+  "pagination": {
+    "total": "{{total}} items"
+  },
+  "ddm": {
+    "yes": "Yes",
+    "no": "No"
+  },
+  "movement": {
+    "from": "From",
+    "to": "To"
   }
 }

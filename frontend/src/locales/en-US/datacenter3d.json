@@ -1,0 +1,55 @@
+{
+  "title": "3D Room",
+  "description": "Cabinets, devices and cables placed by the floor plan; click a cabinet to see its devices",
+  "roomPlaceholder": "Select a room",
+  "noRooms": "No rooms yet. Create one on the Rooms page first",
+  "loadFailed": "Failed to load the room scene",
+  "retry": "Retry",
+  "controls": {
+    "resetView": "Reset view",
+    "cables": "Cables",
+    "colorBy": "Color",
+    "colorType": "By type",
+    "colorOccupancy": "By occupancy",
+    "openRoom": "Room details"
+  },
+  "stats": {
+    "cabinets": "{{count}} cabinets",
+    "devices": "{{count}} devices",
+    "links": "{{count}} cables",
+    "externalLinks": "{{count}} cables lead to other rooms",
+    "looseDevices": "{{count}} devices are not in a cabinet",
+    "workstations": "{{online}}/{{count}} workstations online",
+    "autoPlaced": "{{count}} cabinets have no floor plan position and were placed on a grid"
+  },
+  "legend": {
+    "type": "Device type",
+    "occupancy": "Port occupancy (cabinet frame: U occupancy)",
+    "idle": "Idle",
+    "full": "Full",
+    "noPorts": "No ports",
+    "cables": "Cable medium"
+  },
+  "tooltip": {
+    "uSingle": "U{{from}}, 1U",
+    "uRange": "U{{from}}-U{{to}}, {{height}}U",
+    "ports": "{{connected}}/{{total}} ports connected",
+    "noPorts": "No ports",
+    "uUnknownHeight": "U{{from}}, height unknown"
+  },
+  "drawer": {
+    "uUsage": "{{used}}/{{total}} U used",
+    "devices": "Devices",
+    "noDevices": "This cabinet has no devices yet",
+    "unplaced": "No U position",
+    "openCabinet": "Open cabinet view",
+    "openPanel": "Open panel",
+    "highlight": "Highlight cables",
+    "autoPlaced": "No floor plan position; placed automatically"
+  },
+  "webgl": {
+    "title": "3D view unavailable",
+    "description": "This browser or graphics card does not support WebGL. Try a browser with hardware acceleration, or use the floor plan on the room page.",
+    "openRoom": "Open room floor plan"
+  }
+}

@@ -1,706 +1,435 @@
-import { useState, useEffect } from 'react';
-import {
-  Modal,
-  Form,
-  Input,
-  Select,
-  InputNumber,
-  message,
-  Card,
-  Descriptions,
-  Space,
-  Alert,
-  Tag,
-  Row,
-  Col,
-  Button,
-  Divider,
-  Typography,
-  Tabs,
-} from 'antd';
-import {
-  ScanOutlined,
-  CheckCircleOutlined,
-  LinkOutlined,
-  ThunderboltOutlined,
-  ApiOutlined,
-  SwapOutlined,
-} from '@ant-design/icons';
+import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Alert, Button, Card, Col, Divider, Form, Input, InputNumber, Modal, Row, Select, Space, Tabs, Tag, Typography, message } from 'antd';
+import { ApiOutlined, CheckCircleOutlined, LinkOutlined, ScanOutlined, SwapOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { CABLE_MEDIA, type CableMedium } from '@contracts/enums';
+import type { LabelResolveResult } from '@contracts/labels';
+import type { PanelDetailDto, PanelDto, PortDto } from '@contracts/panels';
+import { formatShortId } from '@contracts/shortId';
 import { cableService } from '@/services/cableService';
-import { portService } from '@/services/portService';
+import { labelService } from '@/services/labelService';
 import { panelService } from '@/services/panelService';
-import { parseShortId, formatShortId } from '@/utils/shortIdFormatter';
-import type { Panel, Port } from '@/types';
-import { PanelVisualizer } from './PanelVisualizer';
+import { PanelView } from './panel/PanelView';
+import { parseLabelInput } from '@/utils/labels';
 
-const { Option } = Select;
-const { TextArea } = Input;
 const { Title, Text } = Typography;
 
-interface CreateCableModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onSuccess?: () => void;
+interface CableFields {
+  label?: string;
+  medium?: CableMedium;
+  lengthM?: number | null;
+  color?: string;
+  notes?: string;
 }
 
-// 线缆类型选项
-const cableTypeOptions = [
-  { value: 'CAT5E', label: 'CAT5E 网线', color: '#2db7f5' },
-  { value: 'CAT6', label: 'CAT6 网线', color: '#108ee9' },
-  { value: 'CAT6A', label: 'CAT6A 网线', color: '#0050b3' },
-  { value: 'CAT7', label: 'CAT7 网线', color: '#003a8c' },
-  { value: 'FIBER_SM', label: '单模光纤', color: '#f50' },
-  { value: 'FIBER_MM', label: '多模光纤', color: '#fa541c' },
-  { value: 'QSFP_TO_SFP', label: 'QSFP转SFP', color: '#722ed1' },
-  { value: 'QSFP_TO_QSFP', label: 'QSFP直连', color: '#531dab' },
-  { value: 'SFP_TO_SFP', label: 'SFP直连', color: '#9254de' },
-  { value: 'POWER', label: '电源线', color: '#faad14' },
-  { value: 'OTHER', label: '其他', color: '#8c8c8c' },
-];
+interface CreateCableModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
+  /** start the quick mode on this panel */
+  initialPanelId?: string;
+}
 
-export default function CreateCableModal({
-  visible,
-  onClose,
-  onSuccess,
-}: CreateCableModalProps) {
-  const [form] = Form.useForm();
-  const [dualForm] = Form.useForm();
-  const [activeTab, setActiveTab] = useState<string>('single');
+const tryParse = (text: string) => {
+  try {
+    return parseLabelInput(text);
+  } catch {
+    return undefined;
+  }
+};
+
+const isFree = (p: PortDto) => !p.connected && p.adminState === 'NORMAL';
+
+/**
+ * Quick mode: one end at a time (scan panel, optionally pick a port, scan the plug).
+ * A plug that already belongs to a cable is plugged in with connect-end; a new plug creates a cable.
+ * Dual mode: both ends at once with cables/create.
+ */
+export default function CreateCableModal({ open, onClose, onSuccess, initialPanelId }: CreateCableModalProps) {
+  const { t } = useTranslation(['cable', 'common']);
+  const [form] = Form.useForm<CableFields>();
+  const [tab, setTab] = useState('single');
   const [loading, setLoading] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [panels, setPanels] = useState<PanelDto[]>([]);
 
-  // 单端连接状态（快速连接：只连接一边）
-  const [singlePanel, setSinglePanel] = useState<string>('');
-  const [singlePanelData, setSinglePanelData] = useState<Panel | null>(null);
-  const [singlePanelInput, setSinglePanelInput] = useState('');
-  const [singlePort, setSinglePort] = useState<string>('');
-  const [singlePorts, setSinglePorts] = useState<Port[]>([]);
-  const [shortId, setShortId] = useState<number | null>(null);
-  const [shortIdInput, setShortIdInput] = useState('');
-  const [loadingShortId, setLoadingShortId] = useState(false);
+  // quick mode
+  const [panelInput, setPanelInput] = useState('');
+  const [panel, setPanel] = useState<PanelDetailDto | null>(null);
+  const [portId, setPortId] = useState<string | null>(null);
+  const [plugInput, setPlugInput] = useState('');
+  const [plug, setPlug] = useState<LabelResolveResult | null>(null);
 
-  // 双端连接状态
-  const [panels, setPanels] = useState<Panel[]>([]);
-  const [portsA, setPortsA] = useState<Port[]>([]);
-  const [portsB, setPortsB] = useState<Port[]>([]);
-  const [selectedPanelA, setSelectedPanelA] = useState<string>('');
-  const [selectedPanelB, setSelectedPanelB] = useState<string>('');
-  const [selectedPortA, setSelectedPortA] = useState<string>('');
-  const [selectedPortB, setSelectedPortB] = useState<string>('');
-  const [shortIdInputA, setShortIdInputA] = useState('');
-  const [shortIdInputB, setShortIdInputB] = useState('');
+  // dual mode
+  const [panelA, setPanelA] = useState<string>();
+  const [panelB, setPanelB] = useState<string>();
+  const [portA, setPortA] = useState<string>();
+  const [portB, setPortB] = useState<string>();
+  const [labelA, setLabelA] = useState('');
+  const [labelB, setLabelB] = useState('');
+  const [portsById, setPortsById] = useState<Record<string, PortDto[]>>({});
+
+  const choosePanel = async (id: string | undefined) => {
+    setPortId(null);
+    if (!id) {
+      setPanel(null);
+      return;
+    }
+    try {
+      setPanel(await panelService.get({ id }));
+    } catch {
+      setPanel(null);
+    }
+  };
 
   useEffect(() => {
-    if (visible) {
-      resetForm();
-      loadPanels();
-    }
-  }, [visible]);
-
-  const resetForm = () => {
+    if (!open) return;
     form.resetFields();
-    dualForm.resetFields();
-    setActiveTab('single');
-    setSinglePanel('');
-    setSinglePanelData(null);
-    setSinglePanelInput('');
-    setSinglePort('');
-    setSinglePorts([]);
-    setShortId(null);
-    setShortIdInput('');
-    setLoadingShortId(false);
-    setShowAdvanced(false);
-    setSelectedPanelA('');
-    setSelectedPanelB('');
-    setSelectedPortA('');
-    setSelectedPortB('');
-    setShortIdInputA('');
-    setShortIdInputB('');
-    setPortsA([]);
-    setPortsB([]);
-  };
+    setTab('single');
+    setShowDetails(false);
+    setPanelInput('');
+    setPanel(null);
+    setPortId(null);
+    setPlugInput('');
+    setPlug(null);
+    setPanelA(undefined);
+    setPanelB(undefined);
+    setPortA(undefined);
+    setPortB(undefined);
+    setLabelA('');
+    setLabelB('');
+    setPortsById({});
+    panelService.list().then(setPanels, () => undefined);
+    if (initialPanelId) choosePanel(initialPanelId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when the dialog opens
+  }, [open]);
 
-  const loadPanels = async () => {
+  const panelOptions = useMemo(
+    () =>
+      panels.map((p) => {
+        const label = `${p.deviceName} / ${p.name}${p.label ? ` (${formatShortId(p.label.shortId)})` : ''}`;
+        return { value: p.id, label, title: label };
+      }),
+    [panels],
+  );
+
+  const portsOf = async (id: string) => {
+    if (portsById[id]) return;
     try {
-      const data = await panelService.getAll();
-      setPanels(data);
-    } catch (error) {
-      console.error('Failed to load panels:', error);
+      const ports = await panelService.get({ id }).then((p) => p.ports);
+      setPortsById((m) => ({ ...m, [id]: ports }));
+    } catch {
+      // reported by rpc
     }
   };
 
-  // ==================== 单端连接逻辑（快速连接：只连接一个端口）====================
-  const handleSinglePanelInput = async (value: string) => {
-    if (!value.trim()) {
-      setSinglePanel('');
-      setSinglePanelData(null);
-      setSinglePort('');
-      setSinglePorts([]);
-      return;
-    }
-
+  const scanPanel = async (text: string) => {
+    const shortId = tryParse(text);
+    if (shortId === undefined) return;
     try {
-      const parsedShortId = parseShortId(value.trim());
-      const panel = panels.find((p) => p.shortId === parsedShortId);
-
-      if (panel) {
-        setSinglePanel(panel.id);
-        setSinglePanelData(panel);
-        setSinglePort('');
-        const ports = await portService.getByPanel(panel.id);
-        setSinglePorts(ports);
-        message.success(`已选择面板: ${panel.name}`);
-      } else {
-        message.error('未找到该面板');
-        setSinglePanel('');
-        setSinglePanelData(null);
-        setSinglePorts([]);
-      }
-    } catch (error: any) {
-      if (error.message?.includes('无效的shortID格式')) {
-        message.error('请输入有效的ID格式（如：E-00001 或 1）');
-      }
-      setSinglePanel('');
-      setSinglePanelData(null);
-      setSinglePorts([]);
-    }
-  };
-
-  const handleSinglePanelChange = async (panelId: string) => {
-    setSinglePanel(panelId);
-    const panel = panels.find((p) => p.id === panelId);
-    setSinglePanelData(panel || null);
-    setSinglePort('');
-    setSinglePorts([]);
-
-    if (panelId) {
-      try {
-        const ports = await portService.getByPanel(panelId);
-        setSinglePorts(ports);
-      } catch (error) {
-        console.error('Failed to load ports:', error);
-      }
-    }
-  };
-
-  const handleShortIdInput = async (value: string) => {
-    if (!value.trim()) return;
-
-    try {
-      setLoadingShortId(true);
-      const parsedShortId = parseShortId(value.trim());
-      setShortId(parsedShortId);
-      message.success('插头录入成功');
-    } catch (error: any) {
-      if (error.message?.includes('无效的shortID格式')) {
-        message.error('请输入有效的ID格式（如：E-00001 或 1）');
-        setShortId(null);
-      }
-    } finally {
-      setLoadingShortId(false);
-    }
-  };
-
-  const handleSingleSubmit = async () => {
-    if (!singlePort) {
-      message.error('请选择端口');
-      return;
-    }
-
-    if (!shortId) {
-      message.error('请扫描插头ShortID');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const values = form.getFieldsValue();
-
-      await cableService.connectSinglePort({
-        portId: singlePort,
-        shortId: shortId,
-        label: values.label,
-        type: values.type,
-        length: values.length,
-        color: values.color,
-        notes: values.notes,
-      });
-
-      message.success('端口连接成功');
-      onSuccess?.();
-      onClose();
-    } catch (error: any) {
-      console.error('Failed to connect port:', error);
-      message.error(error.response?.data?.error || '端口连接失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ==================== 双端连接逻辑 ====================
-  const handlePanelAChange = async (panelId: string) => {
-    setSelectedPanelA(panelId);
-    setSelectedPortA('');
-    setPortsA([]);
-
-    if (panelId) {
-      try {
-        const ports = await portService.getByPanel(panelId);
-        setPortsA(ports.filter((p: Port) => p.status === 'AVAILABLE'));
-      } catch (error) {
-        console.error('Failed to load ports:', error);
-      }
-    }
-  };
-
-  const handlePanelBChange = async (panelId: string) => {
-    setSelectedPanelB(panelId);
-    setSelectedPortB('');
-    setPortsB([]);
-
-    if (panelId) {
-      try {
-        const ports = await portService.getByPanel(panelId);
-        setPortsB(ports.filter((p: Port) => p.status === 'AVAILABLE'));
-      } catch (error) {
-        console.error('Failed to load ports:', error);
-      }
-    }
-  };
-
-  const handleDualSubmit = async () => {
-    if (!selectedPortA || !selectedPortB) {
-      message.error('请选择两个端口');
-      return;
-    }
-
-    if (!shortIdInputA || !shortIdInputB) {
-      message.error('请输入两个插头的ShortID');
-      return;
-    }
-
-    try {
-      const shortIdAVal = parseShortId(shortIdInputA);
-      const shortIdBVal = parseShortId(shortIdInputB);
-
-      if (shortIdAVal === shortIdBVal) {
-        message.error('两个插头的ShortID不能相同');
+      const r = await labelService.resolve({ shortId });
+      if (r.bound?.kind !== 'PANEL') {
+        message.warning(t('cable:create.notPanel'));
         return;
       }
+      await choosePanel(r.bound.id);
+    } catch {
+      // reported by rpc
+    }
+  };
 
-      setLoading(true);
-      const values = dualForm.getFieldsValue();
+  const scanPlug = async (text: string) => {
+    const shortId = tryParse(text);
+    if (shortId === undefined) {
+      setPlug(null);
+      return;
+    }
+    try {
+      const r = await labelService.resolve({ shortId });
+      if (r.state === 'VOID' || (r.bound && r.bound.kind !== 'CABLE_ENDPOINT')) {
+        message.error(r.state === 'VOID' ? t('common:label.void') : t('common:label.bound', { name: r.bound!.path.map((n) => n.name).join(' / ') }));
+        setPlug(null);
+        return;
+      }
+      setPlug(r);
+    } catch {
+      setPlug(null);
+    }
+  };
 
-      await cableService.create({
-        portAId: selectedPortA,
-        portBId: selectedPortB,
-        shortIdA: shortIdAVal,
-        shortIdB: shortIdBVal,
-        label: values.label,
-        type: values.type || 'CAT6',
-        length: values.length,
-        color: values.color,
-        notes: values.notes,
-      });
+  const cableFields = () => {
+    const v = form.getFieldsValue();
+    return { label: v.label, medium: v.medium ?? 'CAT6', lengthM: v.lengthM ?? null, color: v.color, notes: v.notes };
+  };
 
-      message.success('线缆连接创建成功');
+  const submitSingle = async () => {
+    if (!panel || !plug) return;
+    setLoading(true);
+    try {
+      if (plug.bound?.kind === 'CABLE_ENDPOINT') {
+        if (portId) {
+          await cableService.connectEnd({ endpointId: plug.bound.id, portId });
+          message.success(t('cable:create.connected'));
+        } else {
+          await cableService.disconnectEnd({ endpointId: plug.bound.id, parkPanelId: panel.id });
+          message.success(t('cable:create.parked'));
+        }
+      } else {
+        const here = portId ? { portId } : { parkedPanelId: panel.id };
+        await cableService.create({ ...cableFields(), ends: { A: { labelShortId: plug.shortId, ...here }, B: {} } });
+        message.success(t('cable:create.created'));
+      }
       onSuccess?.();
       onClose();
-    } catch (error: any) {
-      console.error('Failed to create cable:', error);
-      message.error(error.response?.data?.error || '创建线缆连接失败');
+    } catch {
+      // reported by rpc
     } finally {
       setLoading(false);
     }
   };
 
-  const canSubmitSingle = singlePort !== '' && shortId !== null;
-  const canSubmitDual = selectedPortA && selectedPortB && shortIdInputA && shortIdInputB;
+  const submitDual = async () => {
+    if (!portA || !portB) return;
+    setLoading(true);
+    try {
+      await cableService.create({
+        ...cableFields(),
+        ends: { A: { portId: portA, labelShortId: tryParse(labelA) }, B: { portId: portB, labelShortId: tryParse(labelB) } },
+      });
+      message.success(t('cable:create.created'));
+      onSuccess?.();
+      onClose();
+    } catch {
+      // reported by rpc
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const renderSingleMode = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <Alert
-        message="快速连接模式"
-        description="扫描面板ShortID，可视化选择端口，然后扫描插头标签来快速建立单端连接。"
-        type="info"
-        showIcon
-        icon={<ThunderboltOutlined />}
-      />
-
+  const detailFields = (
+    <>
+      <Form.Item label={t('cable:fields.label')} name="label">
+        <Input placeholder={t('cable:create.labelPlaceholder')} data-testid="cable-label-input" />
+      </Form.Item>
+      <Form.Item label={t('cable:fields.type')} name="medium">
+        <Select
+          placeholder={t('cable:create.mediumPlaceholder')}
+          allowClear
+          data-testid="cable-type-select"
+          options={CABLE_MEDIA.map((m) => ({ value: m, label: t(`cable:media.${m}`) }))}
+        />
+      </Form.Item>
       <Row gutter={16}>
-        {/* 左侧：输入区域 */}
-        <Col span={10}>
+        <Col span={12}>
+          <Form.Item label={t('cable:labels.cableLength')} name="lengthM">
+            <InputNumber min={0.1} step={0.1} placeholder={t('cable:create.lengthPlaceholder')} style={{ width: '100%' }} />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item label={t('cable:fields.color')} name="color">
+            <Input placeholder={t('cable:create.colorPlaceholder')} />
+          </Form.Item>
+        </Col>
+      </Row>
+      <Form.Item label={t('cable:fields.notes')} name="notes">
+        <Input.TextArea rows={2} placeholder={t('cable:create.notesPlaceholder')} />
+      </Form.Item>
+    </>
+  );
+
+  const selectedPort = panel?.ports.find((p) => p.id === portId);
+
+  const singleMode = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }} data-testid="cable-single-mode">
+      <Alert message={t('cable:create.singleTitle')} description={t('cable:create.singleDesc')} type="info" showIcon icon={<ThunderboltOutlined />} />
+      <Row gutter={16}>
+        <Col span={9}>
           <Space direction="vertical" style={{ width: '100%' }} size="middle">
-            <Card size="small" title="步骤 1: 扫描面板">
-              <Form.Item label="面板 ShortID" required style={{ marginBottom: 8 }}>
+            <Card size="small" title={t('cable:create.step1')}>
+              <Text type="secondary">{t('cable:create.panelLabel')}</Text>
+              <Input
+                prefix={<ScanOutlined />}
+                placeholder={t('cable:create.scanPlaceholder')}
+                value={panelInput}
+                onChange={(e) => setPanelInput(e.target.value)}
+                onPressEnter={() => scanPanel(panelInput)}
+                onBlur={() => scanPanel(panelInput)}
+                size="large"
+                allowClear
+                data-testid="cable-single-panel-scan-input"
+              />
+              <Divider style={{ margin: '12px 0' }}>{t('cable:create.or')}</Divider>
+              <Select
+                placeholder={t('cable:create.selectPanel')}
+                value={panel?.id}
+                onChange={(id?: string) => choosePanel(id)}
+                showSearch
+                optionFilterProp="label"
+                style={{ width: '100%' }}
+                allowClear
+                data-testid="cable-single-panel-select"
+                options={panelOptions}
+              />
+              {panel && (
+                <Tag color="blue" style={{ marginTop: 8 }}>
+                  {panel.deviceName} / {panel.name}
+                  {panel.label ? ` (${formatShortId(panel.label.shortId)})` : ''}
+                </Tag>
+              )}
+            </Card>
+            {panel && (
+              <Card size="small" title={t('cable:create.step3')}>
+                <Text type="secondary">{t('cable:create.plugLabel')}</Text>
                 <Input
                   prefix={<ScanOutlined />}
-                  placeholder="扫描或输入 ShortID"
-                  value={singlePanelInput}
-                  onChange={(e) => setSinglePanelInput(e.target.value)}
-                  onPressEnter={(e) => handleSinglePanelInput((e.target as HTMLInputElement).value)}
-                  onBlur={(e) => handleSinglePanelInput(e.target.value)}
+                  placeholder={t('cable:create.scanPlaceholder')}
+                  value={plugInput}
+                  onChange={(e) => setPlugInput(e.target.value)}
+                  onPressEnter={() => scanPlug(plugInput)}
+                  onBlur={() => scanPlug(plugInput)}
                   size="large"
                   allowClear
+                  data-testid="cable-single-shortid-input"
                 />
-                {singlePanelData && (
-                  <div style={{ marginTop: 8 }}>
-                    <Tag color="blue">
-                      {singlePanelData.name} ({formatShortId(singlePanelData.shortId!)})
-                    </Tag>
-                  </div>
+                {plug && (
+                  <Space direction="vertical" style={{ marginTop: 8 }}>
+                    <Tag color="green">{t('cable:create.plugRecorded', { display: plug.display })}</Tag>
+                    <Text type="secondary">{plug.bound ? t('cable:create.plugExisting') : t('cable:create.plugNew')}</Text>
+                  </Space>
                 )}
-              </Form.Item>
-
-              <Divider style={{ margin: '12px 0' }}>或</Divider>
-
-              <Form.Item label="从列表选择" style={{ marginBottom: 0 }}>
-                <Select
-                  placeholder="选择面板"
-                  value={singlePanel}
-                  onChange={handleSinglePanelChange}
-                  showSearch
-                  size="large"
-                  filterOption={(input, option: any) =>
-                    option?.children?.toLowerCase().includes(input.toLowerCase())
-                  }
-                  allowClear
-                >
-                  {panels.map((panel) => (
-                    <Option key={panel.id} value={panel.id}>
-                      {panel.name} {panel.shortId ? `(${formatShortId(panel.shortId)})` : ''}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Card>
-
-            {singlePort && (
-              <Card size="small" title="步骤 3: 扫描插头">
-                <Form.Item label="插头 ShortID" required style={{ marginBottom: 0 }}>
-                  <Input
-                    prefix={<ScanOutlined />}
-                    placeholder="扫描或输入插头 ShortID"
-                    value={shortIdInput}
-                    onChange={(e) => setShortIdInput(e.target.value)}
-                    onPressEnter={(e) => handleShortIdInput((e.target as HTMLInputElement).value)}
-                    onBlur={(e) => handleShortIdInput(e.target.value)}
-                    size="large"
-                    allowClear
-                  />
-                  {shortId && (
-                    <div style={{ marginTop: 8 }}>
-                      <Tag color="green">已录入：{formatShortId(shortId)}</Tag>
-                    </div>
-                  )}
-                </Form.Item>
               </Card>
             )}
           </Space>
         </Col>
-
-        {/* 右侧：端口可视化 */}
-        <Col span={14}>
-          {singlePanelData && singlePorts.length > 0 ? (
-            <Card size="small" title="步骤 2: 选择端口" style={{ height: '100%' }}>
-              <div style={{ marginBottom: 12 }}>
-                <Text type="secondary">点击面板上的端口进行选择</Text>
-                {singlePort && (
-                  <Tag color="green" style={{ marginLeft: 8 }}>
-                    已选择: {singlePorts.find(p => p.id === singlePort)?.number}
-                  </Tag>
-                )}
-              </div>
-              <div style={{
-                border: '1px solid #d9d9d9',
-                borderRadius: '4px',
-                padding: '20px',
-                backgroundColor: '#fafafa',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                minHeight: '300px'
-              }}>
-                <PanelVisualizer
-                  panel={singlePanelData}
-                  ports={singlePorts}
-                  onPortClick={(port) => {
-                    if (port.status === 'AVAILABLE') {
-                      setSinglePort(port.id);
-                      message.success(`已选择端口: ${port.number}`);
-                    } else {
-                      message.warning(`端口 ${port.number} 不可用`);
-                    }
-                  }}
-                  highlightedPortIds={singlePort ? [singlePort] : []}
+        <Col span={15}>
+          <Card size="small" title={t('cable:create.step2')} style={{ height: '100%' }}>
+            {panel ? (
+              <>
+                <div style={{ marginBottom: 12 }}>
+                  <Text type="secondary">{t('cable:create.portHint')}</Text>
+                  {selectedPort && (
+                    <Tag color="green" style={{ marginLeft: 8 }}>
+                      {t('cable:create.selectedPort', { number: selectedPort.number })}
+                    </Tag>
+                  )}
+                </div>
+                <PanelView
+                  panel={panel}
+                  ports={panel.ports}
+                  highlightedPortIds={portId ? [portId] : []}
                   labelMode="always"
-                  scale={1.2}
+                  scale={1.4}
+                  onPortClick={(p) => {
+                    if (!isFree(p)) {
+                      message.warning(t('cable:create.portBusy', { number: p.number }));
+                      return;
+                    }
+                    setPortId(p.id === portId ? null : p.id);
+                  }}
                 />
-              </div>
-            </Card>
-          ) : (
-            <Card size="small" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ textAlign: 'center', color: '#8c8c8c' }}>
-                <Text type="secondary">请先选择面板</Text>
-              </div>
-            </Card>
-          )}
+              </>
+            ) : (
+              <Text type="secondary">{t('cable:create.choosePanelFirst')}</Text>
+            )}
+          </Card>
         </Col>
       </Row>
-
-      {canSubmitSingle && (
+      {panel && plug && !plug.bound && (
         <>
-          <Divider style={{ margin: '12px 0' }}>
-            <Button
-              type="link"
-              size="small"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-            >
-              {showAdvanced ? '隐藏' : '显示'}线缆详细信息（可选）
+          <Divider style={{ margin: '4px 0' }}>
+            <Button type="link" size="small" onClick={() => setShowDetails(!showDetails)}>
+              {t('cable:create.showDetails')}
             </Button>
           </Divider>
-
-          {showAdvanced && (
-            <Card size="small" title="线缆详细信息（选填）">
-              <Form form={form} layout="vertical">
-                <Form.Item label="线缆标签" name="label">
-                  <Input placeholder="例如：服务器1-交换机1" />
-                </Form.Item>
-
-                <Form.Item label="线缆类型" name="type">
-                  <Select placeholder="默认根据端口类型推断" allowClear>
-                    {cableTypeOptions.map((opt) => (
-                      <Option key={opt.value} value={opt.value}>
-                        <Tag color={opt.color}>{opt.label}</Tag>
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-
-                <Row gutter={16}>
-                  <Col span={12}>
-                    <Form.Item label="长度（米）" name="length">
-                      <InputNumber
-                        min={0}
-                        step={0.1}
-                        placeholder="线缆长度"
-                        style={{ width: '100%' }}
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item label="颜色" name="color">
-                      <Input placeholder="如：蓝色、红色" />
-                    </Form.Item>
-                  </Col>
-                </Row>
-
-                <Form.Item label="备注" name="notes">
-                  <TextArea rows={2} placeholder="其他说明信息" />
-                </Form.Item>
-              </Form>
-            </Card>
-          )}
+          {showDetails && <Card size="small">{detailFields}</Card>}
         </>
       )}
     </div>
   );
 
-  const renderDualMode = () => (
-    <Space direction="vertical" style={{ width: '100%' }} size="large">
-      <Alert
-        message="双端连接模式"
-        description="选择两个端口并输入插头标签来建立完整的端到端连接。"
-        type="info"
-        showIcon
-        icon={<SwapOutlined />}
-      />
+  const endCard = (end: 'A' | 'B') => {
+    const panelId = end === 'A' ? panelA : panelB;
+    const setPanelId = end === 'A' ? setPanelA : setPanelB;
+    const port = end === 'A' ? portA : portB;
+    const setPort = end === 'A' ? setPortA : setPortB;
+    const label = end === 'A' ? labelA : labelB;
+    const setLabel = end === 'A' ? setLabelA : setLabelB;
+    const other = end === 'A' ? portB : portA;
+    const ports = (panelId && portsById[panelId]) || [];
+    const key = end.toLowerCase();
+    return (
+      <Card size="small" title={t(`cable:create.end${end}`)} style={{ marginBottom: 16 }}>
+        <Form.Item label={t('cable:create.selectPanel')} required>
+          <Select
+            placeholder={t('cable:create.selectPanel')}
+            value={panelId}
+            onChange={(id: string) => {
+              setPanelId(id);
+              setPort(undefined);
+              portsOf(id);
+            }}
+            showSearch
+            optionFilterProp="label"
+            data-testid={`cable-panel-${key}-select`}
+            options={panelOptions.map((o) => ({ ...o, label: <span data-testid={`cable-panel-option-${o.value}`}>{o.label}</span> }))}
+            filterOption={(input, option) => String(option?.title ?? '').toLowerCase().includes(input.toLowerCase())}
+          />
+        </Form.Item>
+        <Form.Item label={t('cable:create.selectPort')} required>
+          <Select
+            placeholder={t('cable:create.selectPort')}
+            value={port}
+            onChange={setPort}
+            disabled={!panelId}
+            data-testid={`cable-port-${key}-select`}
+            options={ports
+              .filter((p) => isFree(p) && p.id !== other)
+              .map((p) => {
+                const text = `${p.number}${p.label ? ` (${p.label})` : ''}`;
+                return { value: p.id, label: <span data-testid={`cable-port-option-${p.id}`}>{text}</span> };
+              })}
+          />
+        </Form.Item>
+        <Form.Item label={t('cable:create.plugLabel')} extra={t('cable:create.optionalAuto')}>
+          <Input prefix={<ScanOutlined />} placeholder={t('cable:create.scanPlaceholder')} value={label} onChange={(e) => setLabel(e.target.value)} data-testid={`cable-shortid-${key}-input`} />
+        </Form.Item>
+      </Card>
+    );
+  };
 
-      <Form form={dualForm} layout="vertical">
-        <Row gutter={16}>
-          <Col span={12}>
-            <Card size="small" title="端口 A" style={{ marginBottom: 16 }}>
-              <Form.Item label="选择面板" required>
-                <Select
-                  placeholder="选择面板"
-                  value={selectedPanelA}
-                  onChange={handlePanelAChange}
-                  showSearch
-                  filterOption={(input, option: any) =>
-                    option?.children?.toLowerCase().includes(input.toLowerCase())
-                  }
-                >
-                  {panels.map((panel) => (
-                    <Option key={panel.id} value={panel.id}>
-                      {panel.name} {panel.shortId ? `(${formatShortId(panel.shortId)})` : ''}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-
-              <Form.Item label="选择端口" required>
-                <Select
-                  placeholder="选择端口"
-                  value={selectedPortA}
-                  onChange={setSelectedPortA}
-                  disabled={!selectedPanelA}
-                >
-                  {portsA.map((port) => (
-                    <Option key={port.id} value={port.id}>
-                      {port.number} {port.label && `(${port.label})`}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-
-              <Form.Item label="插头 ShortID" required>
-                <Input
-                  prefix={<ScanOutlined />}
-                  placeholder="扫描或输入 ShortID"
-                  value={shortIdInputA}
-                  onChange={(e) => setShortIdInputA(e.target.value)}
-                />
-              </Form.Item>
-            </Card>
-          </Col>
-
-          <Col span={12}>
-            <Card size="small" title="端口 B" style={{ marginBottom: 16 }}>
-              <Form.Item label="选择面板" required>
-                <Select
-                  placeholder="选择面板"
-                  value={selectedPanelB}
-                  onChange={handlePanelBChange}
-                  showSearch
-                  filterOption={(input, option: any) =>
-                    option?.children?.toLowerCase().includes(input.toLowerCase())
-                  }
-                >
-                  {panels.map((panel) => (
-                    <Option key={panel.id} value={panel.id}>
-                      {panel.name} {panel.shortId ? `(${formatShortId(panel.shortId)})` : ''}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-
-              <Form.Item label="选择端口" required>
-                <Select
-                  placeholder="选择端口"
-                  value={selectedPortB}
-                  onChange={setSelectedPortB}
-                  disabled={!selectedPanelB}
-                >
-                  {portsB.map((port) => (
-                    <Option key={port.id} value={port.id}>
-                      {port.number} {port.label && `(${port.label})`}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-
-              <Form.Item label="插头 ShortID" required>
-                <Input
-                  prefix={<ScanOutlined />}
-                  placeholder="扫描或输入 ShortID"
-                  value={shortIdInputB}
-                  onChange={(e) => setShortIdInputB(e.target.value)}
-                />
-              </Form.Item>
-            </Card>
-          </Col>
-        </Row>
-
-        <Card size="small" title="线缆信息">
-          <Form.Item label="线缆标签" name="label">
-            <Input placeholder="例如：服务器1-交换机1" />
-          </Form.Item>
-
-          <Form.Item label="线缆类型" name="type">
-            <Select placeholder="默认：CAT6" allowClear>
-              {cableTypeOptions.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  <Tag color={opt.color}>{opt.label}</Tag>
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="长度（米）" name="length">
-                <InputNumber
-                  min={0}
-                  step={0.1}
-                  placeholder="线缆长度"
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="颜色" name="color">
-                <Input placeholder="如：蓝色、红色" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item label="备注" name="notes">
-            <TextArea rows={2} placeholder="其他说明信息" />
-          </Form.Item>
-        </Card>
-      </Form>
+  const dualMode = (
+    <Space direction="vertical" style={{ width: '100%' }} size="large" data-testid="cable-dual-mode">
+      <Alert message={t('cable:create.dualTitle')} description={t('cable:create.dualDesc')} type="info" showIcon icon={<SwapOutlined />} />
+      <Row gutter={16}>
+        <Col span={12}>{endCard('A')}</Col>
+        <Col span={12}>{endCard('B')}</Col>
+      </Row>
+      <Card size="small" title={t('cable:create.cableInfo')}>
+        {detailFields}
+      </Card>
     </Space>
   );
 
-  const tabItems = [
-    {
-      key: 'single',
-      label: (
-        <span>
-          <ThunderboltOutlined /> 快速连接
-        </span>
-      ),
-      children: renderSingleMode(),
-    },
-    {
-      key: 'dual',
-      label: (
-        <span>
-          <ApiOutlined /> 完整连接
-        </span>
-      ),
-      children: renderDualMode(),
-    },
-  ];
-
-  const handleSubmit = () => {
-    if (activeTab === 'single') {
-      handleSingleSubmit();
-    } else {
-      handleDualSubmit();
-    }
-  };
-
-  const canSubmit = activeTab === 'single' ? canSubmitSingle : canSubmitDual;
+  const canSubmit = tab === 'single' ? !!panel && !!plug : !!portA && !!portB;
 
   return (
     <Modal
       title={
-        <Space size="large">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <LinkOutlined style={{ fontSize: 20 }} />
-            <Title level={4} style={{ margin: 0 }}>
-              新建线缆连接
-            </Title>
-          </div>
+        <Space>
+          <LinkOutlined style={{ fontSize: 20 }} />
+          <Title level={4} style={{ margin: 0 }}>
+            {t('cable:create.title')}
+          </Title>
         </Space>
       }
-      open={visible}
+      open={open}
       onCancel={onClose}
       width={1200}
+      forceRender
+      wrapProps={{ 'data-testid': 'create-cable-modal' }}
       footer={[
         <Button key="cancel" onClick={onClose}>
-          取消
+          {t('common:actions.cancel')}
         </Button>,
         <Button
           key="submit"
@@ -708,13 +437,39 @@ export default function CreateCableModal({
           icon={<CheckCircleOutlined />}
           loading={loading}
           disabled={!canSubmit}
-          onClick={handleSubmit}
+          onClick={tab === 'single' ? submitSingle : submitDual}
+          data-testid="cable-submit-btn"
         >
-          创建连接
+          {t('cable:create.submit')}
         </Button>,
       ]}
     >
-      <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
+      <Form name="create-cable-modal-form" form={form} layout="vertical" component={false}>
+        <Tabs
+          activeKey={tab}
+          onChange={setTab}
+          items={[
+            {
+              key: 'single',
+              label: (
+                <span data-testid="cable-tab-single">
+                  <ThunderboltOutlined /> {t('cable:create.tabSingle')}
+                </span>
+              ),
+              children: singleMode,
+            },
+            {
+              key: 'dual',
+              label: (
+                <span data-testid="cable-tab-dual">
+                  <ApiOutlined /> {t('cable:create.tabDual')}
+                </span>
+              ),
+              children: dualMode,
+            },
+          ]}
+        />
+      </Form>
     </Modal>
   );
 }

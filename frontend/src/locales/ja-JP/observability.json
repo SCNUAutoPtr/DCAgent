@@ -1,0 +1,99 @@
+{
+  "title": "オブザーバビリティ",
+  "description": "座席の状態、トラフィック、スイッチポートの健全性を一画面で",
+  "tabs": {
+    "seats": "座席",
+    "flows": "トラフィック",
+    "ports": "ポート診断",
+    "unmatched": "未照合"
+  },
+  "common": {
+    "refresh": "更新",
+    "autoRefresh": "自動更新",
+    "empty": "データなし"
+  },
+  "seats": {
+    "room": "部屋",
+    "selectRoom": "部屋を選択",
+    "online": "電源オン",
+    "offline": "電源オフ",
+    "unlocated": "接続先不明",
+    "traffic": "トラフィック",
+    "lastSeen": "最終確認",
+    "switchPort": "接続ポート",
+    "legend": "接続スイッチごとにグループ化。緑は電源オン、灰色はオフ、枠が太いほど通信量が多い",
+    "byLayout": "座席配置",
+    "bySwitch": "スイッチ別",
+    "front": "前方 / スクリーン",
+    "layoutLegend": "実際の座席配置。上部の色帯は接続スイッチ、下の数字はポート番号。緑は電源オン、枠が太いほど通信量が多い",
+    "noLayout": "この部屋のワークステーションにはまだ座席座標がないため、下ではスイッチごとに表示しています。フロアプランエディタで座席を配置すると実際の配置で描画されます。",
+    "noWiring": "この部屋のワークステーションはまだスイッチポートに紐付いていない（配線記録なし）ため、すべて「接続先不明」に入っています。ポートを同期するとスイッチごとに分かれます。"
+  },
+  "flows": {
+    "window": "期間",
+    "sampler": "サンプラー",
+    "allSamplers": "すべて",
+    "limit": "件数",
+    "source": "送信元",
+    "destination": "宛先",
+    "protocol": "プロトコル",
+    "bytes": "通信量",
+    "rate": "平均速度",
+    "records": "サンプル数",
+    "buffered": "バッファ中のフロー",
+    "hint": "sFlow/NetStream のサンプリングによる推定値（収集スクリプトから送信）"
+  },
+  "ports": {
+    "switchName": "スイッチ sysname",
+    "switchNamePlaceholder": "例：445A-U6",
+    "interfaceBrief": "display interface brief の出力",
+    "transceiver": "display transceiver diagnosis の出力（任意）",
+    "save": "スナップショットとして保存",
+    "analyze": "診断",
+    "findings": "検出事項",
+    "noFindings": "問題は見つかりませんでした",
+    "interfaces": "ポート",
+    "severity": "重要度",
+    "critical": "重大",
+    "warning": "注意",
+    "kind": "種類",
+    "value": "値",
+    "margin": "余裕(dB)",
+    "message": "説明",
+    "phy": "物理状態",
+    "inUtil": "受信使用率",
+    "outUtil": "送信使用率",
+    "inErrors": "受信エラー",
+    "outErrors": "送信エラー",
+    "history": "履歴",
+    "switches": "収集済みスイッチ",
+    "lastCollected": "最終収集",
+    "observations": "スナップショット数",
+    "saved": "{{count}} 件保存しました",
+    "kinds": {
+      "RX_POWER": "受光",
+      "TX_POWER": "送光",
+      "INPUT_ERRORS": "受信エラー",
+      "OUTPUT_ERRORS": "送信エラー",
+      "UTILIZATION": "使用率",
+      "ERRORS_GROWING": "エラー増加"
+    },
+    "unmatched": "sysname {{sysname}} の機器がないため、{{count}} 件を未照合に保存しました",
+    "noDevice": "機器に紐付いていないため履歴はありません"
+  },
+  "unmatched": {
+    "source": "種類",
+    "sysname": "sysname",
+    "ifName": "インターフェース",
+    "workstation": "端末",
+    "createdAt": "収集日時",
+    "resolve": "照合",
+    "resolveTitle": "未照合データを照合",
+    "device": "機器",
+    "resolved": "照合しました",
+    "sources": {
+      "WORKSTATION_ATTACH": "端末の接続先",
+      "PORT_OBSERVATION": "ポートのスナップショット"
+    }
+  }
+}

@@ -1,0 +1,184 @@
+.dc3d-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dc3d-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dc3d-stage {
+  position: relative;
+  height: calc(100vh - 230px);
+  min-height: 460px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 30%, #16213d 0%, #0b1020 70%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dc3d-stage .ant-result-title,
+.dc3d-stage .ant-result-subtitle,
+.dc3d-stage .ant-empty-description {
+  color: #cbd5e1;
+}
+
+.dc3d-center {
+  margin: auto;
+}
+
+.dc3d-overlay {
+  position: absolute;
+  z-index: 1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(11, 16, 32, 0.72);
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.7;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+.dc3d-stats {
+  top: 12px;
+  left: 12px;
+  max-width: calc(100% - 24px);
+}
+
+.dc3d-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  color: #e2e8f0;
+}
+
+.dc3d-stats-note {
+  color: #94a3b8;
+}
+
+.dc3d-legend {
+  left: 12px;
+  bottom: 12px;
+  min-width: 150px;
+}
+
+.dc3d-legend-title {
+  color: #e2e8f0;
+  margin-top: 4px;
+}
+
+.dc3d-legend-title:first-child {
+  margin-top: 0;
+}
+
+.dc3d-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dc3d-legend-item i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.dc3d-legend-item i.dc3d-legend-line {
+  height: 3px;
+  width: 14px;
+}
+
+.dc3d-legend-ramp {
+  height: 8px;
+  border-radius: 4px;
+  margin: 4px 0 2px;
+}
+
+.dc3d-legend-ramp-labels {
+  display: flex;
+  justify-content: space-between;
+}
+
+.dc3d-cabinet-label {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(11, 16, 32, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: #e2e8f0;
+  font-size: 12px;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.dc3d-cabinet-label.is-selected {
+  border-color: #7dd3fc;
+  color: #7dd3fc;
+  box-shadow: 0 0 12px rgba(125, 211, 252, 0.45);
+}
+
+.dc3d-short-id {
+  margin-left: 6px;
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.dc3d-tooltip {
+  min-width: 160px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(125, 211, 252, 0.4);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.dc3d-tooltip-title {
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+.dc3d-drawer-usage {
+  margin-bottom: 16px;
+}
+
+.dc3d-device-item {
+  cursor: pointer;
+  border-radius: 6px;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+.dc3d-device-item:hover {
+  background: rgba(22, 119, 255, 0.06);
+}
+
+.dc3d-device-item.is-selected {
+  background: rgba(22, 119, 255, 0.16);
+}
+
+.dc3d-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 28px;
+  border-radius: 3px;
+  margin-top: 4px;
+}
+
+.dc3d-device-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

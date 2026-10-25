@@ -5,21 +5,22 @@
   "editTitle": "Edit Panel",
   "fields": {
     "id": "ID",
-    "shortId": "shortID",
     "name": "Panel Name",
     "type": "Type",
     "device": "Device",
     "template": "Template",
-    "isCustomized": "Customized",
     "portCount": "Port Count",
     "createdAt": "Created At",
-    "actions": "Actions"
+    "actions": "Actions",
+    "label": "Label",
+    "face": "Face",
+    "connected": "Connected",
+    "notes": "Notes"
   },
   "panelTypes": {
-    "ETHERNET": "Ethernet",
-    "FIBER": "Fiber",
+    "NETWORK": "Network",
     "POWER": "Power",
-    "SERIAL": "Serial",
+    "CONSOLE": "Console",
     "USB": "USB",
     "OTHER": "Other"
   },
@@ -27,19 +28,16 @@
     "name": "e.g.: eth0",
     "type": "Select panel type",
     "device": "Select device",
-    "template": "Select template",
     "search": "Search panel name"
   },
   "messages": {
     "deleteConfirm": "Are you sure to delete this panel?",
-    "deleteWarning": "All ports under it will be deleted",
+    "deleteWarning": "Ports that still carry a cable, module or IP ask for confirmation",
     "createSuccess": "Panel created successfully",
     "updateSuccess": "Panel updated successfully",
     "deleteSuccess": "Panel deleted successfully",
-    "loadFailed": "Failed to load panel list",
-    "updateFailed": "Update failed",
-    "createFailed": "Create failed",
-    "deleteFailed": "Delete failed"
+    "forceDeleteTitle": "Ports of this panel are in use",
+    "forceDeleteContent": "Forcing unplugs the cable ends on these ports (they stay as loose ends) and releases their IPs. Ports holding an optical module need the module removed first."
   },
   "validation": {
     "nameRequired": "Please enter panel name",
@@ -48,10 +46,6 @@
   },
   "table": {
     "total": "Total {{total}} items"
-  },
-  "labels": {
-    "customized": "Customized",
-    "fromTemplate": "From Template"
   },
   "buttons": {
     "create": "Create Panel",
@@ -64,5 +58,213 @@
   "filters": {
     "selectDevice": "Select device",
     "selectType": "Select type"
+  },
+  "faces": {
+    "FRONT": "Front",
+    "REAR": "Rear"
+  },
+  "view": {
+    "size": "Size {{w}} × {{h}} mm",
+    "noPorts": "No ports",
+    "number": "Number",
+    "type": "Type",
+    "state": "State",
+    "plug": "Plug",
+    "ifName": "Interface",
+    "module": "Module",
+    "yes": "yes",
+    "portStates": {
+      "FREE": "Free",
+      "CONNECTED": "Connected",
+      "RESERVED": "Reserved",
+      "FAULTY": "Faulty"
+    }
+  },
+  "portTypes": {
+    "RJ45": "Ethernet copper",
+    "SFP": "SFP optical (1G)",
+    "SFP_PLUS": "SFP+ optical (10G)",
+    "SFP28": "SFP28 optical (25G)",
+    "QSFP": "QSFP optical (40G)",
+    "QSFP28": "QSFP28 optical (100G)",
+    "QSFP_DD": "QSFP-DD optical (400G)",
+    "CONSOLE": "Console",
+    "USB": "USB",
+    "POWER": "Power",
+    "OTHER": "Other"
+  },
+  "adminStates": {
+    "NORMAL": "Normal",
+    "RESERVED": "Reserved",
+    "FAULTY": "Faulty"
+  },
+  "editor": {
+    "createTitle": "New device panel",
+    "editTitle": "Edit device panel",
+    "device": "Device",
+    "deviceType": "Device type",
+    "model": "Model",
+    "uPosition": "U position",
+    "widthMm": "Width (mm)",
+    "heightMm": "Height (mm)",
+    "heightHint": "Device {{u}}U = {{mm}} mm; a 19-inch rack is 482.6 mm wide",
+    "template": "Template",
+    "noTemplate": "No template",
+    "templateInfo": "{{count}} ports, r{{revision}}",
+    "templateOutdated": "The template is now r{{revision}}; you can apply it again",
+    "applyTemplate": "Apply template",
+    "ports": "Port layout",
+    "portsHint": "Drag ports to move them; saving writes back changed ports only",
+    "saved": "Panel saved",
+    "deleted": "Panel deleted",
+    "delete": "Delete panel",
+    "placeholders": {
+      "name": "e.g. Front"
+    },
+    "templatesForModel": "Templates for this model",
+    "otherTemplates": "Other templates"
+  },
+  "generator": {
+    "outside": "Outside the plate",
+    "auto": "auto",
+    "dragHint": "{{count}} ports. Drag a port to fine-tune it; hold Shift to move its whole group",
+    "clearOverrides": "Clear {{count}} manual adjustments",
+    "issuesTitle": "The generator has problems; fix them before saving",
+    "issues": {
+      "DUPLICATE_NUMBER": "Duplicate port number: {{value}}",
+      "DUPLICATE_IFNAME": "Duplicate interface name: {{value}}",
+      "NAMES_COUNT_MISMATCH": "Group {{value}}: the number of names does not match the port count",
+      "UNKNOWN_OVERRIDE": "An adjustment points at a missing port: {{value}}"
+    },
+    "group": "Port group {{n}}",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "removeGroup": "Remove group",
+    "portType": "Port type",
+    "count": "Count",
+    "numbering": "Numbering",
+    "numberingPrefix": "Prefix + index",
+    "numberingNames": "Explicit names",
+    "names": "Numbers (comma separated)",
+    "prefix": "Number prefix",
+    "start": "Start",
+    "step": "Step",
+    "ifName": "Interface name ({n} = index)",
+    "rows": "Rows",
+    "order": "Order",
+    "orders": {
+      "ROW_MAJOR": "Row by row",
+      "COLUMN_MAJOR": "Odd top, even bottom (by column)"
+    },
+    "gap": "Gap to previous group (mm)",
+    "xMm": "X (mm)",
+    "yMm": "Y (mm)",
+    "geometry": "Size and pitch",
+    "pitchX": "Column pitch (mm)",
+    "pitchY": "Row pitch (mm)",
+    "wMm": "Port width (mm)",
+    "hMm": "Port height (mm)",
+    "rotation": "Rotation",
+    "addGroup": "Add port group",
+    "presets": {
+      "switch48ge4xge": "48 x RJ45 + 4 x SFP+ switch (odd top, even bottom)",
+      "switch24ge4xge": "24 x RJ45 + 4 x SFP+ switch (odd top, even bottom)",
+      "patchPanel24": "24-port patch panel",
+      "serverRear": "Server rear: 2 PSU + 4 NIC + BMC + 2 USB + VGA"
+    }
+  },
+  "apply": {
+    "title": "Apply template",
+    "confirm": "Apply",
+    "done": "Template applied",
+    "create": "New {{count}}",
+    "update": "Updated {{count}}",
+    "delete": "Will delete {{count}}",
+    "kept": "Kept {{count}}",
+    "reasons": {
+      "CABLE": "cable",
+      "MODULE": "module",
+      "IP": "IP",
+      "WORKSTATION": "workstation",
+      "OBSERVATION": "observations",
+      "ADMIN_STATE": "reserved or faulty",
+      "LABEL": "has a label",
+      "NOTES": "has notes"
+    },
+    "conflictsTitle": "Conflicts: the template cannot be applied",
+    "conflicts": {
+      "IFNAME_TAKEN": "Port {{number}} is in use and holds the interface name {{value}} the template needs",
+      "MODULE_DOES_NOT_FIT": "The module in port {{number}} does not fit the new port type {{value}}; remove it first"
+    },
+    "untouched": "Ports are matched by number. State, label, notes and connections of existing ports are not changed. Ports the template does not have are kept when they are in use or carry a state, label or notes."
+  },
+  "batch": {
+    "title": "Batch apply: {{name}}",
+    "confirm": "Apply to {{count}} devices",
+    "done": "Applied to {{count}} devices",
+    "noModel": "The template has no device model, so it cannot be batch applied",
+    "hint": "{{count}} devices of model {{model}}. The selected devices are applied in one transaction; any conflict stops all of them.",
+    "device": "Device",
+    "panel": "Target panel",
+    "newPanel": "New panel",
+    "newPanelDetail": "The device has no panel for this face; a new one is created from the template (label allocated automatically).",
+    "summary": "Changes",
+    "conflicts": "{{count}} conflicts"
+  },
+  "suggest": {
+    "title": "{{count}} panel templates for this model",
+    "hint": "Checked templates become panels with ports right after the device is created."
+  },
+  "templates": {
+    "title": "Panel templates",
+    "description": "Define panels with the parametric generator or by placing ports. Linked to a device model, a template is offered when creating devices and can be applied to all devices of the model.",
+    "createTitle": "New panel template",
+    "editTitle": "Edit template: {{name}}",
+    "viewTitle": "Template preview",
+    "fields": {
+      "name": "Name",
+      "type": "Panel type",
+      "face": "Face",
+      "deviceModel": "Device model",
+      "widthMm": "Width (mm)",
+      "heightMm": "Height (mm)",
+      "description": "Description",
+      "size": "Size",
+      "source": "Defined by",
+      "portCount": "Ports",
+      "panelCount": "Panels",
+      "revision": "Revision"
+    },
+    "validation": {
+      "nameRequired": "Enter a template name"
+    },
+    "deviceModelHint": "Linked templates are offered when creating devices of the model and can be batch applied",
+    "heightHint": "about {{u}}U",
+    "modeGenerator": "Generator",
+    "modeManual": "Hand placed",
+    "startFromPreset": "Start from a preset...",
+    "revisionHint": "{{count}} panels use this template; changing ports raises the revision and those panels are flagged for re-apply",
+    "manualHint": "Saving hand-placed ports drops the generator parameters.",
+    "toGeneratorTitle": "Switch back to the generator?",
+    "toGeneratorContent": "Hand-placed positions will be replaced by the generator output.",
+    "created": "Template created",
+    "updated": "Template saved",
+    "deleted": "Template deleted",
+    "deleteConfirm": "Delete this template?",
+    "deleteConfirmDescription": "The {{count}} panels using it keep their ports; only the link to the template is removed.",
+    "imported": "Imported: {{created}} new, {{updated}} updated, {{unchanged}} unchanged",
+    "exported": "Exported {{count}} templates",
+    "importInvalid": "The file is not in {{format}} format",
+    "panelCount": "{{count}} panels use this template",
+    "actions": {
+      "view": "Preview",
+      "edit": "Edit",
+      "batchApply": "Batch apply",
+      "delete": "Delete",
+      "importPresets": "Import presets",
+      "import": "Import JSON",
+      "export": "Export JSON",
+      "create": "New template"
+    }
   }
 }

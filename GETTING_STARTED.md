@@ -1,220 +1,118 @@
-# DCAgent 快速开始指南
+# DCAgent 快速开始
 
 ## 前置要求
 
-在开始之前，请确保你的系统已安装以下软件：
+- Node.js 20 以上（本机用的是 Homebrew Node）
+- Docker（只跑 PostgreSQL）
+- Chrome（E2E 用 `channel: 'chrome'`）
 
-- **Node.js** 18+ ([下载](https://nodejs.org/))
-- **npm** 或 **yarn** 或 **pnpm**
-- **Neo4j** 5+ ([下载](https://neo4j.com/download/))
-  - 或使用 Docker 运行 Neo4j
+npm 报证书错误（`UNABLE_TO_GET_ISSUER_CERT` 等）时，先执行 `brew postinstall openssl@4` 再重试。
 
-## 方式一：本地开发（推荐用于开发）
+## 1. 数据库
 
-### 1. 安装 Neo4j
+项目根目录建 `.env`，写入 `POSTGRES_PASSWORD=...`，然后：
 
-#### macOS (使用 Homebrew)
 ```bash
-brew install neo4j
-neo4j start
+docker compose up -d postgres
 ```
 
-#### 使用 Docker
-```bash
-docker run -d \
-  --name neo4j \
-  -p 7474:7474 -p 7687:7687 \
-  -e NEO4J_AUTH=neo4j/password \
-  neo4j:5-community
-```
+镜像固定为 `postgres:16-alpine`。不要换成 Debian 版 `postgres:16` 再挂同一个数据卷：glibc 和 musl 对 `en_US.utf8` 的排序不同，旧卷里文本列上的 btree 索引会和新排序对不上（唯一约束和查询可能悄悄失效）。真要换镜像，先 `pg_dump`，换镜像后用新卷 `pg_restore`。名称类列（机房、机柜、设备、面板、端口号、工作站、子网、型号、模板）用的是 ICU 的 `natural` 排序规则（迁移里建的），不依赖 C 库，`S110-9 < S110-10 < S110-100`。
 
-访问 http://localhost:7474 打开 Neo4j Browser，使用 `neo4j/password` 登录。
+同一个容器里有几个库：
 
-### 2. 安装后端依赖
+| 库 | 用途 | 谁会写 |
+|---|---|---|
+| `dcagent` | 真实数据 | 后端 3000；`npm run db:deploy`；`npm run migrate:legacy -- --target=prod --apply` |
+| `dcagent_test` | 测试、E2E、迁移演练 | `npm test`、`npm run db:test:reset`、Playwright |
+| `dcagent_legacy` | 重构前数据快照（迁移的只读来源） | 只有 `npm run db:legacy:restore` |
+| `dcagent_shadow` | Prisma 生成迁移时的影子库 | Prisma |
+
+## 2. 后端
 
 ```bash
 cd backend
 npm install
-
-# 复制环境变量配置
-cp .env.example .env
-
-# 生成 Prisma Client
-npm run prisma:generate
-
-# 运行数据库迁移
-npm run prisma:migrate
+cp .env.example .env         # 真实库，填密码
+cp .env.example .env.test    # 测试库：DATABASE_URL 改成 .../dcagent_test，PORT=3100，CORS_ORIGIN=http://localhost:5174
+npm run db:deploy            # 建表（prisma migrate deploy）
+npm run dev                  # http://localhost:3000，nodemon 监视 src/
 ```
 
-### 3. 启动后端服务
+`.env` 里每个键都必须有值，缺了服务拒绝启动。
 
-```bash
-cd backend
-npm run dev
-```
-
-后端服务将运行在 http://localhost:3000
-
-访问 http://localhost:3000/health 检查服务状态。
-
-### 4. 安装前端依赖
+## 3. 前端
 
 ```bash
 cd frontend
 npm install
-
-# 复制环境变量配置
-cp .env.example .env
+cp .env.example .env         # API_PROXY_TARGET=http://127.0.0.1:3000
+npm run dev                  # http://localhost:5173
 ```
 
-### 5. 启动前端服务
+浏览器只请求同源的 `/api/v1`，由 Vite 代理到后端。
+
+## 4. 测试
+
+后端：
+
+```bash
+cd backend
+npm run typecheck            # tsc（src + scripts + test）+ emoji 检查
+npm run test:unit            # 纯函数：契约、生成器、迁移转换、Neo4j 导出解析
+npm run test:int             # 先重置 dcagent_test，再跑 test/*.int.test.ts
+npm test                     # 两者都跑
+npm run build
+```
+
+集成测试和重置脚本都先检查库名以 `_test` 结尾，指向别的库会直接报错退出。
+
+前端：
 
 ```bash
 cd frontend
-npm run dev
+npm run typecheck
+npm run lint
+npm test                     # 三语 key 一致、无 emoji、错误码文案齐全、3D 布局计算
+npm run build
+npx playwright test          # E2E
+npx playwright test -c playwright.night.config.ts   # 只读巡检真实环境
 ```
 
-前端应用将运行在 http://localhost:5173
+`npx playwright test` 自己启动一套测试环境：后端 3100（先 `db:test:reset`，连 `dcagent_test`）和 Vite 5174，跑前检查这个后端是空库，所以不会碰 3000/5173 和真实数据。结果在 `test-results/e2e/`。
 
-## 方式二：使用 Docker Compose（推荐用于快速体验）
+`playwright.night.config.ts` 只跑 `e2e/night-smoke.spec.ts`，对正在运行的 5173/3000 做只读巡检（亮暗主题、命令面板、3D 机房、面板模板预览、三语、旧页面），截图和问题清单在 `test-results/night-screenshots/`。
 
-### 1. 启动所有服务
+## 5. 从重构前的数据迁移
 
-```bash
-# 在项目根目录执行
-docker-compose up -d
-```
-
-这将启动：
-- Neo4j (端口 7474, 7687)
-- 后端服务 (端口 3000)
-- 前端服务 (端口 5173)
-
-### 2. 访问应用
-
-- 前端: http://localhost:5173
-- 后端 API: http://localhost:3000/api
-- Neo4j Browser: http://localhost:7474
-
-### 3. 查看日志
-
-```bash
-# 查看所有服务日志
-docker-compose logs -f
-
-# 查看特定服务日志
-docker-compose logs -f backend
-docker-compose logs -f frontend
-docker-compose logs -f neo4j
-```
-
-### 4. 停止服务
-
-```bash
-docker-compose down
-```
-
-## 初始化数据
-
-### 使用 Prisma Studio 管理数据
+重构前的数据在只读备份 `db-backups/dcagent-before-night-modernize-20261025-0057.dump` 里。迁移脚本从 `dcagent_legacy` 读，整表重建目标库，在同一个事务里逐表对账，全部通过才提交。
 
 ```bash
 cd backend
-npm run prisma:studio
+npm run db:legacy:restore                                  # 备份 -> dcagent_legacy（只通过 stdin 读备份文件）
+npm run migrate:legacy -- --target=test                    # 在 dcagent_test 上演练，结束时回滚
+npm run migrate:legacy -- --target=test --apply            # 在 dcagent_test 上提交
+npm run migrate:legacy -- --target=prod --apply            # 写真实库 dcagent
+npm run templates:presets                                  # 导入系统面板模板预设（迁移之后的新数据）
 ```
 
-这将打开 Prisma Studio 在 http://localhost:5555，你可以在这里：
-- 添加数据中心 (DataCenter)
-- 添加机房 (Room)
-- 添加机柜 (Cabinet)
-- 添加设备 (Device)
-- 添加面板和端口 (Panel, Port)
+- 报告和补打标签清单写到 `backend/migration-reports/`（不进 git）：`<时间>-<target>.json`、`labels-to-print-<时间>-<target>.csv`。
+- 对账项：行数、主键、关系、标签绑定、推导状态（端口已连、线缆在用、工作站在线）、逐行 md5，以及 Neo4j 备份里每个节点和连接要么在旧 PG 里、要么是父节点已删的孤儿。任一项不通过就整体回滚并以非零退出。
+- 重复执行结果相同（`digest` 一样）。
+- 保护：`--target=prod --apply` 时，真实库必须是空的，或者和上一次成功的 prod 迁移写进去的内容完全一样（按表比较 digest）。迁移之后录入的任何数据（包括 `templates:presets` 导入的模板）都会让脚本拒绝执行，并列出变化的表。确实要覆盖时，先 `pg_dump` 备份，再加 `--overwrite-live`。
 
-### API 测试
-
-使用 curl 或 Postman 测试 API：
+重建真实库的完整步骤（会清空 `dcagent`，先备份）：
 
 ```bash
-# 健康检查
-curl http://localhost:3000/health
-
-# 获取所有设备
-curl http://localhost:3000/api/devices
-
-# 创建设备
-curl -X POST http://localhost:3000/api/devices \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Server-01",
-    "type": "SERVER",
-    "model": "Dell PowerEdge R740",
-    "cabinetId": "your-cabinet-id"
-  }'
+docker exec dcagent-postgres pg_dump -U dcagent -d dcagent -Fc > db-backups/dcagent-<说明>-$(date +%Y%m%d-%H%M).dump
+docker exec dcagent-postgres psql -U dcagent -d dcagent -c 'DROP SCHEMA public CASCADE' -c 'CREATE SCHEMA public'
+cd backend && npm run db:deploy && npm run migrate:legacy -- --target=prod --apply && npm run templates:presets
+touch src/index.ts           # 让 nodemon 重启后端，丢掉旧连接上缓存的查询计划
 ```
-
-## 开发工作流
-
-### 1. 修改数据模型
-
-编辑 `backend/prisma/schema.prisma`，然后运行：
-
-```bash
-cd backend
-npm run prisma:migrate
-npm run prisma:generate
-```
-
-### 2. 添加新的 API 端点
-
-1. 在 `backend/src/services/` 创建服务
-2. 在 `backend/src/routes/` 创建路由
-3. 在 `backend/src/index.ts` 注册路由
-
-### 3. 添加前端页面
-
-1. 在 `frontend/src/pages/` 创建页面组件
-2. 在 `frontend/src/App.tsx` 添加路由
-3. 在 `frontend/src/components/Layout/AppSidebar.tsx` 添加菜单项
 
 ## 常见问题
 
-### Neo4j 连接失败
+**后端报 `cached plan must not change result type`**：数据库结构变了，后端还拿着旧连接。`touch backend/src/index.ts` 让 nodemon 重启。
 
-检查 Neo4j 是否正在运行：
-```bash
-# 如果使用 Homebrew
-neo4j status
+**端口被占用**：3000/5173 是日常开发用的后端和前端，3100/5174 是 E2E 自己起的测试环境。`lsof -iTCP:3000 -sTCP:LISTEN` 查看占用者。
 
-# 如果使用 Docker
-docker ps | grep neo4j
-```
-
-### Prisma 迁移失败
-
-删除数据库并重新迁移：
-```bash
-cd backend
-rm prisma/dev.db
-npm run prisma:migrate
-```
-
-### 端口被占用
-
-修改端口配置：
-- 后端: 编辑 `backend/.env` 中的 `PORT`
-- 前端: 编辑 `frontend/vite.config.ts` 中的 `server.port`
-
-## 下一步
-
-- 📖 查看 [后端 README](backend/README.md) 了解后端详情
-- 🎨 查看 [前端 README](frontend/README.md) 了解前端详情
-- 📝 查看 [dcagent.md](dcagent.md) 了解功能规划
-
-## 需要帮助？
-
-如有问题，请查看：
-- 后端日志
-- 前端浏览器控制台
-- Neo4j Browser 查询结果
-
-祝你使用愉快！ 🚀
+**迁移脚本提示 `refused: ... tables changed since ...`**：真实库里有迁移之后录入的数据，见上面的保护说明。

@@ -1,0 +1,63 @@
+{
+  "format": "dcagent.panel-template",
+  "version": 1,
+  "templates": [
+    {
+      "name": "样例 2U 服务器后面板 2 电源 + 4 网口 + BMC + 2 USB + VGA",
+      "type": "OTHER",
+      "face": "REAR",
+      "deviceModel": null,
+      "widthMm": 482.6,
+      "heightMm": 88.9,
+      "description": "样例：两个电源、4 个板载网口、BMC 管理口、2 个 USB、VGA",
+      "generator": {
+        "version": 1,
+        "groups": [
+          {
+            "portType": "POWER",
+            "count": 2,
+            "numberPrefix": "PSU",
+            "rows": 1,
+            "xMm": 15,
+            "pitchXMm": 70
+          },
+          {
+            "portType": "RJ45",
+            "count": 4,
+            "numberPrefix": "NIC",
+            "rows": 1,
+            "gapMm": 40,
+            "pitchXMm": 18
+          },
+          {
+            "portType": "RJ45",
+            "count": 1,
+            "names": [
+              "BMC"
+            ],
+            "gapMm": 15
+          },
+          {
+            "portType": "USB",
+            "count": 2,
+            "numberPrefix": "USB",
+            "rows": 2,
+            "order": "COLUMN_MAJOR",
+            "gapMm": 15,
+            "pitchYMm": 10
+          },
+          {
+            "portType": "OTHER",
+            "count": 1,
+            "names": [
+              "VGA"
+            ],
+            "gapMm": 15,
+            "wMm": 31,
+            "hMm": 12
+          }
+        ]
+      }
+    }
+  ]
+}

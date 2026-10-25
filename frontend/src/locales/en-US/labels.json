@@ -1,0 +1,116 @@
+{
+  "title": "Labels",
+  "description": "Cabinets, panels and cable ends must carry a label. Generate number ranges, create print jobs, void damaged labels and check for entities without one.",
+  "tabs": {
+    "labels": "Labels",
+    "tasks": "Print jobs",
+    "missing": "Missing"
+  },
+  "fields": {
+    "shortId": "Label",
+    "state": "State",
+    "bound": "Bound to",
+    "batchNo": "Batch",
+    "printedAt": "Printed",
+    "firstBoundAt": "First bound",
+    "boundAt": "Last bound",
+    "notes": "Notes",
+    "createdAt": "Created",
+    "completedAt": "Completed",
+    "createdBy": "Created by",
+    "count": "Count",
+    "taskName": "Job name",
+    "kind": "Kind",
+    "name": "Name",
+    "location": "Location",
+    "actions": "Actions"
+  },
+  "states": {
+    "GENERATED": "Generated",
+    "PRINTED": "Printed",
+    "VOID": "Void"
+  },
+  "taskStatuses": {
+    "PENDING": "Pending",
+    "COMPLETED": "Completed",
+    "FAILED": "Failed"
+  },
+  "bound": {
+    "yes": "Bound",
+    "no": "Unbound"
+  },
+  "stats": {
+    "total": "Total",
+    "bound": "Bound",
+    "allocatable": "Allocatable",
+    "toPrint": "Bound, not printed",
+    "void": "Void",
+    "missing": "Entities without label"
+  },
+  "actions": {
+    "generate": "Generate",
+    "createPrintTask": "New print job",
+    "batchVoid": "Void range",
+    "void": "Void",
+    "exportCsv": "Export CSV",
+    "complete": "Mark done",
+    "fail": "Mark failed",
+    "refresh": "Refresh"
+  },
+  "filters": {
+    "state": "State",
+    "bound": "Bound",
+    "kind": "Entity kind",
+    "range": "Range, e.g. 1-5, 8"
+  },
+  "modals": {
+    "generate": "Generate label numbers",
+    "createPrintTask": "New print job",
+    "batchVoid": "Void labels",
+    "void": "Void label {{display}}",
+    "confirmComplete": "Mark this job as printed?",
+    "rangeHelp": "Single: 1 or E-00001; range: 1-5 or E-00001-E-00005; mixed: 1-5, 8, 10-12",
+    "modeCount": "By count",
+    "modeRange": "By range",
+    "modeBound": "Bound, not printed"
+  },
+  "form": {
+    "count": "Count",
+    "rangeExpr": "Range",
+    "batchNo": "Batch",
+    "taskName": "Job name",
+    "createdBy": "Created by",
+    "notes": "Notes",
+    "reason": "Reason"
+  },
+  "placeholders": {
+    "batchNo": "Optional",
+    "taskName": "e.g. 2026 batch 1",
+    "createdBy": "Optional",
+    "reason": "e.g. damaged or lost",
+    "rangeExpr": "e.g. 1-5, 8, E-00010-E-00012"
+  },
+  "validation": {
+    "countRequired": "Enter a count",
+    "rangeRequired": "Enter a range",
+    "taskNameRequired": "Enter a job name",
+    "reasonRequired": "Enter a reason"
+  },
+  "messages": {
+    "generated": "{{created}} created, {{existing}} already existed",
+    "taskCreated": "Print job created with {{count}} labels",
+    "taskCompleted": "Print job updated",
+    "voided": "{{count}} labels voided",
+    "voidPartial": "{{ok}} voided, {{failed}} skipped",
+    "voidReasons": {
+      "NOT_FOUND": "does not exist",
+      "BOUND": "bound",
+      "ALREADY_VOID": "already void"
+    },
+    "exported": "Exported",
+    "noMissing": "Every entity carries a label"
+  },
+  "pagination": {
+    "total": "{{total}} items"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "VALIDATION_ERROR": "The submitted data is invalid",
+  "NOT_FOUND": "The record does not exist or was deleted",
+  "UNIQUE_VIOLATION": "An identical record already exists",
+  "LABEL_NOT_AVAILABLE": "This label is not available: already bound or void",
+  "LABEL_REQUIRED": "Cabinets, panels and cable ends must carry a label",
+  "PORT_OCCUPIED": "The port is already occupied by another cable",
+  "PORT_HAS_DEPENDENTS": "The port is still used by a cable, module, IP or workstation",
+  "NOT_EMPTY": "It still contains items; empty it before deleting",
+  "U_SPACE_CONFLICT": "The U range overlaps an existing device",
+  "U_OUT_OF_RANGE": "The U position exceeds the cabinet height",
+  "IP_OUT_OF_SUBNET": "The IP address is outside the subnet",
+  "IP_CONFLICT": "IP address conflict",
+  "TEMPLATE_REVISION_MISMATCH": "The template has changed; reload and try again",
+  "TEMPLATE_CONFLICT": "The template conflicts with ports in use on the panel; nothing was changed",
+  "INVALID_STATE": "This action is not allowed in the current state",
+  "INTERNAL": "Internal server error",
+  "NETWORK": "Cannot reach the server",
+  "detail": {
+    "field": "Field: {{fields}}",
+    "items": "Affected: {{items}}"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "format": "dcagent.panel-template",
+  "version": 1,
+  "templates": [
+    {
+      "name": "样例 24 口千兆交换机前面板",
+      "type": "NETWORK",
+      "face": "FRONT",
+      "deviceModel": null,
+      "widthMm": 482.6,
+      "heightMm": 44.45,
+      "description": "样例：标准 24 口 RJ45 前面板，两行 12 列，按行编号 1-12 在上、13-24 在下（生成器写法）",
+      "generator": {
+        "version": 1,
+        "groups": [
+          {
+            "portType": "RJ45",
+            "count": 24,
+            "rows": 2,
+            "order": "ROW_MAJOR",
+            "xMm": 30,
+            "yMm": 8,
+            "pitchXMm": 18,
+            "pitchYMm": 20,
+            "wMm": 14,
+            "hMm": 12
+          }
+        ]
+      }
+    }
+  ]
+}

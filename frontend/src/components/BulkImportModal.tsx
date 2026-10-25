@@ -1,260 +1,188 @@
 import { useState } from 'react';
-import { Modal, Upload, Button, Table, Alert, Space, message, Typography } from 'antd';
-import { UploadOutlined, DownloadOutlined, InboxOutlined } from '@ant-design/icons';
-import { RcFile } from 'antd/es/upload';
+import { Alert, Button, Modal, Space, Table, Typography, Upload, message } from 'antd';
+import type { UploadFile } from 'antd';
+import type { RcFile } from 'antd/es/upload';
+import { DownloadOutlined, InboxOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import * as XLSX from 'xlsx';
 
 const { Dragger } = Upload;
 const { Text } = Typography;
 
+export type Cell = string | number | boolean | null | undefined;
+export type ImportRow = Record<string, Cell>;
+
 export interface BulkImportColumn {
   title: string;
   dataIndex: string;
-  key: string;
   required?: boolean;
-  validator?: (value: any) => string | null; // 返回错误信息或null
+  /** error text, or null when valid */
+  validator?: (value: Cell) => string | null;
 }
 
 interface BulkImportModalProps {
-  visible: boolean;
+  open: boolean;
   title: string;
   columns: BulkImportColumn[];
-  templateData?: any[]; // 模板示例数据
+  /** example rows keyed by dataIndex; headers come from the column titles */
+  templateRows?: ImportRow[];
   onCancel: () => void;
-  onSubmit: (data: any[]) => Promise<void>;
+  /** rows keyed by dataIndex; throw to keep the dialog open */
+  onSubmit: (rows: ImportRow[]) => Promise<void>;
 }
 
 interface ParsedRow {
-  _index: number;
-  _errors: string[];
-  [key: string]: any;
+  index: number;
+  errors: string[];
+  values: ImportRow;
 }
 
-export default function BulkImportModal({
-  visible,
-  title,
-  columns,
-  templateData = [],
-  onCancel,
-  onSubmit,
-}: BulkImportModalProps) {
-  const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
+/** Spreadsheet import: download a template, upload xlsx/csv, check each row, then hand the rows over. */
+export default function BulkImportModal({ open, title, columns, templateRows = [], onCancel, onSubmit }: BulkImportModalProps) {
+  const { t } = useTranslation('common');
+  const [rows, setRows] = useState<ParsedRow[]>([]);
+  const [files, setFiles] = useState<UploadFile[]>([]);
   const [loading, setLoading] = useState(false);
-  const [fileList, setFileList] = useState<any[]>([]);
 
-  // 下载模板
-  const handleDownloadTemplate = () => {
-    const ws = XLSX.utils.json_to_sheet(templateData.length > 0 ? templateData : [
-      columns.reduce((acc, col) => {
-        acc[col.title] = '';
-        return acc;
-      }, {} as any)
-    ]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Template');
-    XLSX.writeFile(wb, `${title}_模板.xlsx`);
-    message.success('模板已下载');
+  const reset = () => {
+    setRows([]);
+    setFiles([]);
   };
 
-  // 解析文件
-  const handleFileUpload = async (file: RcFile) => {
+  const downloadTemplate = () => {
+    const source = templateRows.length ? templateRows : [{}];
+    const sheet = XLSX.utils.json_to_sheet(source.map((r) => Object.fromEntries(columns.map((c) => [c.title, r[c.dataIndex] ?? '']))));
+    const book = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(book, sheet, 'Template');
+    XLSX.writeFile(book, `${title}_${t('bulkImport.templateSuffix')}.xlsx`);
+    message.success(t('bulkImport.templateDownloaded'));
+  };
+
+  const parse = async (file: RcFile) => {
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-      // 验证和转换数据
-      const validatedData: ParsedRow[] = jsonData.map((row: any, index) => {
+      const book = XLSX.read(await file.arrayBuffer());
+      const sheet = book.Sheets[book.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json<Record<string, Cell>>(sheet);
+      const parsed = json.map((raw, i) => {
         const errors: string[] = [];
-        const parsedRow: ParsedRow = {
-          _index: index + 1,
-          _errors: errors,
-        };
-
-        columns.forEach((col) => {
-          const value = row[col.title];
-
-          // 检查必填字段
-          if (col.required && (value === undefined || value === null || value === '')) {
-            errors.push(`${col.title} 是必填项`);
+        const values: ImportRow = {};
+        for (const col of columns) {
+          const v = raw[col.title];
+          const empty = v === undefined || v === null || v === '';
+          if (col.required && empty) errors.push(t('bulkImport.required', { field: col.title }));
+          if (!empty && col.validator) {
+            const err = col.validator(v);
+            if (err) errors.push(err);
           }
-
-          // 自定义验证
-          if (value !== undefined && value !== null && value !== '' && col.validator) {
-            const error = col.validator(value);
-            if (error) {
-              errors.push(error);
-            }
-          }
-
-          parsedRow[col.dataIndex] = value;
-        });
-
-        return parsedRow;
+          values[col.dataIndex] = empty ? undefined : v;
+        }
+        return { index: i + 1, errors, values };
       });
-
-      setParsedData(validatedData);
-      setFileList([file]);
-      message.success(`成功解析 ${validatedData.length} 条记录`);
-    } catch (error: any) {
-      message.error('文件解析失败: ' + error.message);
+      setRows(parsed);
+      setFiles([file]);
+      message.success(t('bulkImport.parsed', { count: parsed.length }));
+    } catch {
+      message.error(t('bulkImport.parseFailed'));
     }
-
-    return false; // 阻止自动上传
+    return false;
   };
 
-  // 提交导入
-  const handleSubmit = async () => {
-    const hasErrors = parsedData.some(row => row._errors.length > 0);
-    if (hasErrors) {
-      message.error('存在验证错误，请修正后重试');
+  const submit = async () => {
+    if (rows.some((r) => r.errors.length)) {
+      message.error(t('bulkImport.hasErrors'));
       return;
     }
-
-    if (parsedData.length === 0) {
-      message.error('没有可导入的数据');
+    if (!rows.length) {
+      message.error(t('bulkImport.noData'));
       return;
     }
-
     setLoading(true);
     try {
-      // 移除内部字段
-      const cleanData = parsedData.map(({ _index, _errors, ...rest }) => rest);
-      await onSubmit(cleanData);
-      message.success('导入成功');
-      handleReset();
+      await onSubmit(rows.map((r) => r.values));
+      reset();
       onCancel();
-    } catch (error: any) {
-      message.error('导入失败: ' + error.message);
+    } catch {
+      // the caller reported it
     } finally {
       setLoading(false);
     }
   };
 
-  // 重置
-  const handleReset = () => {
-    setParsedData([]);
-    setFileList([]);
-  };
-
-  // 显示列配置
+  const errorCount = rows.filter((r) => r.errors.length).length;
   const tableColumns = [
-    {
-      title: '行号',
-      dataIndex: '_index',
-      key: '_index',
-      width: 60,
-      fixed: 'left' as const,
-    },
-    ...columns.map((col) => ({
-      title: col.title + (col.required ? ' *' : ''),
-      dataIndex: col.dataIndex,
-      key: col.key,
-      render: (text: any) => text ?? '-',
+    { title: t('bulkImport.row'), dataIndex: 'index', key: 'index', width: 60, fixed: 'left' as const },
+    ...columns.map((c) => ({
+      title: c.title + (c.required ? ' *' : ''),
+      key: c.dataIndex,
+      render: (_: unknown, r: ParsedRow) => String(r.values[c.dataIndex] ?? '-'),
     })),
     {
-      title: '状态',
-      dataIndex: '_errors',
-      key: '_errors',
-      width: 100,
+      title: t('bulkImport.status'),
+      key: 'errors',
+      width: 110,
       fixed: 'right' as const,
-      render: (errors: string[]) =>
-        errors.length > 0 ? (
-          <Text type="danger">错误 ({errors.length})</Text>
-        ) : (
-          <Text type="success">正常</Text>
-        ),
+      render: (_: unknown, r: ParsedRow) =>
+        r.errors.length ? <Text type="danger">{t('bulkImport.errorCount', { count: r.errors.length })}</Text> : <Text type="success">{t('bulkImport.ok')}</Text>,
     },
   ];
-
-  const errorCount = parsedData.filter(row => row._errors.length > 0).length;
 
   return (
     <Modal
       title={title}
-      open={visible}
+      open={open}
       onCancel={onCancel}
       width={1000}
       footer={[
         <Button key="cancel" onClick={onCancel}>
-          取消
+          {t('actions.cancel')}
         </Button>,
-        <Button key="reset" onClick={handleReset} disabled={parsedData.length === 0}>
-          清空
+        <Button key="reset" onClick={reset} disabled={!rows.length}>
+          {t('bulkImport.clear')}
         </Button>,
-        <Button
-          key="submit"
-          type="primary"
-          loading={loading}
-          onClick={handleSubmit}
-          disabled={parsedData.length === 0 || errorCount > 0}
-        >
-          导入 ({parsedData.length} 条)
+        <Button key="submit" type="primary" loading={loading} onClick={submit} disabled={!rows.length || errorCount > 0}>
+          {t('bulkImport.submit', { count: rows.length })}
         </Button>,
       ]}
     >
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         <div>
-          <Button
-            icon={<DownloadOutlined />}
-            onClick={handleDownloadTemplate}
-            style={{ marginBottom: 16 }}
-          >
-            下载导入模板
+          <Button icon={<DownloadOutlined />} onClick={downloadTemplate} style={{ marginBottom: 16 }}>
+            {t('bulkImport.downloadTemplate')}
           </Button>
-
-          <Dragger
-            accept=".xlsx,.xls,.csv"
-            fileList={fileList}
-            beforeUpload={handleFileUpload}
-            onRemove={handleReset}
-            maxCount={1}
-          >
+          <Dragger accept=".xlsx,.xls,.csv" fileList={files} beforeUpload={parse} onRemove={reset} maxCount={1}>
             <p className="ant-upload-drag-icon">
               <InboxOutlined />
             </p>
-            <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
-            <p className="ant-upload-hint">支持 Excel (.xlsx, .xls) 和 CSV 文件</p>
+            <p className="ant-upload-text">{t('bulkImport.dragText')}</p>
+            <p className="ant-upload-hint">{t('bulkImport.dragHint')}</p>
           </Dragger>
         </div>
-
-        {parsedData.length > 0 && (
+        {rows.length > 0 && (
           <>
-            {errorCount > 0 && (
-              <Alert
-                message={`发现 ${errorCount} 条记录有错误`}
-                description="请检查下方表格中标记为错误的行，修正数据后重新上传"
-                type="error"
-                showIcon
-              />
-            )}
-
+            {errorCount > 0 && <Alert message={t('bulkImport.errorsFound', { count: errorCount })} description={t('bulkImport.errorsHint')} type="error" showIcon />}
             <Table
               columns={tableColumns}
-              dataSource={parsedData}
-              rowKey="_index"
+              dataSource={rows}
+              rowKey="index"
               scroll={{ x: 'max-content', y: 400 }}
               pagination={{ pageSize: 50 }}
               size="small"
               expandable={{
-                expandedRowRender: (record) =>
-                  record._errors.length > 0 ? (
-                    <Alert
-                      message="错误详情"
-                      description={
-                        <ul style={{ margin: 0, paddingLeft: 20 }}>
-                          {record._errors.map((err, idx) => (
-                            <li key={idx}>{err}</li>
-                          ))}
-                        </ul>
-                      }
-                      type="error"
-                      showIcon
-                    />
-                  ) : null,
-                rowExpandable: (record) => record._errors.length > 0,
+                expandedRowRender: (r) => (
+                  <Alert
+                    message={t('bulkImport.errorDetails')}
+                    description={
+                      <ul style={{ margin: 0, paddingLeft: 20 }}>
+                        {r.errors.map((e) => (
+                          <li key={e}>{e}</li>
+                        ))}
+                      </ul>
+                    }
+                    type="error"
+                    showIcon
+                  />
+                ),
+                rowExpandable: (r) => r.errors.length > 0,
               }}
             />
           </>

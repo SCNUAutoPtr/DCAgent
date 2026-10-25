@@ -1,343 +1,212 @@
-import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Card, Spin, Alert, Descriptions, Tag, Button, Row, Col, Divider, Typography } from 'antd';
-import { ArrowLeftOutlined, SwapOutlined } from '@ant-design/icons';
-import { cableService } from '../services/cableService';
-import { portService } from '../services/portService';
+import { useCallback, useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Popconfirm, Row, Space, Spin, Tag, Typography, message } from 'antd';
+import { ArrowLeftOutlined, DisconnectOutlined, SwapOutlined } from '@ant-design/icons';
+import type { CableDto, EndpointDto } from '@contracts/cables';
+import type { PathNode } from '@contracts/common';
+import type { PortDetailDto } from '@contracts/panels';
+import { formatShortId } from '@contracts/shortId';
+import { cableService } from '@/services/cableService';
+import { portService } from '@/services/panelService';
+import { pathForEntity, paths } from '@/routes';
 
 const { Title, Text } = Typography;
 
-interface PortEndpoint {
-  id: string;
-  number: string;
-  label?: string;
-  status: string;
-  panel: {
-    id: string;
-    name: string;
-    type: string;
-    device: {
-      id: string;
-      name: string;
-      type: string;
-      uPosition?: number;
-      uHeight?: number;
-      cabinet: {
-        id: string;
-        name: string;
-        height: number;
-        room: {
-          id: string;
-          name: string;
-          floor?: string;
-          dataCenter: {
-            id: string;
-            name: string;
-            location?: string;
-          };
-        };
-      };
-    };
-  };
+function PathCrumbs({ path }: { path: PathNode[] }) {
+  const navigate = useNavigate();
+  const nodes = path.filter((n) => n.kind !== 'DATACENTER' && n.kind !== 'CABLE' && n.kind !== 'CABLE_ENDPOINT');
+  return (
+    <Breadcrumb
+      items={nodes.map((n) => ({
+        title: <a onClick={() => navigate(pathForEntity(n.kind, n.id, path))}>{n.name}</a>,
+      }))}
+    />
+  );
 }
 
-interface CableEndpointsData {
-  cable: {
-    id: string;
-    label?: string;
-    type: string;
-    length?: number;
-    color?: string;
-    notes?: string;
-  };
-  portA: PortEndpoint | null;
-  portB: PortEndpoint | null;
+/** One end of a cable: where it is plugged (or parked) and its plug label. */
+function EndpointCard({ ep, highlight, onDisconnect }: { ep: EndpointDto; highlight: boolean; onDisconnect: (ep: EndpointDto) => void }) {
+  const { t } = useTranslation('cable');
+  const navigate = useNavigate();
+  return (
+    <Card
+      title={t(`ends.${ep.end}`)}
+      style={{ height: '100%', borderColor: highlight ? '#1890ff' : undefined }}
+      extra={
+        <Space>
+          {ep.panel && (
+            <Button type="link" size="small" onClick={() => navigate(paths.topologyPanel(ep.panel!.id))}>
+              {t('detail.openPanel')}
+            </Button>
+          )}
+          {ep.cabinet && (
+            <Button type="link" size="small" onClick={() => navigate(paths.cabinet(ep.cabinet!.id))}>
+              {t('detail.openCabinet')}
+            </Button>
+          )}
+        </Space>
+      }
+    >
+      <Descriptions column={1} size="small" bordered>
+        <Descriptions.Item label={t('detail.plug')}>{ep.label ? <Text code>{formatShortId(ep.label.shortId)}</Text> : '-'}</Descriptions.Item>
+        <Descriptions.Item label={t('detail.connector')}>{ep.connector ? t(`connectors.${ep.connector}`) : '-'}</Descriptions.Item>
+        <Descriptions.Item label={t('detail.port')}>
+          {ep.port ? (
+            <Space>
+              <a onClick={() => navigate(paths.port(ep.port!.id))}>{ep.port.number}</a>
+              {ep.port.ifName && <Text type="secondary">{ep.port.ifName}</Text>}
+            </Space>
+          ) : ep.parkedPanelId ? (
+            <Tag color="warning">{t('detail.parked')}</Tag>
+          ) : (
+            <Tag>{t('detail.notPlugged')}</Tag>
+          )}
+        </Descriptions.Item>
+        <Descriptions.Item label={t('detail.path')}>{ep.path.length ? <PathCrumbs path={ep.path} /> : '-'}</Descriptions.Item>
+      </Descriptions>
+      {ep.portId && (
+        <Popconfirm title={t('detail.disconnectConfirm')} onConfirm={() => onDisconnect(ep)}>
+          <Button danger size="small" icon={<DisconnectOutlined />} style={{ marginTop: 12 }}>
+            {t('detail.disconnect')}
+          </Button>
+        </Popconfirm>
+      )}
+    </Card>
+  );
 }
 
 /**
- * 端口详情页 - 双面板视图
- * 用于搜索端口或线缆后，显示本端和对端的完整层级信息
+ * /ports/:id shows a port and the cable on it; /cables/:id shows a cable with both ends.
+ * Everything is read from the path, so a refresh or a shared link shows the same page.
  */
 export default function PortDetailView() {
-  const location = useLocation();
+  const { id } = useParams<{ id: string }>();
+  const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { portId, cableId } = location.state || {};
+  const { t } = useTranslation(['cable', 'panel']);
+  const mode: 'port' | 'cable' = pathname.startsWith('/cables/') ? 'cable' : 'port';
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [endpointsData, setEndpointsData] = useState<CableEndpointsData | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [port, setPort] = useState<PortDetailDto | null>(null);
+  const [cable, setCable] = useState<CableDto | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, [portId, cableId]);
-
-  const loadData = async () => {
+  const load = useCallback(async () => {
+    if (!id) return;
     setLoading(true);
-    setError(null);
-
+    setFailed(false);
     try {
-      if (cableId) {
-        // 通过线缆ID查询两端端点
-        const data = await cableService.getCableEndpoints(cableId);
-        setEndpointsData(data);
-      } else if (portId) {
-        // 通过端口ID查询连接信息
-        const connection = await cableService.getPortConnection(portId);
-        if (connection) {
-          setEndpointsData(connection);
-        } else {
-          // 端口未连接，只查询端口本身信息
-          const portData = await portService.getById(portId);
-          // 构造只有单端的数据结构
-          setEndpointsData({
-            cable: null as any,
-            portA: portData as any,
-            portB: null,
-          });
-        }
+      if (mode === 'port') {
+        const p = await portService.get({ id });
+        setPort(p);
+        setCable(p.cable ? await cableService.get({ id: p.cable.id }) : null);
       } else {
-        setError('缺少端口或线缆ID参数');
+        setPort(null);
+        setCable(await cableService.get({ id }));
       }
-    } catch (err: any) {
-      console.error('Error loading port/cable data:', err);
-      setError(err.message || '加载数据失败');
+    } catch {
+      setFailed(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, mode]);
 
-  const renderLocationPath = (port: PortEndpoint | null) => {
-    if (!port || !port.panel) return '未知位置';
+  useEffect(() => {
+    load();
+  }, [load]);
 
-    const { panel } = port;
-    const device = panel.device;
-    const cabinet = device?.cabinet;
-    const room = cabinet?.room;
-    const dataCenter = room?.dataCenter;
-
-    const parts = [];
-    if (dataCenter) parts.push(dataCenter.name);
-    if (room) parts.push(room.name);
-    if (cabinet) parts.push(cabinet.name);
-    if (device) {
-      const uInfo = device.uPosition ? `U${device.uPosition}` : '';
-      parts.push(`${device.name}${uInfo ? ` (${uInfo})` : ''}`);
+  const disconnect = async (ep: EndpointDto) => {
+    try {
+      await cableService.disconnectEnd({ endpointId: ep.id });
+      message.success(t('cable:detail.disconnected'));
+      load();
+    } catch {
+      // reported by rpc
     }
-    if (panel) parts.push(panel.name);
-
-    return parts.join(' → ');
   };
 
-  const renderPortCard = (port: PortEndpoint | null, title: string) => {
-    if (!port) {
-      return (
-        <Card title={title} style={{ height: '100%' }}>
-          <Alert message="该端未连接" type="info" showIcon />
-        </Card>
-      );
-    }
-
-    const panel = port.panel;
-    const device = panel?.device;
-    const cabinet = device?.cabinet;
-    const room = cabinet?.room;
-    const dataCenter = room?.dataCenter;
-
-    const statusColors: Record<string, string> = {
-      AVAILABLE: 'green',
-      OCCUPIED: 'blue',
-      RESERVED: 'orange',
-      FAULTY: 'red',
-    };
-
-    const statusLabels: Record<string, string> = {
-      AVAILABLE: '可用',
-      OCCUPIED: '占用',
-      RESERVED: '预留',
-      FAULTY: '故障',
-    };
-
-    return (
-      <Card
-        title={title}
-        style={{ height: '100%' }}
-        extra={
-          <Button
-            type="link"
-            onClick={() => {
-              // 跳转到机柜可视化视图
-              if (cabinet?.id && device?.id) {
-                navigate('/cabinets', {
-                  state: {
-                    activeTab: 'visual',
-                    selectedCabinetId: cabinet.id,
-                    selectedDeviceId: device.id,
-                    selectedPanelId: panel.id,
-                    showDevicePanels: true,
-                  },
-                });
-              }
-            }}
-          >
-            查看机柜
-          </Button>
-        }
-      >
-        <Descriptions column={1} size="small" bordered>
-          <Descriptions.Item label="端口编号">
-            {port.number}
-          </Descriptions.Item>
-          {port.label && (
-            <Descriptions.Item label="端口标签">
-              {port.label}
-            </Descriptions.Item>
-          )}
-          <Descriptions.Item label="状态">
-            <Tag color={statusColors[port.status] || 'default'}>
-              {statusLabels[port.status] || port.status}
-            </Tag>
-          </Descriptions.Item>
-        </Descriptions>
-
-        <Divider orientation="left">位置信息</Divider>
-
-        <Descriptions column={1} size="small">
-          <Descriptions.Item label="数据中心">
-            {dataCenter?.name || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="机房">
-            {room?.name || '-'}
-            {room?.floor && ` (${room.floor})`}
-          </Descriptions.Item>
-          <Descriptions.Item label="机柜">
-            {cabinet?.name || '-'}
-            {cabinet?.height && ` (${cabinet.height}U)`}
-          </Descriptions.Item>
-          <Descriptions.Item label="设备">
-            {device?.name || '-'}
-            {device?.type && ` (${device.type})`}
-          </Descriptions.Item>
-          {device?.uPosition && (
-            <Descriptions.Item label="U位">
-              U{device.uPosition}
-              {device?.uHeight && ` (高度: ${device.uHeight}U)`}
-            </Descriptions.Item>
-          )}
-          <Descriptions.Item label="面板">
-            {panel?.name || '-'}
-            {panel?.type && ` (${panel.type})`}
-          </Descriptions.Item>
-        </Descriptions>
-
-        <Divider />
-
-        <Text type="secondary" style={{ fontSize: '12px' }}>
-          路径: {renderLocationPath(port)}
-        </Text>
-      </Card>
-    );
-  };
-
-  const renderCableInfo = () => {
-    if (!endpointsData?.cable) return null;
-
-    const cable = endpointsData.cable;
-    const cableTypeLabels: Record<string, string> = {
-      CAT5E: '超五类网线',
-      CAT6: '六类网线',
-      CAT6A: '超六类网线',
-      CAT7: '七类网线',
-      FIBER_SM: '单模光纤',
-      FIBER_MM: '多模光纤',
-      POWER: '电源线',
-      OTHER: '其他',
-    };
-
-    return (
-      <Card
-        title={
-          <span>
-            <SwapOutlined /> 线缆连接信息
-          </span>
-        }
-        style={{ marginBottom: 16 }}
-      >
-        <Descriptions column={2} size="small">
-          <Descriptions.Item label="线缆标签">
-            {cable.label || '未命名'}
-          </Descriptions.Item>
-          <Descriptions.Item label="类型">
-            <Tag color="blue">
-              {cableTypeLabels[cable.type] || cable.type}
-            </Tag>
-          </Descriptions.Item>
-          {cable.length && (
-            <Descriptions.Item label="长度">
-              {cable.length}m
-            </Descriptions.Item>
-          )}
-          {cable.color && (
-            <Descriptions.Item label="颜色">
-              <Tag color={cable.color}>{cable.color}</Tag>
-            </Descriptions.Item>
-          )}
-          {cable.notes && (
-            <Descriptions.Item label="备注" span={2}>
-              {cable.notes}
-            </Descriptions.Item>
-          )}
-        </Descriptions>
-      </Card>
-    );
-  };
+  const back = (
+    <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} style={{ marginBottom: 16 }}>
+      {t('cable:detail.back')}
+    </Button>
+  );
 
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '100px 0' }}>
-        <Spin size="large" tip="加载中..." />
+        <Spin size="large" />
+      </div>
+    );
+  }
+  if (failed) {
+    return (
+      <div>
+        {back}
+        <Alert type="error" showIcon message={t('cable:detail.notFound')} />
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div style={{ padding: '24px' }}>
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(-1)}
-          style={{ marginBottom: 16 }}
-        >
-          返回
-        </Button>
-        <Alert message="错误" description={error} type="error" showIcon />
-      </div>
-    );
-  }
+  const ends = cable ? [...cable.endpoints].sort((a, b) => a.end.localeCompare(b.end)) : [];
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Button
-        icon={<ArrowLeftOutlined />}
-        onClick={() => navigate(-1)}
-        style={{ marginBottom: 16 }}
-      >
-        返回
-      </Button>
+    <div>
+      {back}
+      <Title level={3}>{mode === 'port' ? t('cable:detail.portTitle') : t('cable:detail.cableTitle')}</Title>
 
-      <Title level={3}>
-        {cableId ? '线缆连接详情' : '端口连接详情'}
-      </Title>
+      {port && (
+        <Card style={{ marginBottom: 16 }} title={<PathCrumbs path={port.path} />}>
+          <Descriptions column={{ xs: 1, md: 3 }} size="small">
+            <Descriptions.Item label={t('cable:detail.port')}>{port.number}</Descriptions.Item>
+            <Descriptions.Item label={t('cable:detail.ifName')}>{port.ifName ?? '-'}</Descriptions.Item>
+            <Descriptions.Item label={t('panel:view.type')}>{t(`panel:portTypes.${port.portType}`)}</Descriptions.Item>
+            <Descriptions.Item label={t('cable:detail.adminState')}>{t(`panel:adminStates.${port.adminState}`)}</Descriptions.Item>
+            <Descriptions.Item label={t('cable:detail.module')}>
+              {port.opticalModule ? `${port.opticalModule.vendor} ${port.opticalModule.model} (${port.opticalModule.serialNo})` : t('cable:detail.none')}
+            </Descriptions.Item>
+            <Descriptions.Item label={t('cable:detail.ip')}>{port.ipAddress?.address ?? t('cable:detail.none')}</Descriptions.Item>
+            <Descriptions.Item label={t('cable:detail.workstations')}>
+              {port.attachedWorkstations.length ? port.attachedWorkstations.map((w) => w.name).join(', ') : t('cable:detail.none')}
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
+      )}
 
-      {renderCableInfo()}
-
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={12}>
-          {renderPortCard(endpointsData?.portA || null, '本端端口 (Port A)')}
-        </Col>
-        <Col xs={24} lg={12}>
-          {renderPortCard(endpointsData?.portB || null, '对端端口 (Port B)')}
-        </Col>
-      </Row>
+      {cable ? (
+        <>
+          <Card
+            style={{ marginBottom: 16 }}
+            title={
+              <span>
+                <SwapOutlined /> {t('cable:detail.cable')}
+              </span>
+            }
+          >
+            <Descriptions column={{ xs: 1, md: 4 }} size="small">
+              <Descriptions.Item label={t('cable:fields.label')}>{cable.label || '-'}</Descriptions.Item>
+              <Descriptions.Item label={t('cable:fields.type')}>
+                <Tag color="blue">{t(`cable:media.${cable.medium}`)}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label={t('cable:fields.status')}>
+                <Tag color={cable.state === 'IN_USE' ? 'green' : 'gold'}>{t(`cable:states.${cable.state}`)}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label={t('cable:fields.length')}>{cable.lengthM ? `${cable.lengthM} m` : '-'}</Descriptions.Item>
+              {cable.color && <Descriptions.Item label={t('cable:fields.color')}>{cable.color}</Descriptions.Item>}
+              {cable.notes && <Descriptions.Item label={t('cable:fields.notes')}>{cable.notes}</Descriptions.Item>}
+            </Descriptions>
+          </Card>
+          <Row gutter={[16, 16]}>
+            {ends.map((ep) => (
+              <Col key={ep.id} xs={24} lg={12}>
+                <EndpointCard ep={ep} highlight={!!port && ep.portId === port.id} onDisconnect={disconnect} />
+              </Col>
+            ))}
+          </Row>
+        </>
+      ) : (
+        <Alert type="info" showIcon message={t('cable:detail.notConnected')} />
+      )}
     </div>
   );
 }

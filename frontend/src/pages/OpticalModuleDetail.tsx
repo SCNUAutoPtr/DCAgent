@@ -1,256 +1,136 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Card,
-  Descriptions,
-  Button,
-  Space,
-  Tag,
-  Timeline,
-  Modal,
-  Form,
-  Select,
-  Input,
-  message,
-  Spin,
-  Alert,
-  Popconfirm,
-  Typography,
-  Row,
-  Col,
-  Statistic,
-} from 'antd';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Alert, Button, Card, Descriptions, Form, Input, Modal, Popconfirm, Space, Spin, Tag, Timeline, Typography, message } from 'antd';
 import {
   ArrowLeftOutlined,
-  EditOutlined,
-  ToolOutlined,
-  ExportOutlined,
-  ImportOutlined,
-  DeleteOutlined,
-  HistoryOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  DeleteOutlined,
+  ExportOutlined,
+  HistoryOutlined,
+  ImportOutlined,
   SyncOutlined,
+  ToolOutlined,
 } from '@ant-design/icons';
-import { useParams, useNavigate } from 'react-router-dom';
-import { OpticalModule, ModuleMovement, ModuleStatus, MovementType } from '@/types';
 import dayjs from 'dayjs';
+import type { MovementType } from '@contracts/enums';
+import { MODULE_FITS } from '@contracts/moduleFits';
+import type { ModuleDto, ModuleMovementDto } from '@contracts/opticalModules';
+import type { PortDto } from '@contracts/panels';
+import { opticalModuleService } from '@/services/opticalModuleService';
+import { PortPicker } from '@/components/PortPicker';
+import { paths } from '@/routes';
+import { MODULE_STATUS_COLORS } from '@/constants/colors';
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 
-// 获取状态映射的函数
-const getModuleStatusMap = (t: any): Record<ModuleStatus, { label: string; color: string }> => ({
-  IN_STOCK: { label: t('moduleStatus.IN_STOCK'), color: 'default' },
-  INSTALLED: { label: t('moduleStatus.INSTALLED'), color: 'green' },
-  RESERVED: { label: t('moduleStatus.RESERVED'), color: 'blue' },
-  FAULTY: { label: t('moduleStatus.FAULTY'), color: 'red' },
-  SCRAPPED: { label: t('moduleStatus.SCRAPPED'), color: 'gray' },
-});
+const MOVEMENT_STYLE: Record<MovementType, { icon: ReactNode; color: string }> = {
+  PURCHASE: { icon: <ImportOutlined />, color: 'blue' },
+  INSTALL: { icon: <CheckCircleOutlined />, color: 'green' },
+  UNINSTALL: { icon: <ExportOutlined />, color: 'orange' },
+  TRANSFER: { icon: <SyncOutlined />, color: 'purple' },
+  REPAIR: { icon: <ToolOutlined />, color: 'red' },
+  RETURN: { icon: <CheckCircleOutlined />, color: 'cyan' },
+  SCRAP: { icon: <CloseCircleOutlined />, color: 'gray' },
+};
 
-// 获取移动类型映射的函数
-const getMovementTypeMap = (t: any): Record<MovementType, { label: string; icon: any; color: string }> => ({
-  PURCHASE: { label: t('movementTypes.PURCHASE'), icon: <ImportOutlined />, color: 'blue' },
-  INSTALL: { label: t('movementTypes.INSTALL'), icon: <CheckCircleOutlined />, color: 'green' },
-  UNINSTALL: { label: t('movementTypes.UNINSTALL'), icon: <ExportOutlined />, color: 'orange' },
-  TRANSFER: { label: t('movementTypes.TRANSFER'), icon: <SyncOutlined />, color: 'purple' },
-  REPAIR: { label: t('movementTypes.REPAIR'), icon: <ToolOutlined />, color: 'red' },
-  RETURN: { label: t('movementTypes.RETURN'), icon: <CheckCircleOutlined />, color: 'cyan' },
-  SCRAP: { label: t('movementTypes.SCRAP'), icon: <CloseCircleOutlined />, color: 'gray' },
-});
+type Action = 'install' | 'uninstall' | 'transfer' | 'scrap';
+
+interface ActionForm {
+  portId?: string;
+  operator?: string;
+  notes?: string;
+}
 
 export default function OpticalModuleDetail() {
   const { t } = useTranslation('opticalModule');
-  const moduleStatusMap = getModuleStatusMap(t);
-  const movementTypeMap = getMovementTypeMap(t);
-
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [module, setModule] = useState<OpticalModule | null>(null);
-  const [movements, setMovements] = useState<ModuleMovement[]>([]);
+  const [module, setModule] = useState<ModuleDto | null>(null);
+  const [movements, setMovements] = useState<ModuleMovementDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [installModalVisible, setInstallModalVisible] = useState(false);
-  const [uninstallModalVisible, setUninstallModalVisible] = useState(false);
-  const [transferModalVisible, setTransferModalVisible] = useState(false);
-  const [scrapModalVisible, setScrapModalVisible] = useState(false);
-  const [installForm] = Form.useForm();
-  const [uninstallForm] = Form.useForm();
-  const [transferForm] = Form.useForm();
-  const [scrapForm] = Form.useForm();
+  const [action, setAction] = useState<Action | null>(null);
+  const [form] = Form.useForm<ActionForm>();
 
-  // 加载光模块详情
-  const loadModule = async () => {
+  const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/v1/optical-modules/get', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      });
-      if (!response.ok) throw new Error('Failed to load module');
-      const data = await response.json();
-      setModule(data);
-    } catch (error) {
-      message.error(t('messages.loadDetailFailed'));
-      console.error(error);
+      const [m, h] = await Promise.all([opticalModuleService.get({ id }), opticalModuleService.history({ id })]);
+      setModule(m);
+      setMovements(h);
+    } catch {
+      setModule(null);
     } finally {
       setLoading(false);
     }
-  };
-
-  // 加载移动历史
-  const loadHistory = async () => {
-    if (!id) return;
-    try {
-      const response = await fetch(`http://localhost:3000/api/v1/optical-modules/${id}/history`, {
-        method: 'POST',
-      });
-      if (!response.ok) throw new Error('Failed to load history');
-      const data = await response.json();
-      setMovements(data);
-    } catch (error) {
-      console.error(t('messages.loadHistoryFailed'), error);
-    }
-  };
-
-  useEffect(() => {
-    loadModule();
-    loadHistory();
   }, [id]);
 
-  // 安装到端口
-  const handleInstall = async () => {
-    try {
-      const values = await installForm.validateFields();
-      const response = await fetch(`http://localhost:3000/api/v1/optical-modules/${id}/install`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error);
-      }
-      message.success(t('messages.installSuccess'));
-      setInstallModalVisible(false);
-      installForm.resetFields();
-      loadModule();
-      loadHistory();
-    } catch (error: any) {
-      message.error(error.message || t('messages.installFailed'));
-    }
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  /** a cage takes the module when its form fits and it holds no module yet */
+  const fits = (port: PortDto) => !port.hasModule && !!module && (MODULE_FITS[port.portType] ?? []).includes(module.moduleType);
+
+  const openAction = (a: Action) => {
+    form.resetFields();
+    setAction(a);
   };
 
-  // 从端口卸下
-  const handleUninstall = async () => {
+  const submit = async () => {
+    if (!module || !action) return;
+    const v = await form.validateFields();
+    const op = { operator: v.operator, notes: v.notes };
     try {
-      const values = await uninstallForm.validateFields();
-      const response = await fetch(`http://localhost:3000/api/v1/optical-modules/${id}/uninstall`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error);
-      }
-      message.success(t('messages.uninstallSuccess'));
-      setUninstallModalVisible(false);
-      uninstallForm.resetFields();
-      loadModule();
-      loadHistory();
-    } catch (error: any) {
-      message.error(error.message || t('messages.uninstallFailed'));
-    }
-  };
-
-  // 转移到其他端口
-  const handleTransfer = async () => {
-    try {
-      const values = await transferForm.validateFields();
-      const response = await fetch(`http://localhost:3000/api/v1/optical-modules/${id}/transfer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error);
-      }
-      message.success(t('messages.transferSuccess'));
-      setTransferModalVisible(false);
-      transferForm.resetFields();
-      loadModule();
-      loadHistory();
-    } catch (error: any) {
-      message.error(error.message || t('messages.transferFailed'));
-    }
-  };
-
-  // 报废
-  const handleScrap = async () => {
-    try {
-      const values = await scrapForm.validateFields();
-      const response = await fetch(`http://localhost:3000/api/v1/optical-modules/${id}/scrap`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error);
-      }
-      message.success(t('messages.scrapSuccess'));
-      setScrapModalVisible(false);
-      scrapForm.resetFields();
-      loadModule();
-      loadHistory();
-    } catch (error: any) {
-      message.error(error.message || t('messages.scrapFailed'));
+      if (action === 'install') await opticalModuleService.install({ id: module.id, portId: v.portId!, ...op });
+      if (action === 'transfer') await opticalModuleService.transfer({ id: module.id, toPortId: v.portId!, ...op });
+      if (action === 'uninstall') await opticalModuleService.uninstall({ id: module.id, ...op });
+      if (action === 'scrap') await opticalModuleService.scrap({ id: module.id, ...op });
+      message.success(t(`messages.${action}Success`));
+      setAction(null);
+      load();
+    } catch {
+      // reported by rpc
     }
   };
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '100px' }}>
+      <div style={{ textAlign: 'center', padding: 100 }}>
         <Spin size="large" />
       </div>
     );
   }
+  if (!module) return <Alert message={t('noData.moduleNotFound')} type="error" showIcon />;
 
-  if (!module) {
-    return (
-      <Alert
-        message={t('noData.moduleNotFound')}
-        description={t('noData.moduleNotFound')}
-        type="error"
-        showIcon
-      />
-    );
-  }
+  const needsPort = action === 'install' || action === 'transfer';
+  const alertKey = {
+    install: 'alerts.installInfo',
+    uninstall: 'alerts.uninstallWarning',
+    transfer: 'alerts.transferWarning',
+    scrap: 'alerts.scrappingWarning',
+  } as const;
 
   return (
-    <div style={{ padding: '24px' }}>
-      {/* 头部操作栏 */}
+    <div>
       <Space style={{ marginBottom: 16 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/optical-modules')}>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(paths.opticalModules())}>
           {t('buttons.back')}
         </Button>
-        <Button icon={<EditOutlined />} onClick={() => navigate(`/optical-modules/${id}/edit`)}>
-          {t('buttons.editInfo')}
-        </Button>
         {module.status === 'IN_STOCK' && (
-          <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => setInstallModalVisible(true)}>
+          <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => openAction('install')}>
             {t('buttons.install')}
           </Button>
         )}
         {module.status === 'INSTALLED' && (
           <>
-            <Button icon={<ExportOutlined />} onClick={() => setUninstallModalVisible(true)}>
+            <Button icon={<ExportOutlined />} onClick={() => openAction('uninstall')}>
               {t('buttons.uninstall')}
             </Button>
-            <Button icon={<SyncOutlined />} onClick={() => setTransferModalVisible(true)}>
+            <Button icon={<SyncOutlined />} onClick={() => openAction('transfer')}>
               {t('buttons.transfer')}
             </Button>
           </>
@@ -259,7 +139,7 @@ export default function OpticalModuleDetail() {
           <Popconfirm
             title={t('messages.scrappingConfirm')}
             description={t('messages.scrappingWarning')}
-            onConfirm={() => setScrapModalVisible(true)}
+            onConfirm={() => openAction('scrap')}
             okText={t('buttons.confirm')}
             cancelText={t('buttons.cancel')}
           >
@@ -274,7 +154,6 @@ export default function OpticalModuleDetail() {
         <ToolOutlined /> {t('detailTitle')}
       </Title>
 
-      {/* 基本信息卡片 */}
       <Card title={t('tabs.basicInfo')} style={{ marginBottom: 16 }}>
         <Descriptions bordered column={2}>
           <Descriptions.Item label={t('fields.serialNo')} span={2}>
@@ -284,229 +163,110 @@ export default function OpticalModuleDetail() {
           </Descriptions.Item>
           <Descriptions.Item label={t('fields.model')}>{module.model}</Descriptions.Item>
           <Descriptions.Item label={t('fields.vendor')}>{module.vendor}</Descriptions.Item>
-          <Descriptions.Item label={t('fields.moduleType')}>{module.moduleType}</Descriptions.Item>
+          <Descriptions.Item label={t('fields.moduleType')}>{t(`moduleTypes.${module.moduleType}`)}</Descriptions.Item>
           <Descriptions.Item label={t('fields.status')}>
-            <Tag color={moduleStatusMap[module.status]?.color}>
-              {moduleStatusMap[module.status]?.label}
-            </Tag>
+            <Tag color={MODULE_STATUS_COLORS[module.status]}>{t(`moduleStatus.${module.status}`)}</Tag>
           </Descriptions.Item>
-          <Descriptions.Item label={t('fields.wavelength')}>
-            {module.wavelength || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('fields.distance')}>
-            {module.distance || '-'}
-          </Descriptions.Item>
+          <Descriptions.Item label={t('fields.wavelength')}>{module.wavelength || '-'}</Descriptions.Item>
+          <Descriptions.Item label={t('fields.distance')}>{module.distance || '-'}</Descriptions.Item>
           <Descriptions.Item label={t('fields.ddmSupport')} span={2}>
-            {module.ddmSupport ? <Tag color="green">{t('moduleStatus.INSTALLED')}</Tag> : <Tag>{t('noData.noLocation')}</Tag>}
+            {module.ddmSupport ? <Tag color="green">{t('ddm.yes')}</Tag> : <Tag>{t('ddm.no')}</Tag>}
           </Descriptions.Item>
         </Descriptions>
       </Card>
 
-      {/* 当前位置信息 */}
       {module.currentPort && (
         <Card title={t('tabs.currentLocation')} style={{ marginBottom: 16 }}>
-          <Descriptions bordered column={2}>
-            <Descriptions.Item label={t('fields.currentPort')}>
-              {module.currentPort.panel?.device?.name || t('noData.moduleNotFound')}
-            </Descriptions.Item>
-            <Descriptions.Item label={t('tabs.basicInfo')}>
-              {module.currentPort.panel?.name || t('noData.moduleNotFound')}
-            </Descriptions.Item>
-            <Descriptions.Item label={t('fields.currentPort')}>
-              {module.currentPort.number}
-            </Descriptions.Item>
-            <Descriptions.Item label={t('fields.moduleType')}>
-              {module.currentPort.portType || '-'}
+          <Descriptions bordered column={3}>
+            <Descriptions.Item label={t('fields.device')}>{module.currentPort.deviceName}</Descriptions.Item>
+            <Descriptions.Item label={t('fields.panel')}>{module.currentPort.panelName}</Descriptions.Item>
+            <Descriptions.Item label={t('fields.port')}>
+              <a onClick={() => navigate(paths.port(module.currentPort!.id))}>{module.currentPort.number}</a>
             </Descriptions.Item>
           </Descriptions>
         </Card>
       )}
 
-      {/* 采购信息 */}
       <Card title={t('tabs.purchaseInfo')} style={{ marginBottom: 16 }}>
         <Descriptions bordered column={2}>
-          <Descriptions.Item label={t('fields.supplier')}>
-            {module.supplier || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('fields.price')}>
-            {module.price ? `¥${module.price}` : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('fields.purchaseDate')}>
-            {module.purchaseDate ? dayjs(module.purchaseDate).format('YYYY-MM-DD') : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('fields.warranty')}>
-            {module.warrantyExpiry ? dayjs(module.warrantyExpiry).format('YYYY-MM-DD') : '-'}
-          </Descriptions.Item>
+          <Descriptions.Item label={t('fields.supplier')}>{module.supplier || '-'}</Descriptions.Item>
+          <Descriptions.Item label={t('fields.price')}>{module.price !== null ? module.price : '-'}</Descriptions.Item>
+          <Descriptions.Item label={t('fields.purchaseDate')}>{module.purchaseDate ? dayjs(module.purchaseDate).format('YYYY-MM-DD') : '-'}</Descriptions.Item>
+          <Descriptions.Item label={t('fields.warranty')}>{module.warrantyExpiry ? dayjs(module.warrantyExpiry).format('YYYY-MM-DD') : '-'}</Descriptions.Item>
           <Descriptions.Item label={t('fields.notes')} span={2}>
             {module.notes || '-'}
           </Descriptions.Item>
         </Descriptions>
       </Card>
 
-      {/* 移动历史 */}
-      <Card title={<><HistoryOutlined /> {t('tabs.movementHistory')}</>}>
+      <Card
+        title={
+          <>
+            <HistoryOutlined /> {t('tabs.movementHistory')}
+          </>
+        }
+      >
         {movements.length === 0 ? (
           <Text type="secondary">{t('noData.noHistory')}</Text>
         ) : (
           <Timeline
-            items={movements.map((movement) => {
-              const typeInfo = movementTypeMap[movement.movementType];
-              return {
-                color: typeInfo.color,
-                dot: typeInfo.icon,
-                children: (
-                  <div>
-                    <Space direction="vertical" size={4}>
-                      <Text strong>
-                        {typeInfo.label}
-                      </Text>
-                      <Text type="secondary">
-                        {dayjs(movement.createdAt).format('YYYY-MM-DD HH:mm:ss')}
-                      </Text>
-                      {movement.operator && (
-                        <Text type="secondary">{t('fields.operator')}: {movement.operator}</Text>
-                      )}
-                      {movement.fromPort && (
-                        <Text type="secondary">
-                          {t('movementTypes.TRANSFER')}: {movement.fromPort.panel?.device?.name} - {movement.fromPort.number}
-                        </Text>
-                      )}
-                      {movement.toPort && (
-                        <Text type="secondary">
-                          {t('movementTypes.INSTALL')}: {movement.toPort.panel?.device?.name} - {movement.toPort.number}
-                        </Text>
-                      )}
-                      {movement.notes && (
-                        <Text type="secondary">{t('fields.notes')}: {movement.notes}</Text>
-                      )}
-                    </Space>
-                  </div>
-                ),
-              };
-            })}
+            items={movements.map((m) => ({
+              color: MOVEMENT_STYLE[m.movementType].color,
+              dot: MOVEMENT_STYLE[m.movementType].icon,
+              children: (
+                <Space direction="vertical" size={4}>
+                  <Text strong>{t(`movementTypes.${m.movementType}`)}</Text>
+                  <Text type="secondary">{dayjs(m.createdAt).format('YYYY-MM-DD HH:mm:ss')}</Text>
+                  {m.operator && (
+                    <Text type="secondary">
+                      {t('fields.operator')}: {m.operator}
+                    </Text>
+                  )}
+                  {m.fromPort && (
+                    <Text type="secondary">
+                      {t('movement.from')}: {m.fromPort}
+                    </Text>
+                  )}
+                  {m.toPort && (
+                    <Text type="secondary">
+                      {t('movement.to')}: {m.toPort}
+                    </Text>
+                  )}
+                  {m.notes && (
+                    <Text type="secondary">
+                      {t('fields.notes')}: {m.notes}
+                    </Text>
+                  )}
+                </Space>
+              ),
+            }))}
           />
         )}
       </Card>
 
-      {/* 安装对话框 */}
       <Modal
-        title={t('buttons.install')}
-        open={installModalVisible}
-        onOk={handleInstall}
-        onCancel={() => setInstallModalVisible(false)}
-        okText={t('buttons.install')}
+        title={action ? t(`buttons.${action}`) : ''}
+        open={!!action}
+        onOk={submit}
+        onCancel={() => setAction(null)}
+        okText={action ? t(`buttons.${action}`) : ''}
         cancelText={t('buttons.cancel')}
+        okButtonProps={{ danger: action === 'scrap' }}
+        width={needsPort ? 720 : 520}
+        forceRender
       >
-        <Alert
-          message={t('buttons.install')}
-          description={t('alerts.installInfo')}
-          type="info"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-        <Form form={installForm} layout="vertical">
-          <Form.Item
-            name="portId"
-            label={t('fields.currentPort')}
-            rules={[{ required: true, message: t('validation.portIdRequired') }]}
-          >
-            <Input placeholder={t('placeholders.portId')} />
-          </Form.Item>
+        {action && <Alert description={t(alertKey[action])} type={action === 'install' ? 'info' : 'warning'} showIcon style={{ marginBottom: 16 }} />}
+        <Form name="optical-module-detail-form" form={form} layout="vertical">
+          {needsPort && (
+            <Form.Item name="portId" label={t('fields.port')} rules={[{ required: true, message: t('validation.portIdRequired') }]}>
+              <PortPicker selectable={fits} testIdPrefix="module-port" />
+            </Form.Item>
+          )}
           <Form.Item name="operator" label={t('fields.operator')}>
             <Input placeholder={t('placeholders.operator')} />
           </Form.Item>
-          <Form.Item name="notes" label={t('fields.notes')}>
-            <Input.TextArea rows={3} placeholder={t('placeholders.operator')} />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* 卸下对话框 */}
-      <Modal
-        title={t('buttons.uninstall')}
-        open={uninstallModalVisible}
-        onOk={handleUninstall}
-        onCancel={() => setUninstallModalVisible(false)}
-        okText={t('buttons.uninstall')}
-        cancelText={t('buttons.cancel')}
-      >
-        <Alert
-          message={t('buttons.uninstall')}
-          description={t('alerts.uninstallWarning')}
-          type="warning"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-        <Form form={uninstallForm} layout="vertical">
-          <Form.Item name="operator" label={t('fields.operator')}>
-            <Input placeholder={t('placeholders.operator')} />
-          </Form.Item>
-          <Form.Item name="notes" label={t('fields.notes')}>
-            <Input.TextArea rows={3} placeholder={t('placeholders.operator')} />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* 转移对话框 */}
-      <Modal
-        title={t('buttons.transfer')}
-        open={transferModalVisible}
-        onOk={handleTransfer}
-        onCancel={() => setTransferModalVisible(false)}
-        okText={t('buttons.transfer')}
-        cancelText={t('buttons.cancel')}
-      >
-        <Alert
-          message={t('buttons.transfer')}
-          description={t('alerts.transferWarning')}
-          type="warning"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-        <Form form={transferForm} layout="vertical">
-          <Form.Item
-            name="targetPortId"
-            label={t('fields.currentPort')}
-            rules={[{ required: true, message: t('validation.targetPortIdRequired') }]}
-          >
-            <Input placeholder={t('placeholders.targetPortId')} />
-          </Form.Item>
-          <Form.Item name="operator" label={t('fields.operator')}>
-            <Input placeholder={t('placeholders.operator')} />
-          </Form.Item>
-          <Form.Item name="notes" label={t('fields.notes')}>
-            <Input.TextArea rows={3} placeholder={t('placeholders.operator')} />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* 报废对话框 */}
-      <Modal
-        title={t('buttons.scrap')}
-        open={scrapModalVisible}
-        onOk={handleScrap}
-        onCancel={() => setScrapModalVisible(false)}
-        okText={t('buttons.scrap')}
-        cancelText={t('buttons.cancel')}
-        okButtonProps={{ danger: true }}
-      >
-        <Alert
-          message={t('buttons.scrap')}
-          description={t('alerts.scrappingWarning')}
-          type="error"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-        <Form form={scrapForm} layout="vertical">
-          <Form.Item name="operator" label={t('fields.operator')}>
-            <Input placeholder={t('placeholders.operator')} />
-          </Form.Item>
-          <Form.Item
-            name="notes"
-            label={t('fields.notes')}
-            rules={[{ required: true, message: t('validation.notesRequired') }]}
-          >
-            <Input.TextArea rows={3} placeholder={t('placeholders.scrappingReason')} />
+          <Form.Item name="notes" label={t('fields.notes')} rules={action === 'scrap' ? [{ required: true, message: t('validation.notesRequired') }] : []}>
+            <Input.TextArea rows={3} placeholder={action === 'scrap' ? t('placeholders.scrappingReason') : undefined} />
           </Form.Item>
         </Form>
       </Modal>

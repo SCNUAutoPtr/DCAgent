@@ -1,61 +1,43 @@
-import api from './api';
-import { PanelTemplate, PanelType } from '@/types';
+import type { IdBody, OkResult } from '@contracts/common';
+import type { PanelDetailDto } from '@contracts/panels';
+import type {
+  ApplyDiff,
+  BatchPreview,
+  BatchResult,
+  ImportResult,
+  PanelTemplateDto,
+  TemplateDoc,
+  TemplatePortDraft,
+  applyPreviewSchema,
+  applySchema,
+  batchApplySchema,
+  batchPreviewSchema,
+  createPanelFromTemplateSchema,
+  createPanelsFromTemplatesSchema,
+  exportSchema,
+  generatePreviewSchema,
+  importSchema,
+  templateCreateSchema,
+  templateListSchema,
+  templateUpdateSchema,
+} from '@contracts/panelTemplates';
+import { rpc, type In, type RpcOptions } from './api';
 
 export const panelTemplateService = {
-  // 获取所有模板
-  async getAll(type?: PanelType): Promise<PanelTemplate[]> {
-    const params: any = {};
-    if (type) params.type = type;
-    const response = await api.get('/panel-templates', { params });
-    return response.data;
-  },
-
-  // 获取模板详情
-  async getById(id: string): Promise<PanelTemplate> {
-    const response = await api.get(`/panel-templates/${id}`);
-    return response.data;
-  },
-
-  // 创建模板
-  async create(data: Partial<PanelTemplate>): Promise<PanelTemplate> {
-    const response = await api.post('/panel-templates', data);
-    return response.data;
-  },
-
-  // 更新模板
-  async update(id: string, data: Partial<PanelTemplate>): Promise<PanelTemplate> {
-    const response = await api.put(`/panel-templates/${id}`, data);
-    return response.data;
-  },
-
-  // 删除模板
-  async delete(id: string): Promise<void> {
-    await api.delete(`/panel-templates/${id}`);
-  },
-
-  // 从模板创建面板
-  async createPanelFromTemplate(
-    templateId: string,
-    deviceId: string,
-    panelName?: string,
-    shortId?: number
-  ): Promise<{ panel: any; ports: any[] }> {
-    const response = await api.post(`/panel-templates/${templateId}/create-panel`, {
-      deviceId,
-      panelName,
-      shortId,
-    });
-    return response.data;
-  },
-
-  // 解绑面板与模板
-  async unbindPanel(panelId: string): Promise<any> {
-    const response = await api.post(`/panel-templates/unbind/${panelId}`);
-    return response.data;
-  },
-
-  // 初始化系统预设模板
-  async initSystemTemplates(): Promise<void> {
-    await api.post('/panel-templates/init-system-templates');
-  },
+  list: (body: In<typeof templateListSchema> = {}) => rpc<typeof body, PanelTemplateDto[]>('panel-templates/list', body),
+  get: (body: IdBody) => rpc<IdBody, PanelTemplateDto>('panel-templates/get', body),
+  create: (body: In<typeof templateCreateSchema>) => rpc<typeof body, PanelTemplateDto>('panel-templates/create', body),
+  update: (body: In<typeof templateUpdateSchema>) => rpc<typeof body, PanelTemplateDto>('panel-templates/update', body),
+  delete: (body: IdBody) => rpc<IdBody, OkResult>('panel-templates/delete', body),
+  generatePreview: (body: In<typeof generatePreviewSchema>) => rpc<typeof body, TemplatePortDraft[]>('panel-templates/generate-preview', body),
+  applyPreview: (body: In<typeof applyPreviewSchema>) => rpc<typeof body, ApplyDiff>('panel-templates/apply-preview', body),
+  apply: (body: In<typeof applySchema>, opts?: RpcOptions) => rpc<typeof body, ApplyDiff>('panel-templates/apply', body, opts),
+  batchPreview: (body: In<typeof batchPreviewSchema>) => rpc<typeof body, BatchPreview>('panel-templates/batch-preview', body),
+  batchApply: (body: In<typeof batchApplySchema>, opts?: RpcOptions) => rpc<typeof body, BatchResult>('panel-templates/batch-apply', body, opts),
+  createPanel: (body: In<typeof createPanelFromTemplateSchema>) => rpc<typeof body, PanelDetailDto>('panel-templates/create-panel', body),
+  createPanels: (body: In<typeof createPanelsFromTemplatesSchema>) => rpc<typeof body, PanelDetailDto[]>('panel-templates/create-panels', body),
+  unbind: (body: { panelId: string }) => rpc<typeof body, PanelDetailDto>('panel-templates/unbind', body),
+  export: (body: In<typeof exportSchema> = {}) => rpc<typeof body, TemplateDoc>('panel-templates/export', body),
+  import: (body: In<typeof importSchema>) => rpc<typeof body, ImportResult>('panel-templates/import', body),
+  importPresets: () => rpc<Record<string, never>, ImportResult>('panel-templates/import-presets', {}),
 };

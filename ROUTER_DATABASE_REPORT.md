@@ -579,11 +579,11 @@ await prisma.port.updateMany({
 ## 6. 实用脚本
 
 ### 6.1 查询路由器脚本
-文件位置: `/Users/uaih3k9x/code/DCAgent/backend/query-routers.ts`
+文件位置: `backend/query-routers.ts`
 
 运行命令:
 ```bash
-cd /Users/uaih3k9x/code/DCAgent/backend
+cd backend
 npx ts-node query-routers.ts
 ```
 
@@ -596,11 +596,11 @@ npx ts-node query-routers.ts
 - 列出路由器之间的连接关系
 
 ### 6.2 查询所有设备脚本
-文件位置: `/Users/uaih3k9x/code/DCAgent/backend/query-all-devices.ts`
+文件位置: `backend/query-all-devices.ts`
 
 运行命令:
 ```bash
-cd /Users/uaih3k9x/code/DCAgent/backend
+cd backend
 npx ts-node query-all-devices.ts
 ```
 
@@ -610,11 +610,11 @@ npx ts-node query-all-devices.ts
 - 显示设备连接拓扑
 
 ### 6.3 路由器操作指南脚本
-文件位置: `/Users/uaih3k9x/code/DCAgent/backend/router-usage-guide.ts`
+文件位置: `backend/router-usage-guide.ts`
 
 运行命令:
 ```bash
-cd /Users/uaih3k9x/code/DCAgent/backend
+cd backend
 npx ts-node router-usage-guide.ts
 ```
 
@@ -845,12 +845,12 @@ const routers = [
 
 | 文件路径 | 说明 |
 |---------|------|
-| `/Users/uaih3k9x/code/DCAgent/backend/prisma/schema.prisma` | Prisma 数据库模型定义 |
-| `/Users/uaih3k9x/code/DCAgent/backend/src/services/deviceService.ts` | 设备服务逻辑 |
-| `/Users/uaih3k9x/code/DCAgent/backend/src/routes/devices.ts` | 设备 API 路由 |
-| `/Users/uaih3k9x/code/DCAgent/backend/query-routers.ts` | 路由器查询脚本 |
-| `/Users/uaih3k9x/code/DCAgent/backend/query-all-devices.ts` | 所有设备查询脚本 |
-| `/Users/uaih3k9x/code/DCAgent/backend/router-usage-guide.ts` | 路由器操作指南 |
+| `backend/prisma/schema.prisma` | Prisma 数据库模型定义 |
+| `backend/src/services/deviceService.ts` | 设备服务逻辑 |
+| `backend/src/routes/devices.ts` | 设备 API 路由 |
+| `backend/query-routers.ts` | 路由器查询脚本 |
+| `backend/query-all-devices.ts` | 所有设备查询脚本 |
+| `backend/router-usage-guide.ts` | 路由器操作指南 |
 
 ---
 

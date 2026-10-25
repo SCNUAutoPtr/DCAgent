@@ -1,80 +1,109 @@
-import { Routes, Route } from 'react-router-dom';
-import { Layout, ConfigProvider } from 'antd';
+import { Suspense, useEffect, useMemo } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { App as AntApp, ConfigProvider, Layout, Spin, theme } from 'antd';
 import { useTranslation } from 'react-i18next';
+import { useDeckMode } from './stores/deckMode';
+import { useUiPrefs } from './stores/uiPrefs';
 import { getAntdLocale } from './locales/languages';
+import { buildTheme } from './theme';
 import AppHeader from './components/Layout/AppHeader';
 import AppSidebar from './components/Layout/AppSidebar';
-import Dashboard from './pages/Dashboard';
-import DataCenterList from './pages/DataCenterList';
-import RoomList from './pages/RoomList';
-import CabinetList from './pages/CabinetList';
-import DeviceList from './pages/DeviceList';
-import PanelList from './pages/PanelList';
-import CableTopology from './pages/CableTopology';
-import CableManualInventory from './pages/CableManualInventory';
-import CableScrap from './pages/CableScrap';
-import ShortIdPoolManagement from './pages/ShortIdPoolManagement';
-import PortDetailView from './pages/PortDetailView';
-import BulkDeploymentPage from './pages/BulkDeploymentPage';
-import PanelTemplateManagementPage from './pages/PanelTemplateManagementPage';
-import OpticalModuleList from './pages/OpticalModuleList';
-import OpticalModuleDetail from './pages/OpticalModuleDetail';
-import IpManagement from './pages/IpManagement';
-import SubnetDetail from './pages/SubnetDetail';
-// import MonitoringPage from './pages/MonitoringPage'; // SNMP 监控模块已隐藏
+import CommandPalette from './components/CommandPalette/CommandPalette';
+import { ROUTES, paths } from './routes';
 
 const { Content } = Layout;
 
-function App() {
-  const { i18n } = useTranslation();
+/** Pages that lay out their own cards on the layout background instead of one surface. */
+const BARE_PAGES = new Set([paths.dashboard()]);
 
-  // 根据当前语言动态获取 Ant Design 的 locale
-  const antdLocale = getAntdLocale(i18n.language);
+function Shell() {
+  const { token } = theme.useToken();
+  const { pathname } = useLocation();
+  const deckEnabled = useDeckMode((state) => state.enabled);
+  const deckScale = useDeckMode((state) => state.scale);
+  const bare = BARE_PAGES.has(pathname);
 
   return (
-    <ConfigProvider locale={antdLocale}>
-      <Layout style={{ minHeight: '100vh' }}>
+    <Layout
+      className="app-shell"
+      style={{
+        minHeight: '100vh',
+        // the Deck reports a 1080p viewport as 1920 CSS px: scale the whole page
+        zoom: deckEnabled && deckScale !== 1 ? deckScale : undefined,
+      }}
+    >
+      <AppSidebar />
+      <Layout className="app-main">
         <AppHeader />
-        <Layout>
-          <AppSidebar />
-          <Layout style={{ padding: '24px' }}>
-            <Content
-              style={{
-                padding: 24,
-                margin: 0,
-                minHeight: 280,
-                background: '#fff',
-                borderRadius: 8,
-              }}
-            >
+        <Content className="deck-content-wrapper app-content" style={{ padding: deckEnabled ? 8 : '16px 24px 24px' }}>
+          <div
+            className={bare ? 'app-page app-page--bare' : 'app-page'}
+            style={
+              bare
+                ? undefined
+                : {
+                    padding: deckEnabled ? 8 : 24,
+                    minHeight: 280,
+                    background: token.colorBgContainer,
+                    borderRadius: deckEnabled ? 4 : token.borderRadiusLG,
+                    boxShadow: token.boxShadowTertiary,
+                  }
+            }
+          >
+            <Suspense fallback={<Spin style={{ display: 'block', margin: '80px auto' }} />}>
               <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/datacenters" element={<DataCenterList />} />
-              <Route path="/rooms" element={<RoomList />} />
-              <Route path="/cabinets" element={<CabinetList />} />
-              <Route path="/devices" element={<DeviceList />} />
-              <Route path="/panels" element={<PanelList />} />
-              <Route path="/port-detail" element={<PortDetailView />} />
-              <Route path="/topology" element={<CableTopology />} />
-              <Route path="/cable-topology" element={<CableTopology />} />
-              <Route path="/cable-manual-inventory" element={<CableManualInventory />} />
-              <Route path="/cable-scrap" element={<CableScrap />} />
-              <Route path="/shortid-pool" element={<ShortIdPoolManagement />} />
-              <Route path="/bulk-deployment" element={<BulkDeploymentPage />} />
-              <Route path="/panel-templates" element={<PanelTemplateManagementPage />} />
-              <Route path="/optical-modules" element={<OpticalModuleList />} />
-              <Route path="/optical-modules/:id" element={<OpticalModuleDetail />} />
-              <Route path="/ip-management" element={<IpManagement />} />
-              <Route path="/ip-management/subnet/:id" element={<SubnetDetail />} />
-              {/* SNMP 监控路由已隐藏 */}
-              {/* <Route path="/monitoring" element={<MonitoringPage />} /> */}
+                {ROUTES.map((r) => (
+                  <Route key={r.path} path={r.path} element={r.element} />
+                ))}
               </Routes>
-            </Content>
-          </Layout>
-        </Layout>
+            </Suspense>
+          </div>
+        </Content>
       </Layout>
-    </ConfigProvider>
+      <CommandPalette />
+    </Layout>
   );
 }
 
-export default App;
+export default function App() {
+  const { i18n } = useTranslation();
+  const deckEnabled = useDeckMode((state) => state.enabled);
+  const autoDetect = useDeckMode((state) => state.autoDetect);
+  const mode = useUiPrefs((s) => s.theme);
+  const themeConfig = useMemo(() => buildTheme(mode, deckEnabled), [mode, deckEnabled]);
+
+  // guess once from the viewport width; a manual switch is remembered in localStorage
+  useEffect(() => {
+    autoDetect();
+  }, [autoDetect]);
+
+  // the class sits on body so modals (mounted under body) get the deck styles too
+  useEffect(() => {
+    document.body.classList.toggle('deck-mode', deckEnabled);
+  }, [deckEnabled]);
+
+  // static message/notification/modal calls (rpc error toasts) render outside the tree: give them the theme too
+  useEffect(() => {
+    ConfigProvider.config({
+      holderRender: (children) => (
+        <ConfigProvider locale={getAntdLocale(i18n.language)} theme={themeConfig}>
+          {children}
+        </ConfigProvider>
+      ),
+    });
+  }, [themeConfig, i18n.language]);
+
+  // plain CSS (index.css, scrollbars, native controls) follows the antd theme
+  useEffect(() => {
+    document.documentElement.dataset.theme = mode;
+    document.documentElement.style.colorScheme = mode;
+  }, [mode]);
+
+  return (
+    <ConfigProvider locale={getAntdLocale(i18n.language)} componentSize={deckEnabled ? 'small' : 'middle'} theme={themeConfig}>
+      <AntApp>
+        <Shell />
+      </AntApp>
+    </ConfigProvider>
+  );
+}

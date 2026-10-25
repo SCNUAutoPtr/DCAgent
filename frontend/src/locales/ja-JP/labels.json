@@ -1,0 +1,116 @@
+{
+  "title": "ラベル管理",
+  "description": "ラック、パネル、ケーブル端子にはラベルが必要です。番号の生成、印刷ジョブの作成、破損ラベルの無効化、ラベル未設定の確認を行います。",
+  "tabs": {
+    "labels": "ラベル",
+    "tasks": "印刷ジョブ",
+    "missing": "未設定"
+  },
+  "fields": {
+    "shortId": "ラベル番号",
+    "state": "状態",
+    "bound": "紐付け先",
+    "batchNo": "バッチ",
+    "printedAt": "印刷日時",
+    "firstBoundAt": "初回紐付け",
+    "boundAt": "最終紐付け",
+    "notes": "備考",
+    "createdAt": "作成日時",
+    "completedAt": "完了日時",
+    "createdBy": "作成者",
+    "count": "枚数",
+    "taskName": "ジョブ名",
+    "kind": "種類",
+    "name": "名前",
+    "location": "場所",
+    "actions": "操作"
+  },
+  "states": {
+    "GENERATED": "生成済み",
+    "PRINTED": "印刷済み",
+    "VOID": "無効"
+  },
+  "taskStatuses": {
+    "PENDING": "印刷待ち",
+    "COMPLETED": "完了",
+    "FAILED": "失敗"
+  },
+  "bound": {
+    "yes": "紐付け済み",
+    "no": "未紐付け"
+  },
+  "stats": {
+    "total": "合計",
+    "bound": "紐付け済み",
+    "allocatable": "自動割り当て可能",
+    "toPrint": "紐付け済み未印刷",
+    "void": "無効",
+    "missing": "ラベル未設定"
+  },
+  "actions": {
+    "generate": "番号を生成",
+    "createPrintTask": "印刷ジョブ作成",
+    "batchVoid": "一括無効化",
+    "void": "無効化",
+    "exportCsv": "CSV 出力",
+    "complete": "完了にする",
+    "fail": "失敗にする",
+    "refresh": "更新"
+  },
+  "filters": {
+    "state": "状態",
+    "bound": "紐付け",
+    "kind": "種類",
+    "range": "範囲（例 1-5, 8）"
+  },
+  "modals": {
+    "generate": "ラベル番号を生成",
+    "createPrintTask": "印刷ジョブ作成",
+    "batchVoid": "ラベルを一括無効化",
+    "void": "ラベル {{display}} を無効化",
+    "confirmComplete": "印刷完了にしますか？",
+    "rangeHelp": "単一：1 または E-00001、範囲：1-5 または E-00001-E-00005、組み合わせ：1-5, 8, 10-12",
+    "modeCount": "枚数指定",
+    "modeRange": "範囲指定",
+    "modeBound": "紐付け済み未印刷"
+  },
+  "form": {
+    "count": "枚数",
+    "rangeExpr": "範囲",
+    "batchNo": "バッチ",
+    "taskName": "ジョブ名",
+    "createdBy": "作成者",
+    "notes": "備考",
+    "reason": "理由"
+  },
+  "placeholders": {
+    "batchNo": "任意",
+    "taskName": "例：2026 年第 1 弾",
+    "createdBy": "任意",
+    "reason": "例：破損、紛失",
+    "rangeExpr": "例：1-5, 8, E-00010-E-00012"
+  },
+  "validation": {
+    "countRequired": "枚数を入力してください",
+    "rangeRequired": "範囲を入力してください",
+    "taskNameRequired": "ジョブ名を入力してください",
+    "reasonRequired": "理由を入力してください"
+  },
+  "messages": {
+    "generated": "新規 {{created}} 件、既存 {{existing}} 件",
+    "taskCreated": "印刷ジョブを作成しました（{{count}} 枚）",
+    "taskCompleted": "印刷ジョブを更新しました",
+    "voided": "{{count}} 件を無効化しました",
+    "voidPartial": "{{ok}} 件を無効化、{{failed}} 件はスキップ",
+    "voidReasons": {
+      "NOT_FOUND": "存在しない",
+      "BOUND": "紐付け済み",
+      "ALREADY_VOID": "既に無効"
+    },
+    "exported": "出力しました",
+    "noMissing": "すべてラベル設定済みです"
+  },
+  "pagination": {
+    "total": "合計 {{total}} 件"
+  }
+}

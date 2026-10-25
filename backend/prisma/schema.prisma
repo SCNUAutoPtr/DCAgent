@@ -1,5 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// DCAgent schema (0001_baseline, 2026-10-25).
+// Rules that Prisma cannot model (CHECK, EXCLUDE, triggers) live at the end of
+// prisma/migrations/0001_baseline/migration.sql under "-- native constraints".
+// Derived state (port occupancy, cable stock/in-use, workstation online) is never stored.
 
 generator client {
   provider = "prisma-client-js"
@@ -10,45 +12,61 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 数据中心（作为入口选择页面，不需要shortID）
+// ---------------------------------------------------------------------------
+// Hierarchy
+// ---------------------------------------------------------------------------
+
 model DataCenter {
   id        String   @id @default(uuid())
-  name      String
+  name      String   @unique
   location  String?
   rooms     Room[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-// 机房
 model Room {
-  id           String     @id @default(uuid())
-  shortId      Int?       @unique // 全局唯一短ID（通过 GlobalShortIdAllocation 分配）
+  id           String        @id @default(uuid())
   name         String
   floor        String?
+  notes        String?
   dataCenterId String
-  dataCenter   DataCenter @relation(fields: [dataCenterId], references: [id], onDelete: Cascade)
+  dataCenter   DataCenter    @relation(fields: [dataCenterId], references: [id], onDelete: Restrict)
+  widthM       Float?
+  depthM       Float?
+  label        Label?
   cabinets     Cabinet[]
-  ipSubnets    IpSubnet[] // 关联的IP子网
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  devices      Device[]
+  workstations Workstation[]
+  ipSubnets    IpSubnet[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([dataCenterId, name])
 }
 
-// 机柜
 model Cabinet {
-  id        String   @id @default(uuid())
-  shortId   Int?     @unique // 全局唯一短ID（通过 GlobalShortIdAllocation 分配）
-  name      String
-  position  String?  // 机房中的位置
-  height    Int      @default(42) // U数，默认42U
-  roomId    String
-  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  devices   Device[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(uuid())
+  name         String
+  positionCode String?
+  heightU      Int      @default(42)
+  notes        String?
+  roomId       String
+  room         Room     @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  // floor plan / 3D: room coordinates in metres, (fpX,fpY) = front-left corner
+  fpX          Float?
+  fpY          Float?
+  fpW          Float?
+  fpD          Float?
+  fpRotation   Int      @default(0)
+  label        Label?
+  devices      Device[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([roomId, name])
 }
 
-// 设备类型枚举
 enum DeviceType {
   SERVER
   SWITCH
@@ -59,403 +77,502 @@ enum DeviceType {
   OTHER
 }
 
-// 设备（可以通过Cabinet唯一找到，不需要独立的shortID）
+model DeviceModel {
+  id         String          @id @default(uuid())
+  vendor     String          @default("")
+  name       String
+  deviceType DeviceType
+  /// null = height not known (yet)
+  uHeight    Int?
+  depthMm    Int?
+  notes      String?
+  devices    Device[]
+  templates  PanelTemplate[]
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@unique([vendor, name])
+}
+
 model Device {
-  id          String      @id @default(uuid())
-  name        String
-  type        DeviceType
-  model       String?
-  serialNo    String?     @unique
-  uPosition   Int?        // 在机柜中的U位
-  uHeight     Int?        // 占用几U
-  cabinetId   String
-  cabinet     Cabinet     @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
-  panels      Panel[]
-  ipAddresses IpAddress[] // 设备的管理IP地址
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id            String            @id @default(uuid())
+  name          String
+  type          DeviceType
+  deviceModelId String?
+  deviceModel   DeviceModel?      @relation(fields: [deviceModelId], references: [id], onDelete: SetNull)
+  serialNo      String?           @unique
+  sysname       String?           @unique
+  cabinetId     String?
+  cabinet       Cabinet?          @relation(fields: [cabinetId], references: [id], onDelete: Restrict)
+  roomId        String?
+  room          Room?             @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  uPosition     Int?
+  /// null = height not known; a racked device of unknown height occupies at least its uPosition (see device_u_overlap)
+  uHeight       Int?
+  notes         String?
+  panels        Panel[]
+  ipAddresses   IpAddress[]
+  observations  PortObservation[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([cabinetId, name])
+  @@unique([roomId, name])
 }
 
-// 面板类型枚举
+// ---------------------------------------------------------------------------
+// Panels, ports, templates
+// ---------------------------------------------------------------------------
+
 enum PanelType {
-  NETWORK      // 网络面板（可包含RJ45, SFP, QSFP等混合端口）
-  POWER        // 电源面板
-  CONSOLE      // 控制台/串口面板
-  USB          // USB面板
-  MIXED        // 混合功能面板
-  OTHER        // 其他
+  NETWORK
+  POWER
+  CONSOLE
+  USB
+  OTHER
 }
 
-// 面板模板（可复用的面板配置）
-model PanelTemplate {
-  id              String    @id @default(uuid())
-  name            String    // 模板名称，如 "24口交换机面板"
-  type            PanelType // 面板类型
-  portCount       Int       // 端口数量
-  description     String?   // 模板描述
-  // 物理尺寸（单位：mm）
-  width           Float     @default(482.6) // 标准1U面板宽度
-  height          Float     @default(44.45) // 标准1U面板高度
-  // 布局配置（JSON存储）
-  layoutConfig    Json?     // 布局规则配置：{ portsPerRow, rowSpacing, portSize, spacing }
-  // 端口定义（JSON数组）
-  portDefinitions Json      // 端口定义数组：[{ number, position: {x,y}, size: {width,height} }]
-  // 视觉样式
-  backgroundColor String?   // 背景颜色
-  image           String?   // 图片URL
-  svgPath         String?   // SVG路径
-  // 是否为系统预设模板
-  isSystem        Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  // 使用该模板的面板
-  panels          Panel[]
+enum PanelFace {
+  FRONT
+  REAR
 }
 
-// 面板（设备上的接口面板）
-model Panel {
-  id              String         @id @default(uuid())
-  name            String
-  type            PanelType
-  shortId         Int?           @unique // 面板shortID，用于快速识别和扫码
-  deviceId        String
-  device          Device         @relation(fields: [deviceId], references: [id], onDelete: Cascade)
-  ports           Port[]
-  // 模板引用（可选）
-  templateId      String?
-  template        PanelTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  isCustomized    Boolean        @default(false) // 是否已从模板自定义（解绑）
-  // 物理布局信息（单位：mm）
-  position        Json?          // 位置坐标 {x, y}
-  size            Json?          // 尺寸 {width, height}
-  // 视觉样式
-  backgroundColor String?        // 背景颜色
-  image           String?        // 图片URL
-  svgPath         String?        // SVG路径
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-}
-
-// 端口状态枚举
-enum PortStatus {
-  AVAILABLE
-  OCCUPIED
-  RESERVED
-  FAULTY
-}
-
-// 端口物理状态枚举（用于区分槽位、模块、线缆的状态）
-enum PhysicalStatus {
-  EMPTY         // 空槽位（未安装模块）
-  MODULE_ONLY   // 已安装模块但未连接线缆
-  CONNECTED     // 已连接线缆
-}
-
-// 端口（不需要 shortID，太小贴不了标签）
-model Port {
-  id             String          @id @default(uuid())
-  number         String          // 端口编号
-  label          String?         // 端口标签
-  status         PortStatus      @default(AVAILABLE)
-  physicalStatus PhysicalStatus  @default(EMPTY) // 物理状态
-  panelId        String
-  panel          Panel           @relation(fields: [panelId], references: [id], onDelete: Cascade)
-  portType       String?         // 端口类型 (RJ45, SFP, SFP+, QSFP, 等)
-  rotation       Float?          @default(0) // 旋转角度 (0, 90, 180, 270)
-  // 物理布局信息（相对于面板的坐标，单位：mm）
-  position       Json?           // 位置坐标 {x, y}
-  size           Json?           // 尺寸 {width, height}
-  // 连接信息
-  cableEndpoints CableEndpoint[] // 该端口连接的线缆端点
-  opticalModule  OpticalModule?  // 关联的光模块（如果有）
-  ipAddress      IpAddress?      // 关联的IP地址
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-
-  @@unique([panelId, number])
-}
-
-// 线缆类型枚举
-enum CableType {
-  CAT5E
-  CAT6
-  CAT6A
-  CAT7
-  FIBER_SM       // 单模光纤
-  FIBER_MM       // 多模光纤
-  QSFP_TO_SFP    // QSFP转SFP分支线缆
-  QSFP_TO_QSFP   // QSFP直连
-  SFP_TO_SFP     // SFP直连
+enum PortType {
+  RJ45
+  SFP
+  SFP_PLUS
+  SFP28
+  QSFP
+  QSFP28
+  QSFP_DD
+  CONSOLE
+  USB
   POWER
   OTHER
 }
 
-// 线缆入库状态枚举
-enum CableInventoryStatus {
-  NOT_INVENTORIED  // 未入库（线缆记录存在但未绑定端口）
-  INVENTORIED      // 已入库（已绑定端口，待连接）
-  IN_USE           // 使用中（已连接端口并在用）
+enum PortAdminState {
+  NORMAL
+  RESERVED
+  FAULTY
 }
 
-// 线缆（可以通过两端Port唯一找到，不需要独立的shortID）
-model Cable {
-  id               String                @id @default(uuid())
-  label            String?               // 线缆标签
-  type             CableType
-  length           Float?                // 长度（米）
-  color            String?
+model Panel {
+  id               String          @id @default(uuid())
+  name             String
+  type             PanelType
+  face             PanelFace       @default(FRONT)
   notes            String?
-  isBranched       Boolean               @default(false) // 是否为分支线缆（1对多）
-  inventoryStatus  CableInventoryStatus  @default(NOT_INVENTORIED) // 入库状态
-  endpoints        CableEndpoint[]       // 线缆端点
-  shortIdPools     CableShortIdPool[]    // shortID池关联（用于预分配ID）
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
+  deviceId         String
+  device           Device          @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  templateId       String?
+  template         PanelTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  templateRevision Int?
+  widthMm          Float?
+  heightMm         Float?
+  label            Label?
+  ports            Port[]
+  parkedEndpoints  CableEndpoint[] @relation("ParkedOnPanel")
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@unique([deviceId, name])
 }
 
-// 线缆端点（支持1对多连接）
+model Port {
+  id                   String            @id @default(uuid())
+  panelId              String
+  panel                Panel             @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  number               String
+  sortIndex            Int
+  ifName               String?
+  portType             PortType
+  label                String?
+  adminState           PortAdminState    @default(NORMAL)
+  notes                String?
+  xMm                  Float?
+  yMm                  Float?
+  wMm                  Float?
+  hMm                  Float?
+  rotation             Int               @default(0)
+  cableEndpoint        CableEndpoint?
+  opticalModule        OpticalModule?
+  ipAddress            IpAddress?
+  attachedWorkstations Workstation[]
+  observations         PortObservation[]
+  movementsFrom        ModuleMovement[]  @relation("MovementFrom")
+  movementsTo          ModuleMovement[]  @relation("MovementTo")
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  @@unique([panelId, number])
+  @@unique([panelId, ifName])
+  @@index([panelId, sortIndex])
+}
+
+model PanelTemplate {
+  id            String              @id @default(uuid())
+  name          String              @unique
+  type          PanelType
+  face          PanelFace           @default(FRONT)
+  deviceModelId String?
+  deviceModel   DeviceModel?        @relation(fields: [deviceModelId], references: [id], onDelete: SetNull)
+  widthMm       Float               @default(482.6)
+  heightMm      Float               @default(44.45)
+  generator     Json?
+  revision      Int                 @default(1)
+  description   String?
+  ports         PanelTemplatePort[]
+  panels        Panel[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+}
+
+model PanelTemplatePort {
+  id         String        @id @default(uuid())
+  templateId String
+  template   PanelTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  number     String
+  sortIndex  Int
+  portType   PortType
+  ifName     String?
+  xMm        Float
+  yMm        Float
+  wMm        Float
+  hMm        Float
+  rotation   Int           @default(0)
+
+  @@unique([templateId, number])
+}
+
+// ---------------------------------------------------------------------------
+// Cables
+// ---------------------------------------------------------------------------
+
+enum CableMedium {
+  CAT5E
+  CAT6
+  CAT6A
+  CAT7
+  FIBER_SM
+  FIBER_MM
+  DAC
+  AOC
+  POWER
+  OTHER
+}
+
+enum ConnectorType {
+  RJ45
+  LC
+  SC
+  MPO
+  SFP
+  SFP_PLUS
+  QSFP
+  QSFP28
+  OTHER
+}
+
+enum CableEnd {
+  A
+  B
+}
+
+model Cable {
+  id        String          @id @default(uuid())
+  medium    CableMedium
+  label     String?
+  lengthM   Float?
+  color     String?
+  notes     String?
+  endpoints CableEndpoint[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
 model CableEndpoint {
-  id        String   @id @default(uuid())
-  shortId   Int?     @unique // 端点标签的shortID（用于扫码识别线缆）
-  cableId   String
-  cable     Cable    @relation(fields: [cableId], references: [id], onDelete: Cascade)
-  portId    String?  // 端口ID（可选，入库时可能未连接端口）
-  port      Port?    @relation(fields: [portId], references: [id], onDelete: Cascade)
-  endType   String   // "A" 表示主端（如QSFP端），"B1", "B2", "B3", "B4" 表示分支端（如4个SFP端）
-  createdAt DateTime @default(now())
+  id            String         @id @default(uuid())
+  cableId       String
+  cable         Cable          @relation(fields: [cableId], references: [id], onDelete: Cascade)
+  end           CableEnd
+  connector     ConnectorType?
+  portId        String?        @unique
+  port          Port?          @relation(fields: [portId], references: [id], onDelete: SetNull)
+  parkedPanelId String?
+  parkedPanel   Panel?         @relation("ParkedOnPanel", fields: [parkedPanelId], references: [id], onDelete: SetNull)
+  label         Label?
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
-  @@unique([cableId, endType]) // 确保同一线缆的端点类型唯一
+  @@unique([cableId, end])
+  @@index([parkedPanelId])
 }
 
-// ShortID池状态枚举
-enum ShortIdPoolStatus {
-  GENERATED   // 已生成（刚创建）
-  PRINTED     // 已打印（被打印任务标记）
-  BOUND       // 已绑定（已绑定到实体）
-  CANCELLED   // 已报废（标签损坏、丢失等）
+// ---------------------------------------------------------------------------
+// Labels (shortID). The only place a shortID lives.
+// ---------------------------------------------------------------------------
+
+enum LabelState {
+  GENERATED
+  PRINTED
+  VOID
 }
 
-// 实体类型枚举（所有使用shortID的实体）
-enum EntityType {
-  DATA_CENTER
-  ROOM
-  CABINET
-  DEVICE
-  PANEL
-  PORT
-  CABLE
-  CABLE_ENDPOINT
+model Label {
+  shortId         Int            @id
+  state           LabelState     @default(GENERATED)
+  printTaskId     String?
+  printTask       PrintTask?     @relation(fields: [printTaskId], references: [id], onDelete: SetNull)
+  printedAt       DateTime?
+  batchNo         String?
+  notes           String?
+  firstBoundAt    DateTime?
+  boundAt         DateTime?
+  roomId          String?        @unique
+  room            Room?          @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  cabinetId       String?        @unique
+  cabinet         Cabinet?       @relation(fields: [cabinetId], references: [id], onDelete: SetNull)
+  panelId         String?        @unique
+  panel           Panel?         @relation(fields: [panelId], references: [id], onDelete: SetNull)
+  cableEndpointId String?        @unique
+  cableEndpoint   CableEndpoint? @relation(fields: [cableEndpointId], references: [id], onDelete: SetNull)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([state])
 }
 
-// 打印任务表
+enum PrintTaskStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
 model PrintTask {
-  id          String         @id @default(uuid())
-  name        String         // 任务名称，如 "2025年第一批标签"
-  count       Int            // 打印数量
-  status      String         @default("PENDING") // PENDING/PRINTING/COMPLETED/FAILED
-  filePath    String?        // 导出文件路径（CSV/Excel）
-  notes       String?        // 备注
-  shortIds    ShortIdPool[]  // 关联的shortID
-  createdBy   String?        // 创建人
-  createdAt   DateTime       @default(now())
-  completedAt DateTime?      // 完成时间
-  updatedAt   DateTime       @updatedAt
-}
-
-// 统一的ShortID池（用于预先打印标签）
-model ShortIdPool {
-  id           String             @id @default(uuid())
-  shortId      Int                @unique  // 预分配的shortID
-  status       ShortIdPoolStatus  @default(GENERATED) // 状态
-
-  // 绑定信息（使用时填充）
-  entityType   EntityType?        // 绑定时的实体类型
-  entityId     String?            // 绑定的实体ID
-  boundAt      DateTime?          // 绑定时间
-
-  // 打印任务关联
-  printTaskId  String?
-  printTask    PrintTask?         @relation(fields: [printTaskId], references: [id], onDelete: SetNull)
-  printedAt    DateTime?          // 打印时间
-
-  // 其他信息
-  batchNo      String?            // 批次号
-  notes        String?            // 备注（如作废原因等）
-
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-
-  @@index([entityType, status])
-  @@index([shortId])
-  @@index([status])
-}
-
-// 为了保持向后兼容，Cable表的shortIdPools关系暂时保留
-// 后续会迁移到统一的ShortIdPool表
-model CableShortIdPool {
-  id          String        @id @default(uuid())
-  shortId     Int           @unique
-  status      String        @default("AVAILABLE")
-  cableId     String?       @unique
-  cable       Cable?        @relation(fields: [cableId], references: [id], onDelete: SetNull)
-  allocatedAt DateTime      @default(now())
-  usedAt      DateTime?
+  id          String          @id @default(uuid())
+  name        String
+  status      PrintTaskStatus @default(PENDING)
   notes       String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdBy   String?
+  labels      Label[]
+  createdAt   DateTime        @default(now())
+  completedAt DateTime?
+  updatedAt   DateTime        @updatedAt
 }
 
-// ============================================
-// 全局 ShortID 管理系统（已废弃，统一使用 ShortIdPool）
-// ============================================
-// GlobalShortIdSequence 和 GlobalShortIdAllocation 已迁移到 ShortIdPool
-// 详见 ShortID池管理系统
+// ---------------------------------------------------------------------------
+// Optical modules
+// ---------------------------------------------------------------------------
 
-// ============================================
-// 光模块管理系统
-// ============================================
-
-// 光模块状态枚举
 enum ModuleStatus {
-  IN_STOCK      // 在库（未安装）
-  INSTALLED     // 已安装
-  RESERVED      // 预留
-  FAULTY        // 故障
-  SCRAPPED      // 已报废
+  IN_STOCK
+  INSTALLED
+  RESERVED
+  FAULTY
+  SCRAPPED
 }
 
-// 光模块（Optical Transceiver Module）
+enum TransceiverForm {
+  SFP
+  SFP_PLUS
+  SFP28
+  QSFP
+  QSFP28
+  QSFP_DD
+  OTHER
+}
+
+enum MovementType {
+  PURCHASE
+  INSTALL
+  UNINSTALL
+  TRANSFER
+  REPAIR
+  RETURN
+  SCRAP
+}
+
 model OpticalModule {
   id             String           @id @default(uuid())
-  serialNo       String           @unique // 序列号（必填，用于唯一识别）
-  model          String           // 型号
-  vendor         String           // 厂商
-  moduleType     String           // 模块类型：SFP, SFP_PLUS, QSFP, QSFP28, QSFP_DD
-
-  // 技术参数
-  wavelength     String?          // 波长（如 850nm, 1310nm, 1550nm）
-  distance       String?          // 传输距离（如 300m, 10km, 40km）
-  ddmSupport     Boolean          @default(false) // 是否支持DDM（数字诊断监控）
-
-  // 采购信息（可选）
-  supplier       String?          // 供应商
-  purchaseDate   DateTime?        // 采购日期
-  price          Float?           // 采购价格
-  warrantyExpiry DateTime?        // 保修到期日
-
-  // 状态和位置
-  status         ModuleStatus     @default(IN_STOCK) // 当前状态
-  currentPortId  String?          @unique // 当前安装的端口ID（null表示在库）
-  currentPort    Port?            @relation(fields: [currentPortId], references: [id], onDelete: SetNull)
-
-  // 历史记录
-  movements      ModuleMovement[] // 移动历史
-
-  // 备注
-  notes          String?          // 备注信息
-
+  serialNo       String           @unique
+  model          String
+  vendor         String
+  moduleType     TransceiverForm
+  wavelength     String?
+  distance       String?
+  ddmSupport     Boolean          @default(false)
+  supplier       String?
+  purchaseDate   DateTime?
+  price          Float?
+  warrantyExpiry DateTime?
+  status         ModuleStatus     @default(IN_STOCK)
+  currentPortId  String?          @unique
+  currentPort    Port?            @relation(fields: [currentPortId], references: [id], onDelete: Restrict)
+  movements      ModuleMovement[]
+  notes          String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
   @@index([status])
   @@index([moduleType])
-  @@index([currentPortId])
 }
 
-// 光模块移动类型枚举
-enum MovementType {
-  PURCHASE      // 采购入库
-  INSTALL       // 安装到端口
-  UNINSTALL     // 从端口卸下
-  TRANSFER      // 转移到其他端口
-  REPAIR        // 送修
-  RETURN        // 维修返回
-  SCRAP         // 报废
-}
-
-// 光模块移动历史
 model ModuleMovement {
-  id           String       @id @default(uuid())
+  id           String        @id @default(uuid())
   moduleId     String
   module       OpticalModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-
-  movementType MovementType // 移动类型
-  fromPortId   String?      // 源端口ID（可为空，如采购入库）
-  toPortId     String?      // 目标端口ID（可为空，如报废）
-
-  operator     String?      // 操作人
-  notes        String?      // 备注信息
-  createdAt    DateTime     @default(now())
+  movementType MovementType
+  fromPortId   String?
+  fromPort     Port?         @relation("MovementFrom", fields: [fromPortId], references: [id], onDelete: SetNull)
+  /// "device / panel / port" at the time of the movement; survives deleting or renaming the port
+  fromPortPath String?
+  toPortId     String?
+  toPort       Port?         @relation("MovementTo", fields: [toPortId], references: [id], onDelete: SetNull)
+  toPortPath   String?
+  operator     String?
+  notes        String?
+  createdAt    DateTime      @default(now())
 
   @@index([moduleId])
   @@index([createdAt])
 }
 
-// ============================================
-// IP地址管理系统
-// ============================================
+// ---------------------------------------------------------------------------
+// IP management. A free address has no row.
+// ---------------------------------------------------------------------------
 
-// IP状态枚举
 enum IpStatus {
-  FREE        // 空闲
-  ALLOCATED   // 已分配
-  RESERVED    // 保留（网关、广播等）
-  BLOCKED     // 禁用
+  ALLOCATED
+  RESERVED
+  BLOCKED
 }
 
-// IP子网
+// network holds the network address (host form) and prefixLen the mask: Prisma drops the
+// prefix of inet values on read and cannot write them, so the mask lives in its own column.
+// SQL uses set_masklen("network", "prefixLen") for containment.
 model IpSubnet {
   id          String      @id @default(uuid())
-  name        String      // 子网名称，如 "机房A管理网段"
-  network     String      // 网络地址，如 "192.168.1.0"
-  cidr        Int         // CIDR前缀，如 24
-  gateway     String?     // 网关地址，如 "192.168.1.1"
-  vlan        String?     // VLAN标识
-  dnsServers  Json?       // DNS服务器列表 ["8.8.8.8", "8.8.4.4"]
-  description String?     // 描述信息
-
-  // 关联机房（可选）
+  name        String
+  network     String      @db.Inet
+  prefixLen   Int
+  gateway     String?     @db.Inet
+  vlan        Int?
+  dnsServers  String[]    @default([])
+  description String?
   roomId      String?
   room        Room?       @relation(fields: [roomId], references: [id], onDelete: SetNull)
-
-  // IP地址池
   ipAddresses IpAddress[]
-
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
+  @@unique([network, prefixLen])
   @@index([roomId])
 }
 
-// IP地址
 model IpAddress {
-  id          String    @id @default(uuid())
-  address     String    @unique  // IP地址，如 "192.168.1.100"
+  id            String       @id @default(uuid())
+  subnetId      String
+  subnet        IpSubnet     @relation(fields: [subnetId], references: [id], onDelete: Restrict)
+  address       String       @db.Inet
+  status        IpStatus     @default(ALLOCATED)
+  portId        String?      @unique
+  port          Port?        @relation(fields: [portId], references: [id], onDelete: SetNull)
+  deviceId      String?
+  device        Device?      @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  workstationId String?      @unique
+  workstation   Workstation? @relation(fields: [workstationId], references: [id], onDelete: SetNull)
+  hostname      String?
+  macAddress    String?
+  description   String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
-  // 所属子网
-  subnetId    String
-  subnet      IpSubnet  @relation(fields: [subnetId], references: [id], onDelete: Cascade)
-
-  // IP状态
-  status      IpStatus  @default(FREE)
-
-  // 绑定关系（支持绑定到端口或设备）
-  portId      String?   @unique  // 绑定的端口ID（与端口一对一）
-  port        Port?     @relation(fields: [portId], references: [id], onDelete: SetNull)
-
-  deviceId    String?   // 绑定的设备ID（设备管理IP，一个设备可有多个IP）
-  device      Device?   @relation(fields: [deviceId], references: [id], onDelete: SetNull)
-
-  // 网络信息
-  hostname    String?   // 主机名
-  macAddress  String?   // MAC地址
-  description String?   // 描述信息
-
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([subnetId])
+  @@unique([subnetId, address])
   @@index([status])
-  @@index([portId])
   @@index([deviceId])
+}
+
+// ---------------------------------------------------------------------------
+// Workstations and observability
+// ---------------------------------------------------------------------------
+
+enum WorkstationAdminState {
+  ACTIVE
+  MAINTENANCE
+  FAULTY
+  RETIRED
+}
+
+model Workstation {
+  id             String                 @id @default(uuid())
+  name           String
+  code           String?                @unique
+  roomId         String
+  room           Room                   @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  cpu            String?
+  memory         String?
+  storage        String?
+  gpu            String?
+  os             String?
+  adminState     WorkstationAdminState  @default(ACTIVE)
+  assignedTo     String?
+  fpX            Float?
+  fpY            Float?
+  fpW            Float?
+  fpD            Float?
+  notes          String?
+  attachedPortId String?
+  attachedPort   Port?                  @relation(fields: [attachedPortId], references: [id], onDelete: SetNull)
+  lastSeenAt     DateTime?
+  lastCheckedAt  DateTime?
+  ipAddress      IpAddress?
+  unmatched      ObservationUnmatched[]
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@unique([roomId, name])
+  @@index([attachedPortId])
+}
+
+model PortObservation {
+  id             String   @id @default(uuid())
+  deviceId       String
+  /// history is never dropped implicitly: deleting a device with observations needs force (service deletes them explicitly)
+  device         Device   @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  portId         String?
+  port           Port?    @relation(fields: [portId], references: [id], onDelete: SetNull)
+  ifName         String
+  phy            String?
+  inUtilPercent  Float?
+  outUtilPercent Float?
+  inErrors       Int?
+  outErrors      Int?
+  rxPowerDbm     Float?
+  txPowerDbm     Float?
+  rxLowAlarmDbm  Float?
+  rxLowWarnDbm   Float?
+  collectedAt    DateTime @default(now())
+
+  @@index([deviceId, ifName, collectedAt])
+  @@index([portId])
+}
+
+enum UnmatchedSource {
+  WORKSTATION_ATTACH
+  PORT_OBSERVATION
+}
+
+model ObservationUnmatched {
+  id            String          @id @default(uuid())
+  source        UnmatchedSource
+  sysname       String
+  ifName        String?
+  workstationId String?
+  workstation   Workstation?    @relation(fields: [workstationId], references: [id], onDelete: Cascade)
+  payload       Json
+  createdAt     DateTime        @default(now())
+
+  @@index([source])
 }

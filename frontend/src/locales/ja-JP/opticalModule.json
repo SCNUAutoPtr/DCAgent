@@ -24,7 +24,10 @@
     "notes": "備考",
     "operator": "操作者",
     "createdAt": "作成時刻",
-    "actions": "操作"
+    "actions": "操作",
+    "device": "機器",
+    "panel": "パネル",
+    "port": "ポート"
   },
   "moduleStatus": {
     "IN_STOCK": "在庫",
@@ -38,7 +41,9 @@
     "SFP_PLUS": "SFP+ (10G)",
     "QSFP": "QSFP (40G)",
     "QSFP28": "QSFP28 (100G)",
-    "QSFP_DD": "QSFP-DD (400G)"
+    "QSFP_DD": "QSFP-DD (400G)",
+    "SFP28": "SFP28 (25G)",
+    "OTHER": "その他"
   },
   "movementTypes": {
     "PURCHASE": "購入入庫",
@@ -52,18 +57,19 @@
   "placeholders": {
     "serialNo": "光モジュールシリアルナンバーを入力",
     "model": "例 SFP-10G-LR",
-    "vendor": "ベンダーを選択",
+    "vendor": "メーカーを選択または入力",
     "moduleType": "モジュールタイプを選択",
     "wavelength": "例 850nm, 1310nm",
     "distance": "例 300m, 10km",
     "supplier": "購入供給者",
     "price": "単位：元",
     "notes": "その他備考情報",
-    "portId": "ポートUUID",
-    "targetPortId": "ターゲットポートUUID",
     "operator": "オプション",
     "scrappingReason": "廃棄理由を詳しく説明してください",
-    "search": "シリアルナンバー、モデル、ベンダーを検索"
+    "search": "シリアルナンバー、モデル、ベンダーを検索",
+    "selectDevice": "機器を選択",
+    "selectPanel": "パネルを選択",
+    "selectPort": "ポートを選択"
   },
   "messages": {
     "deleteConfirm": "この光モジュールを削除してもよろしいですか？",
@@ -75,25 +81,15 @@
     "installSuccess": "インストール成功",
     "uninstallSuccess": "取外し成功",
     "transferSuccess": "転送成功",
-    "scrapSuccess": "廃棄成功",
-    "loadFailed": "光モジュールリスト読み込み失敗",
-    "loadDetailFailed": "光モジュール情報読み込み失敗",
-    "loadHistoryFailed": "移動履歴読み込み失敗",
-    "updateFailed": "更新失敗",
-    "createFailed": "作成失敗",
-    "deleteFailed": "削除失敗",
-    "installFailed": "インストール失敗",
-    "uninstallFailed": "取外し失敗",
-    "transferFailed": "転送失敗",
-    "scrapFailed": "廃棄失敗"
+    "scrapSuccess": "廃棄成功"
   },
   "validation": {
     "serialNoRequired": "シリアルナンバーを入力してください",
     "modelRequired": "モデルを入力してください",
     "vendorRequired": "ベンダーを選択してください",
     "moduleTypeRequired": "モジュールタイプを選択してください",
-    "portIdRequired": "ポートIDを入力してください",
-    "targetPortIdRequired": "ターゲットポートIDを入力してください",
+    "portIdRequired": "ポートを選択してください",
+    "targetPortIdRequired": "移動先ポートを選択してください",
     "notesRequired": "廃棄理由を説明してください"
   },
   "tabs": {
@@ -115,26 +111,21 @@
     "scrap": "廃棄",
     "viewHistory": "履歴を表示",
     "viewDetail": "詳細",
-    "back": "リストに戻る",
-    "editInfo": "情報編集"
+    "back": "リストに戻る"
   },
   "filters": {
     "search": "シリアルナンバー、モデル、ベンダーを検索",
     "status": "ステータス",
-    "moduleType": "モジュールタイプ",
-    "applyFilter": "フィルター適用",
-    "reset": "リセット"
+    "moduleType": "モジュールタイプ"
   },
   "statistics": {
     "total": "合計",
     "inStock": "在庫",
     "installed": "インストール済み",
-    "reserved": "予約済み",
-    "faulty": "故障",
-    "scrapped": "廃棄済み"
+    "faulty": "故障"
   },
   "alerts": {
-    "installInfo": "ターゲットポートのIDを入力してください。インストール後、光モジュールのステータスは「インストール済み」に変わります。",
+    "installInfo": "取り付けるポートを選択します。モジュールに合う空きポートのみ表示します。",
     "uninstallWarning": "取外し前に、ポートが接続されていないことを確認してください。取外し後、光モジュールは在庫に戻ります。",
     "transferWarning": "転送前に、現在のポートが接続されていないことを確認してください。",
     "scrappingWarning": "廃棄操作は不可逆的です。この光モジュールが本当に廃棄する必要があることを確認してください。"
@@ -143,5 +134,16 @@
     "noHistory": "移動履歴がありません",
     "noLocation": "在庫",
     "moduleNotFound": "光モジュールが存在しません"
+  },
+  "pagination": {
+    "total": "合計 {{total}} 件"
+  },
+  "ddm": {
+    "yes": "対応",
+    "no": "非対応"
+  },
+  "movement": {
+    "from": "移動元",
+    "to": "移動先"
   }
 }

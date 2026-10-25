@@ -1,0 +1,55 @@
+{
+  "title": "3D 机房",
+  "description": "按平面图坐标还原机柜、设备和线缆，点击机柜查看设备",
+  "roomPlaceholder": "选择机房",
+  "noRooms": "还没有机房，请先在机房页面创建",
+  "loadFailed": "机房场景加载失败",
+  "retry": "重试",
+  "controls": {
+    "resetView": "重置视角",
+    "cables": "线缆",
+    "colorBy": "着色",
+    "colorType": "按类型",
+    "colorOccupancy": "按占用率",
+    "openRoom": "机房详情"
+  },
+  "stats": {
+    "cabinets": "机柜 {{count}}",
+    "devices": "设备 {{count}}",
+    "links": "线缆 {{count}}",
+    "externalLinks": "{{count}} 根线缆连到其他机房",
+    "looseDevices": "{{count}} 台设备不在机柜里",
+    "workstations": "工作站 {{online}}/{{count}} 在线",
+    "autoPlaced": "{{count}} 个机柜没有平面图坐标，已自动排成网格"
+  },
+  "legend": {
+    "type": "设备类型",
+    "occupancy": "端口占用率（机柜框为 U 位占用率）",
+    "idle": "空闲",
+    "full": "占满",
+    "noPorts": "无端口",
+    "cables": "线缆介质"
+  },
+  "tooltip": {
+    "uSingle": "U{{from}}，1U",
+    "uRange": "U{{from}}-U{{to}}，{{height}}U",
+    "ports": "端口 {{connected}}/{{total}} 已连接",
+    "noPorts": "没有端口",
+    "uUnknownHeight": "U{{from}}，高度未知"
+  },
+  "drawer": {
+    "uUsage": "U 位占用 {{used}}/{{total}}",
+    "devices": "设备",
+    "noDevices": "这个机柜里还没有设备",
+    "unplaced": "未设置 U 位",
+    "openCabinet": "打开机柜视图",
+    "openPanel": "打开面板",
+    "highlight": "高亮线缆",
+    "autoPlaced": "没有平面图坐标，位置是自动排的"
+  },
+  "webgl": {
+    "title": "无法显示 3D 视图",
+    "description": "当前浏览器或显卡不支持 WebGL。可以换用支持硬件加速的浏览器，或使用机房页面的平面图。",
+    "openRoom": "打开机房平面图"
+  }
+}

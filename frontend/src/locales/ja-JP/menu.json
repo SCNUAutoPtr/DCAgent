@@ -1,6 +1,6 @@
 {
   "dashboard": "ダッシュボード",
-  "infrastructure": "インフラストラクチャ",
+  "infrastructure": "インフラ",
   "dataCenter": "データセンター",
   "room": "機械室",
   "cabinet": "キャビネット",
@@ -9,13 +9,17 @@
   "panel": "パネル",
   "port": "ポート",
   "cable": "ケーブル",
-  "opticalModule": "光モジュール管理",
-  "opticalModuleList": "光モジュールリスト",
+  "opticalModule": "光モジュール",
   "cableTopology": "ケーブルトポロジー",
-  "cableManualInventory": "ケーブル手動入庫",
+  "cableManualInventory": "ケーブル入庫",
   "cableScrap": "ケーブル廃棄",
-  "shortIdPool": "shortIDプール管理",
   "ipManagement": "IPアドレス管理",
   "bulkDeployment": "一括配置",
-  "panelTemplate": "パネルテンプレート"
+  "panelTemplate": "パネルテンプレート",
+  "observability": "可観測性",
+  "labels": "ラベル管理",
+  "labelGroup": "ラベル",
+  "network": "ネットワーク",
+  "tools": "ツール",
+  "datacenter3d": "3D ルーム"
 }

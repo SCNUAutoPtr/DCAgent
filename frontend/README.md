@@ -1,223 +1,46 @@
 # DCAgent Frontend
 
-数据中心线缆管理系统 - 前端应用
+React 18 + TypeScript + Vite + Ant Design 5 + React Router 6 + React Flow + i18next (zh-CN / en-US / ja-JP).
 
-## 技术栈
+## Contracts and API
 
-- React 18
-- TypeScript
-- Vite
-- Ant Design
-- React Router
-- React Flow (拓扑图可视化)
-- Axios
-- i18next (国际化：中/英/日)
+- Types come from the backend: `@contracts/*` maps to `../backend/src/contracts/*`. Pages use `import type` for DTOs and
+  request schemas; only dependency-free files (`enums`, `shortId`, `ipv4`, `portSizes`, `scene`, `ifName`, `moduleFits`)
+  are imported as values, so zod never ends up in the bundle.
+- Every request goes through `services/api.ts`: `rpc<Req, Res>(path, body)` posts to the same origin `/api/v1/<resource>/<action>`
+  with all parameters in the JSON body. A failure `{code, message, details}` is shown as the translated `errors:<code>` text and
+  rethrown as `ApiError` (pass `{ silent: true }` to handle it yourself).
+- One named service per resource (`hierarchyService.ts` exports `dataCenterService`, `roomService`, `cabinetService`, ...).
 
-## 项目结构
+## Routes
 
-```
-frontend/
-├── src/
-│   ├── components/      # React 组件库
-│   │   ├── Layout/          # 布局组件（Header、Sidebar）
-│   │   ├── PanelVisualizer.tsx          # 面板可视化编辑器
-│   │   ├── CabinetVisualizer.tsx        # 机柜可视化展示
-│   │   ├── PanelCanvasEditor.tsx        # 面板画布编辑器
-│   │   ├── DevicePanelEditor.tsx        # 设备面板编辑
-│   │   ├── CreateCableModal.tsx         # 线缆创建对话框
-│   │   ├── ConnectSingleCableModal.tsx  # 单端连接对话框
-│   │   ├── AddDeviceModal.tsx           # 设备创建对话框
-│   │   ├── BulkImportModal.tsx          # 批量导入对话框
-│   │   ├── SimplifiedTopology.tsx       # 简化拓扑图
-│   │   ├── PortIcon.tsx                 # 端口图标组件
-│   │   └── CabinetThumbnail.tsx         # 机柜缩略图
-│   ├── pages/           # 页面路由（15个）
-│   │   ├── Dashboard.tsx                  # 仪表板
-│   │   ├── DataCenterList.tsx             # 数据中心列表
-│   │   ├── RoomList.tsx                   # 机房列表
-│   │   ├── CabinetList.tsx                # 机柜列表
-│   │   ├── DeviceList.tsx                 # 设备列表
-│   │   ├── PanelList.tsx                  # 面板列表
-│   │   ├── PortDetailView.tsx             # 端口详情
-│   │   ├── CableTopology.tsx              # 线缆拓扑图
-│   │   ├── CableManualInventory.tsx       # 手动入库线缆
-│   │   ├── ShortIdPoolManagement.tsx      # ShortID 管理
-│   │   ├── BulkDeploymentPage.tsx         # 批量部署
-│   │   ├── PanelTemplateManagementPage.tsx # 面板模板管理
-│   │   ├── OpticalModuleList.tsx          # 光模块列表
-│   │   └── OpticalModuleDetail.tsx        # 光模块详情
-│   ├── services/        # API 服务封装
-│   │   ├── api.ts
-│   │   ├── dataCenterService.ts
-│   │   ├── roomService.ts
-│   │   ├── cabinetService.ts
-│   │   ├── deviceService.ts
-│   │   ├── panelService.ts
-│   │   ├── portService.ts
-│   │   ├── cableService.ts
-│   │   ├── opticalModuleService.ts
-│   │   ├── shortIdService.ts
-│   │   └── ...
-│   ├── types/           # TypeScript 类型定义
-│   ├── utils/           # 工具函数
-│   │   └── shortIdFormatter.ts  # ShortID 格式化工具
-│   ├── locales/         # 国际化资源（中/英/日）
-│   ├── App.tsx          # 主应用组件
-│   ├── main.tsx         # 入口文件
-│   └── index.css        # 全局样式
-├── public/              # 静态资源
-└── index.html           # HTML 模板
-```
+All routes, the menu (longest-prefix highlight) and the path builders live in `src/routes.tsx`. Shareable locations are path
+segments only: `/rooms/:id` (floor plan), `/cabinets/:id` (rack view), `/topology/panel/:id`, `/ports/:id`, `/cables/:id`,
+`/optical-modules/:id`, `/ip-management/subnet/:id`. Search and label scans go through `pathForEntity`.
 
-## 功能特性
-
-### 已完成
-- 仪表板概览（数据统计）
-- 数据中心、机房、机柜、设备、面板管理
-- 线缆拓扑图可视化（ReactFlow）
-- 端口、线缆 CRUD 操作
-- 面板可视化编辑和布局
-- ShortID 管理和显示（E-00001 格式）
-- 光模块库存和安装跟踪
-- 面板模板快速创建
-- 批量导入设备和面板
-- 全局搜索（关键词、ShortID）
-- 国际化支持（中文/English/日本語）
-
-### 开发中/隐藏
-- SNMP 监控页面（已隐藏）
-
-## 安装
+## Development
 
 ```bash
-# 安装依赖
 npm install
-
-# 复制环境变量配置
-cp .env.example .env
+cp .env.example .env   # API_PROXY_TARGET, read by the Vite dev server only
+npm run dev            # http://localhost:5173, proxies /api to API_PROXY_TARGET (default http://127.0.0.1:3000)
 ```
 
-## 开发
+| Script | What it checks |
+|---|---|
+| `npm run build` | `tsc && vite build`; i18n keys are typed against zh-CN (`src/i18next.d.ts`) |
+| `npm run lint` | ESLint, no `any`, no CJK literals outside `eslint-cjk-allowlist.json` (the list may only shrink) |
+| `npm test` | locale parity across the three languages, error-code coverage of `errors.json`, allowlist hygiene, no emoji |
+| `npm run e2e` | Playwright (Chrome) against its own stack, see below |
 
-```bash
-# 启动开发服务器
-npm run dev
+## E2E
 
-# 构建生产版本
-npm run build
+`playwright.config.ts` starts a separate stack: the backend on 3100 with `NODE_ENV=test` after `npm run db:test:reset`
+(which refuses any database not ending in `_test`), and Vite on 5174 proxying to it. `e2e/global-setup.ts` aborts when that
+backend already holds devices. Specs create their own data through the RPC API with unique names, and every spec fails on a
+console error or warning. The real database (`dcagent`, served on 3000/5173) is never touched.
 
-# 预览生产构建
-npm run preview
+## i18n
 
-# 代码检查
-npm run lint
-```
-
-开发服务器将运行在 http://localhost:5173
-
-## 环境变量
-
-```env
-VITE_API_URL=http://localhost:3000/api
-```
-
-## 页面路由（15个）
-
-| 路由 | 页面 | 说明 |
-|------|------|------|
-| `/` | Dashboard | 仪表板 |
-| `/datacenters` | DataCenterList | 数据中心列表 |
-| `/rooms` | RoomList | 机房列表 |
-| `/cabinets` | CabinetList | 机柜列表 |
-| `/devices` | DeviceList | 设备列表 |
-| `/panels` | PanelList | 面板列表和编辑 |
-| `/port-detail` | PortDetailView | 端口详情和连接 |
-| `/topology` | CableTopology | 线缆网络拓扑 |
-| `/cable-manual-inventory` | CableManualInventory | 手动入库线缆 |
-| `/shortid-pool` | ShortIdPoolManagement | ShortID 生成和管理 |
-| `/bulk-deployment` | BulkDeploymentPage | 批量部署设备和面板 |
-| `/panel-templates` | PanelTemplateManagementPage | 面板模板管理 |
-| `/optical-modules` | OpticalModuleList | 光模块库存 |
-| `/optical-modules/:id` | OpticalModuleDetail | 光模块详情 |
-
-## 国际化支持
-
-项目支持三种语言，通过 i18next 管理：
-
-- 中文 (zh-CN)
-- English (en-US)
-- 日本語 (ja-JP)
-
-在 `src/locales/` 目录中配置翻译资源
-
-## ShortID 格式化
-
-提供便捷的 ShortID 格式转换工具，格式为 `E-XXXXX`：
-
-```typescript
-import { formatShortId, parseShortId } from '@/utils/shortIdFormatter';
-
-// 数字 -> 显示格式
-const display = formatShortId(1);      // "E-00001"
-const display2 = formatShortId(123456); // "E-123456"
-
-// 显示格式 -> 数字
-const numeric = parseShortId('E-00001');  // 1
-const numeric2 = parseShortId('00001');   // 1（自动移除前缀）
-```
-
-## API 集成
-
-所有 API 调用通过 `services/` 目录中的服务模块进行，统一调用后端 `/api/v1` 接口：
-
-```typescript
-import { deviceService } from '@/services/deviceService';
-
-// 获取所有设备
-const devices = await deviceService.getAll();
-
-// 创建设备
-const device = await deviceService.create(data);
-
-// 按 ShortID 查询
-const cabinet = await cabinetService.getByShortId(100);
-```
-
-## 组件开发
-
-使用 Ant Design 组件库构建 UI，支持响应式布局：
-
-```tsx
-import { Button, Table, Card } from 'antd';
-import { useTranslation } from 'react-i18next';
-
-function MyComponent() {
-  const { t } = useTranslation();
-
-  return (
-    <Card title={t('common.title')}>
-      <Table dataSource={data} columns={columns} />
-    </Card>
-  );
-}
-```
-
-## 类型安全
-
-项目使用 TypeScript 确保类型安全，所有数据模型定义在 `src/types/index.ts`：
-
-```typescript
-import { Device, Cable, Panel, Port } from '@/types';
-```
-
-## 详细文档
-
-更多详细信息请参考 `docs/` 目录中的文档：
-- [API.md](../docs/API.md) - API 完整文档
-- [SHORTID.md](../docs/SHORTID.md) - ShortID 系统详解
-- [CABLE_MANAGEMENT.md](../docs/CABLE_MANAGEMENT.md) - 线缆管理
-- [OPTICAL_MODULE.md](../docs/OPTICAL_MODULE.md) - 光模块系统
-
-## License
-
-MIT
+Resources are picked up from `src/locales/<lang>/<ns>.json` by `import.meta.glob`. Add a key to all three languages; zh-CN
+is the reference for the compile-time key check. Error codes are translated in the `errors` namespace.

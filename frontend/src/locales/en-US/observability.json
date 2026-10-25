@@ -1,0 +1,99 @@
+{
+  "title": "Observability",
+  "description": "Seat status, traffic and switch port health in one place",
+  "tabs": {
+    "seats": "Seats",
+    "flows": "Traffic",
+    "ports": "Port Health",
+    "unmatched": "Unmatched"
+  },
+  "common": {
+    "refresh": "Refresh",
+    "autoRefresh": "Auto refresh",
+    "empty": "No data"
+  },
+  "seats": {
+    "room": "Room",
+    "selectRoom": "Select room",
+    "online": "On",
+    "offline": "Off",
+    "unlocated": "Port unknown",
+    "traffic": "Traffic",
+    "lastSeen": "Last seen",
+    "switchPort": "Switch port",
+    "legend": "Grouped by access switch; green is on, grey is off, thicker border means more traffic",
+    "byLayout": "By seat",
+    "bySwitch": "By switch",
+    "front": "Front / screens",
+    "layoutLegend": "Real seat layout; top stripe is the access switch, the number below is the port; green is on, thicker border means more traffic",
+    "noLayout": "Workstations in this room have no seat coordinates yet, so they are grouped by switch below. Place them in the floor plan editor to see the real layout.",
+    "noWiring": "No workstation in this room is linked to a switch port yet (no wiring record), so all of them are under \"Port unknown\". Sync ports to group them by switch."
+  },
+  "flows": {
+    "window": "Window",
+    "sampler": "Sampler",
+    "allSamplers": "All",
+    "limit": "Rows",
+    "source": "Source",
+    "destination": "Destination",
+    "protocol": "Protocol",
+    "bytes": "Bytes",
+    "rate": "Avg rate",
+    "records": "Samples",
+    "buffered": "Buffered flow records",
+    "hint": "Estimated from sFlow/NetStream samples pushed by the collector script"
+  },
+  "ports": {
+    "switchName": "Switch sysname",
+    "switchNamePlaceholder": "e.g. 445A-U6",
+    "interfaceBrief": "display interface brief output",
+    "transceiver": "display transceiver diagnosis output (optional)",
+    "save": "Save as snapshot",
+    "analyze": "Check",
+    "findings": "Findings",
+    "noFindings": "No problems found",
+    "interfaces": "Interfaces",
+    "severity": "Severity",
+    "critical": "Critical",
+    "warning": "Warning",
+    "kind": "Kind",
+    "value": "Value",
+    "margin": "Margin (dB)",
+    "message": "Detail",
+    "phy": "PHY",
+    "inUtil": "In util",
+    "outUtil": "Out util",
+    "inErrors": "In errors",
+    "outErrors": "Out errors",
+    "history": "History",
+    "switches": "Collected switches",
+    "lastCollected": "Last collected",
+    "observations": "Snapshots",
+    "saved": "Saved {{count}} rows",
+    "kinds": {
+      "RX_POWER": "Rx power",
+      "TX_POWER": "Tx power",
+      "INPUT_ERRORS": "Input errors",
+      "OUTPUT_ERRORS": "Output errors",
+      "UTILIZATION": "Utilization",
+      "ERRORS_GROWING": "Errors growing"
+    },
+    "unmatched": "No device has sysname {{sysname}}; {{count}} rows were parked as unmatched",
+    "noDevice": "Not linked to a device; no history"
+  },
+  "unmatched": {
+    "source": "Source",
+    "sysname": "sysname",
+    "ifName": "Interface",
+    "workstation": "Workstation",
+    "createdAt": "Collected",
+    "resolve": "Resolve",
+    "resolveTitle": "Resolve unmatched data",
+    "device": "Device",
+    "resolved": "Resolved",
+    "sources": {
+      "WORKSTATION_ATTACH": "Workstation link",
+      "PORT_OBSERVATION": "Port snapshot"
+    }
+  }
+}

@@ -1,230 +1,211 @@
-import prisma from '../utils/prisma';
-import { PortStatus } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
+import type { z } from 'zod';
+import type { Db } from '../utils/prisma';
+import { AppError, must } from '../http/errors';
+import type {
+  PortDependents,
+  PortDetailDto,
+  PortDto,
+  portCreateBulkSchema,
+  portCreateSchema,
+  portListSchema,
+  portUpdateSchema,
+} from '../contracts/panels';
+import { trailingNumber } from '../contracts/ifName';
+import { endpointInclude, endpointPath, labelRef, labelSelect, portLocInclude, portPath } from './shared';
 
-export interface CreatePortDto {
-  number: string;
-  label?: string | null;
-  status?: PortStatus;
-  panelId: string;
-  portType?: string;
-  rotation?: number;
-  position?: {
-    x: number;
-    y: number;
-  };
-  size?: {
-    width: number;
-    height: number;
+export const portInclude = {
+  cableEndpoint: { select: { id: true, cableId: true, end: true, label: labelSelect } },
+  opticalModule: { select: { id: true } },
+} as const satisfies Prisma.PortInclude;
+export type PortRow = Prisma.PortGetPayload<{ include: typeof portInclude }>;
+
+export function portDto(p: PortRow): PortDto {
+  return {
+    id: p.id,
+    panelId: p.panelId,
+    number: p.number,
+    sortIndex: p.sortIndex,
+    ifName: p.ifName,
+    portType: p.portType,
+    label: p.label,
+    adminState: p.adminState,
+    notes: p.notes,
+    xMm: p.xMm,
+    yMm: p.yMm,
+    wMm: p.wMm,
+    hMm: p.hMm,
+    rotation: p.rotation,
+    connected: p.cableEndpoint !== null,
+    hasModule: p.opticalModule !== null,
+    endpoint: p.cableEndpoint ? { ...p.cableEndpoint, label: labelRef(p.cableEndpoint.label) } : null,
   };
 }
 
-export interface UpdatePortDto {
-  number?: string;
-  label?: string | null;
-  status?: PortStatus;
-  portType?: string;
-  rotation?: number;
-  position?: {
-    x: number;
-    y: number;
-  };
-  size?: {
-    width: number;
-    height: number;
-  };
-}
+export const portOrder = [{ sortIndex: 'asc' as const }, { number: 'asc' as const }];
 
-class PortService {
-  async createPort(data: CreatePortDto) {
-    return await prisma.port.create({
-      data: {
-        ...data,
-        status: data.status || PortStatus.AVAILABLE,
-      },
-      include: {
-        panel: {
-          include: {
-            device: true,
-          },
+/**
+ * Ports matching `where` that are in use. Observations only count for template apply,
+ * because they are history rather than something plugged in.
+ */
+export async function portDependents(db: Db, where: Prisma.PortWhereInput, withObservations = false): Promise<PortDependents[]> {
+  const rows = await db.port.findMany({
+    where: {
+      AND: [
+        where,
+        {
+          OR: [
+            { cableEndpoint: { isNot: null } },
+            { opticalModule: { isNot: null } },
+            { ipAddress: { isNot: null } },
+            { attachedWorkstations: { some: {} } },
+            ...(withObservations ? [{ observations: { some: {} } }] : []),
+          ],
         },
-      },
-    });
-  }
-
-  async createBulkPorts(panelId: string, count: number, prefix: string = 'Port-', useCustomPrefix: boolean = false) {
-    const createdPorts = [];
-
-    for (let i = 1; i <= count; i++) {
-      let label: string;
-
-      if (useCustomPrefix) {
-        // 使用自定义前缀，替换 Var 为序号
-        label = prefix.replace(/Var/g, String(i));
-      } else {
-        // 使用旧的前缀方式
-        label = `${prefix}${i}`;
-      }
-
-      const port = await this.createPort({
-        number: String(i),
-        label,
-        panelId,
-        status: PortStatus.AVAILABLE,
-      });
-      createdPorts.push(port);
-    }
-
-    return { count: createdPorts.length };
-  }
-
-  async getPortById(id: string) {
-    return await prisma.port.findUnique({
-      where: { id },
-      include: {
-        panel: {
-          include: {
-            device: {
-              include: {
-                cabinet: {
-                  include: {
-                    room: {
-                      include: {
-                        dataCenter: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-        cableEndpoints: {
-          include: {
-            cable: true,
-          },
-        },
-        ipAddress: {
-          include: {
-            subnet: true,
-          },
-        },
-        opticalModule: true,
-      },
-    });
-  }
-
-  async getAllPorts() {
-    return await prisma.port.findMany({
-      include: {
-        panel: {
-          include: {
-            device: true,
-          },
-        },
-      },
-      orderBy: [
-        { panelId: 'asc' },
-        { number: 'asc' },
       ],
-    });
-  }
-
-  async getPortsByPanel(panelId: string) {
-    return await prisma.port.findMany({
-      where: { panelId },
-      include: {
-        cableEndpoints: {
-          include: {
-            cable: true,
-          },
-        },
-        ipAddress: {
-          include: {
-            subnet: true,
-          },
-        },
-        opticalModule: true,
-      },
-      orderBy: {
-        number: 'asc',
-      },
-    });
-  }
-
-  async getPortsByStatus(status: PortStatus) {
-    return await prisma.port.findMany({
-      where: { status },
-      include: {
-        panel: {
-          include: {
-            device: true,
-          },
-        },
-      },
-    });
-  }
-
-  async updatePort(id: string, data: UpdatePortDto) {
-    return await prisma.port.update({
-      where: { id },
-      data,
-      include: {
-        panel: {
-          include: {
-            device: true,
-          },
-        },
-      },
-    });
-  }
-
-  async updatePortStatus(id: string, status: PortStatus) {
-    return await prisma.port.update({
-      where: { id },
-      data: { status },
-      include: {
-        panel: true,
-      },
-    });
-  }
-
-  async deletePort(id: string) {
-    return await prisma.port.delete({
-      where: { id },
-    });
-  }
-
-  async searchPorts(query: string) {
-    return await prisma.port.findMany({
-      where: {
-        OR: [
-          { number: { contains: query } },
-          { label: { contains: query } },
-          { panel: { name: { contains: query } } },
-          { panel: { device: { name: { contains: query } } } },
-        ],
-      },
-      include: {
-        panel: {
-          include: {
-            device: true,
-          },
-        },
-      },
-    });
-  }
-
-  async getAvailablePortsByPanel(panelId: string) {
-    return await prisma.port.findMany({
-      where: {
-        panelId,
-        status: PortStatus.AVAILABLE,
-      },
-      orderBy: {
-        number: 'asc',
-      },
-    });
-  }
+    },
+    select: {
+      id: true,
+      number: true,
+      cableEndpoint: { select: { id: true } },
+      opticalModule: { select: { id: true } },
+      ipAddress: { select: { id: true } },
+      _count: { select: { attachedWorkstations: true, observations: true } },
+    },
+    orderBy: portOrder,
+  });
+  return rows.map((p) => {
+    const reasons: PortDependents['reasons'] = [];
+    if (p.cableEndpoint) reasons.push('CABLE');
+    if (p.opticalModule) reasons.push('MODULE');
+    if (p.ipAddress) reasons.push('IP');
+    if (p._count.attachedWorkstations) reasons.push('WORKSTATION');
+    if (withObservations && p._count.observations) reasons.push('OBSERVATION');
+    return { portId: p.id, number: p.number, reasons };
+  });
 }
 
-export default new PortService();
+/**
+ * Delete ports matching `where`. Without force, any dependent blocks the delete.
+ * With force, cable ends are unplugged (they stay, unparked) and IP bindings are released;
+ * optical modules always have to be removed by hand first.
+ */
+export async function deletePorts(db: Db, where: Prisma.PortWhereInput, force: boolean) {
+  const deps = await portDependents(db, where);
+  const blocking = force ? deps.filter((d) => d.reasons.includes('MODULE')) : deps;
+  if (blocking.length) throw new AppError('PORT_HAS_DEPENDENTS', 'ports are in use', { ports: blocking });
+  if (force && deps.length) {
+    const ids = deps.map((d) => d.portId);
+    await db.cableEndpoint.updateMany({ where: { portId: { in: ids } }, data: { portId: null } });
+    await db.ipAddress.updateMany({ where: { portId: { in: ids } }, data: { portId: null } });
+    await db.workstation.updateMany({ where: { attachedPortId: { in: ids } }, data: { attachedPortId: null } });
+  }
+  return db.port.deleteMany({ where });
+}
+
+async function get(db: Db, id: string): Promise<PortDetailDto> {
+  const p = must(
+    await db.port.findUnique({
+      where: { id },
+      include: {
+        ...portInclude,
+        ...portLocInclude,
+        cableEndpoint: {
+          include: {
+            label: labelSelect,
+            cable: { include: { endpoints: { include: endpointInclude } } },
+          },
+        },
+        opticalModule: { select: { id: true, serialNo: true, model: true, vendor: true, status: true } },
+        ipAddress: { select: { id: true, address: true, status: true, subnetId: true } },
+        attachedWorkstations: { select: { id: true, name: true, code: true }, orderBy: { name: 'asc' } },
+      },
+    }),
+    'port',
+    { id },
+  );
+  const ep = p.cableEndpoint;
+  const peer = ep?.cable.endpoints.find((e) => e.id !== ep.id) ?? null;
+  const cableName = ep?.cable.label ?? 'cable';
+  return {
+    ...portDto({
+      ...p,
+      cableEndpoint: ep ? { id: ep.id, cableId: ep.cableId, end: ep.end, label: ep.label } : null,
+      opticalModule: p.opticalModule ? { id: p.opticalModule.id } : null,
+    }),
+    path: portPath(p),
+    cable: ep ? { id: ep.cable.id, medium: ep.cable.medium, label: ep.cable.label, color: ep.cable.color, lengthM: ep.cable.lengthM } : null,
+    peer: peer
+      ? {
+          endpointId: peer.id,
+          end: peer.end,
+          label: labelRef(peer.label),
+          portId: peer.portId,
+          parkedPanelId: peer.parkedPanelId,
+          path: endpointPath(peer, cableName),
+        }
+      : null,
+    opticalModule: p.opticalModule,
+    ipAddress: p.ipAddress,
+    attachedWorkstations: p.attachedWorkstations,
+  };
+}
+
+async function nextSortIndex(db: Db, panelId: string) {
+  const max = await db.port.aggregate({ where: { panelId }, _max: { sortIndex: true } });
+  return (max._max.sortIndex ?? 0) + 1;
+}
+
+export const portService = {
+  async list(db: Db, input: z.infer<typeof portListSchema>) {
+    const f = input.filter;
+    const rows = await db.port.findMany({
+      where: {
+        panelId: input.panelId,
+        adminState: f.adminState,
+        portType: f.portType,
+        ...(f.connected === true ? { cableEndpoint: { isNot: null } } : f.connected === false ? { cableEndpoint: { is: null } } : {}),
+      },
+      include: portInclude,
+      orderBy: portOrder,
+    });
+    return rows.map(portDto);
+  },
+  get,
+  async create(db: Db, input: z.infer<typeof portCreateSchema>) {
+    must(await db.panel.findUnique({ where: { id: input.panelId } }), 'panel', { id: input.panelId });
+    const sortIndex = input.sortIndex ?? trailingNumber(input.number) ?? (await nextSortIndex(db, input.panelId));
+    const p = await db.port.create({ data: { ...input, sortIndex } });
+    return get(db, p.id);
+  },
+  async createBulk(db: Db, input: z.infer<typeof portCreateBulkSchema>) {
+    must(await db.panel.findUnique({ where: { id: input.panelId } }), 'panel', { id: input.panelId });
+    const data = Array.from({ length: input.count }, (_, i) => {
+      const n = input.startNumber + i;
+      return {
+        panelId: input.panelId,
+        number: `${input.prefix}${n}`,
+        sortIndex: n,
+        portType: input.portType,
+        ifName: input.ifNamePattern ? input.ifNamePattern.replace(/\{n\}/g, String(n)) : null,
+      };
+    });
+    const res = await db.port.createMany({ data });
+    return { created: res.count };
+  },
+  async update(db: Db, { id, ...data }: z.infer<typeof portUpdateSchema>) {
+    must(await db.port.findUnique({ where: { id } }), 'port', { id });
+    await db.port.update({ where: { id }, data });
+    return get(db, id);
+  },
+  async setAdminState(db: Db, id: string, adminState: PortDto['adminState']) {
+    must(await db.port.findUnique({ where: { id } }), 'port', { id });
+    await db.port.update({ where: { id }, data: { adminState } });
+    return get(db, id);
+  },
+  async delete(db: Db, id: string, force: boolean) {
+    must(await db.port.findUnique({ where: { id } }), 'port', { id });
+    await deletePorts(db, { id }, force);
+    return { ok: true as const };
+  },
+};

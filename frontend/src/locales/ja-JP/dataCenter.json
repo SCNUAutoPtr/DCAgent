@@ -4,11 +4,11 @@
   "createTitle": "新しいデータセンターを作成",
   "editTitle": "データセンターを編集",
   "fields": {
-    "id": "ID",
     "name": "データセンター名",
     "location": "所在地",
     "createdAt": "作成日時",
-    "actions": "操作"
+    "actions": "操作",
+    "roomCount": "機械室数"
   },
   "placeholders": {
     "name": "例：東京データセンター",
@@ -17,14 +17,10 @@
   },
   "messages": {
     "deleteConfirm": "このデータセンターを削除してもよろしいですか？",
-    "deleteWarning": "削除後、配下のすべての機械室、ラック、デバイスも一緒に削除されます",
+    "deleteWarning": "機械室が残っているデータセンターは削除できません",
     "createSuccess": "データセンターの作成に成功しました",
     "updateSuccess": "データセンターの更新に成功しました",
-    "deleteSuccess": "データセンターの削除に成功しました",
-    "loadFailed": "データセンター一覧の読み込みに失敗しました",
-    "updateFailed": "更新に失敗しました",
-    "createFailed": "作成に失敗しました",
-    "deleteFailed": "削除に失敗しました"
+    "deleteSuccess": "データセンターの削除に成功しました"
   },
   "validation": {
     "nameRequired": "データセンター名を入力してください"

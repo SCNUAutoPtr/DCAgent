@@ -1,787 +1,371 @@
-import { useState, useEffect, useRef } from 'react';
-import { useSearchParams, useLocation } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import './CabinetList.css';
 import {
-  Card,
-  Table,
+  Alert,
   Button,
-  Modal,
+  Card,
+  Descriptions,
+  Divider,
+  Empty,
   Form,
   Input,
   InputNumber,
-  Select,
-  message,
-  Space,
-  Popconfirm,
-  Typography,
-  Tag,
-  Cascader,
-  Tabs,
-  Empty,
   Layout,
   List,
-  Statistic,
-  Row,
-  Col,
-  Collapse,
-  Divider,
+  Modal,
+  Popconfirm,
+  Select,
+  Space,
+  Table,
+  Tabs,
+  Tag,
   Tooltip,
-  Descriptions,
-  Alert,
+  Typography,
+  message,
 } from 'antd';
 import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  InboxOutlined,
-  EyeOutlined,
-  SettingOutlined,
   AppstoreOutlined,
   BlockOutlined,
   CloudServerOutlined,
-  SendOutlined,
   CopyOutlined,
-  ScanOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  InboxOutlined,
+  PlusOutlined,
+  SendOutlined,
+  SettingOutlined,
+  VerticalAlignTopOutlined,
 } from '@ant-design/icons';
-import { Cabinet, Room, DataCenter, Device, DeviceType, Panel, Port } from '@/types';
-import { cabinetService } from '@/services/cabinetService';
-import { roomService } from '@/services/roomService';
-import { dataCenterService } from '@/services/dataCenterService';
+import type { DanglingByDevice } from '@contracts/cables';
+import type { DeviceDto } from '@contracts/devices';
+import type { CabinetDto, RoomDto } from '@contracts/hierarchy';
+import type { PanelDto } from '@contracts/panels';
+import { formatShortId } from '@contracts/shortId';
+import { cabinetService, roomService } from '@/services/hierarchyService';
+import { cableService } from '@/services/cableService';
 import { deviceService } from '@/services/deviceService';
 import { panelService } from '@/services/panelService';
-import { portService } from '@/services/portService';
 import { panelTemplateService } from '@/services/panelTemplateService';
-import { shortIdPoolService } from '@/services/shortIdPoolService';
-import { CabinetVisualizer, ViewMode, CabinetVisualizerHandle } from '@/components/CabinetVisualizer';
+import { CabinetVisualizer, type CabinetVisualizerHandle, type ViewMode } from '@/components/CabinetVisualizer';
 import { CabinetThumbnail } from '@/components/CabinetThumbnail';
-import { PanelVisualizer } from '@/components/PanelVisualizer';
 import { DevicePanelEditor } from '@/components/DevicePanelEditor';
-import { generatePortLayout, sortPortsByNumber } from '@/utils/panelLayoutGenerator';
-import { ShortIdFormatter } from '@/utils/shortIdFormatter';
-
-
-interface CascaderOption {
-  value: string;
-  label: string;
-  children?: CascaderOption[];
-}
+import { DeviceFormModal } from '@/components/DeviceFormModal';
+import { PanelView } from '@/components/panel/PanelView';
+import { LabelField } from '@/components/LabelField';
+import { parseLabelInput, rebindIfChanged } from '@/utils/labels';
+import { deleteWithForce } from '@/components/confirmForce';
+import { DEVICE_TYPE_COLORS } from '@/constants/colors';
+import { paths } from '@/routes';
+import { uHeightText } from '@/utils/uHeight';
+import { SearchInput } from '@/components/SearchInput';
 
 const { Title, Text } = Typography;
-const { Search } = Input;
-const { Option } = Select;
-const { TabPane } = Tabs;
 const { Sider, Content } = Layout;
-const { Panel: CollapsePanel } = Collapse;
 
-// 设备类型配置 - 在useTranslation hook中使用后设置
-const getDeviceTypeMap = (t: any): Record<DeviceType, { label: string; color: string }> => ({
-  SERVER: { label: t('deviceTypes.SERVER'), color: 'blue' },
-  SWITCH: { label: t('deviceTypes.SWITCH'), color: 'green' },
-  ROUTER: { label: t('deviceTypes.ROUTER'), color: 'orange' },
-  FIREWALL: { label: t('deviceTypes.FIREWALL'), color: 'red' },
-  STORAGE: { label: t('deviceTypes.STORAGE'), color: 'purple' },
-  PDU: { label: t('deviceTypes.PDU'), color: 'cyan' },
-  OTHER: { label: t('deviceTypes.OTHER'), color: 'default' },
-});
+interface CabinetForm {
+  shortId?: string;
+  name: string;
+  positionCode?: string | null;
+  heightU: number;
+  roomId: string;
+}
 
+interface PlaceForm {
+  cabinetId: string;
+  uPosition: number;
+}
+
+const VIEW_MODE_KEY = 'cabinet-view-mode';
+
+function readViewMode(): ViewMode {
+  try {
+    return localStorage.getItem(VIEW_MODE_KEY) === '3d' ? '3d' : '2d';
+  } catch {
+    return '2d';
+  }
+}
+
+/**
+ * /cabinets lists cabinets; /cabinets/:id shows that cabinet in the rack view.
+ * Devices of the shown cabinet are loaded on their own, panels of a device in one request.
+ */
 export default function CabinetList() {
-  const { t } = useTranslation('cabinet');
-  const deviceTypeMap = getDeviceTypeMap(t);
-  const [searchParams] = useSearchParams();
-  const location = useLocation();
-  const [cabinets, setCabinets] = useState<Cabinet[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [dataCenters, setDataCenters] = useState<DataCenter[]>([]);
-  const [devices, setDevices] = useState<Device[]>([]);
+  const { t } = useTranslation(['cabinet', 'device', 'panel', 'common']);
+  const { id: routeCabinetId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  const [cabinets, setCabinets] = useState<CabinetDto[]>([]);
+  const [rooms, setRooms] = useState<RoomDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [deviceModalVisible, setDeviceModalVisible] = useState(false);
-  const [panelViewModalVisible, setPanelViewModalVisible] = useState(false);
-  const [panelEditorVisible, setPanelEditorVisible] = useState(false);
-  const [editingPanel, setEditingPanel] = useState<Panel | null>(null);
-  const [editingCabinet, setEditingCabinet] = useState<Cabinet | null>(null);
-  const [editingDevice, setEditingDevice] = useState<Device | null>(null);
-  const [viewingDevice, setViewingDevice] = useState<Device | null>(null);
-  const [devicePanels, setDevicePanels] = useState<Panel[]>([]);
-  const [panelPorts, setPanelPorts] = useState<Map<string, Port[]>>(new Map());
-  const [selectedRoom, setSelectedRoom] = useState<string>();
-  const [selectedCabinet, setSelectedCabinet] = useState<Cabinet | null>(null);
-  // 从路由 state 中读取初始 activeTab，默认为 'list'
-  const [activeTab, setActiveTab] = useState(() => {
-    const state = location.state as any;
-    return state?.activeTab || 'list';
-  });
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    const saved = localStorage.getItem('cabinet-view-mode');
-    return (saved === '3d' ? '3d' : '2d') as ViewMode;
-  });
-  const [form] = Form.useForm();
-  const [deviceForm] = Form.useForm();
-  const [shortIdChecking, setShortIdChecking] = useState(false);
-  const [deviceTransferVisible, setDeviceTransferVisible] = useState(false);
-  const [deviceCopyVisible, setDeviceCopyVisible] = useState(false);
-  const [selectedDeviceForAction, setSelectedDeviceForAction] = useState<Device | null>(null);
-  // 从路由 state 中读取需要高亮的机柜 ID
-  const [highlightedCabinetId, setHighlightedCabinetId] = useState<string | null>(() => {
-    const state = location.state as any;
-    return state?.selectedId || null;
-  });
+  const [filter, setFilter] = useState<{ roomId?: string; search?: string }>({});
+  const [activeTab, setActiveTab] = useState(routeCabinetId ? 'visual' : 'list');
+  const [viewMode, setViewMode] = useState<ViewMode>(readViewMode);
+  const [devices, setDevices] = useState<DeviceDto[]>([]);
 
-  // 主视图引用（用于传递给 CabinetThumbnail 组件）
+  const [cabinetModalOpen, setCabinetModalOpen] = useState(false);
+  const [editingCabinet, setEditingCabinet] = useState<CabinetDto | null>(null);
+  const [cabinetForm] = Form.useForm<CabinetForm>();
+
+  const [deviceModal, setDeviceModal] = useState<{ open: boolean; device: DeviceDto | null }>({ open: false, device: null });
+  const [placeAction, setPlaceAction] = useState<{ kind: 'move' | 'copy'; device: DeviceDto } | null>(null);
+  const [placeForm] = Form.useForm<PlaceForm>();
+
+  const [viewingDevice, setViewingDevice] = useState<DeviceDto | null>(null);
+  const [devicePanels, setDevicePanels] = useState<PanelDto[]>([]);
+  const [dangling, setDangling] = useState<DanglingByDevice | null>(null);
+  const [panelEditor, setPanelEditor] = useState<{ open: boolean; panelId?: string; device: DeviceDto | null }>({ open: false, device: null });
+
   const mainViewRef = useRef<CabinetVisualizerHandle>(null);
-  // Content 容器引用（用于获取可见区域高度）
-  const contentContainerRef = useRef<HTMLDivElement>(null);
+  const selected = useMemo(() => cabinets.find((c) => c.id === routeCabinetId) ?? null, [cabinets, routeCabinetId]);
 
-  // 加载所有相关数据
-  const loadAllData = async () => {
-    try {
-      const [dcData, roomData, deviceData] = await Promise.all([
-        dataCenterService.getAll(),
-        roomService.getAll(),
-        deviceService.getAll(),
-      ]);
-      setDataCenters(dcData);
-      setRooms(roomData);
-      setDevices(deviceData);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  // 加载机柜列表
-  const loadCabinets = async (searchQuery?: string, roomId?: string) => {
+  const loadCabinets = useCallback(async () => {
     setLoading(true);
     try {
-      let data;
-      if (searchQuery) {
-        data = await cabinetService.search(searchQuery);
-      } else if (roomId) {
-        data = await cabinetService.getAll(roomId);
-      } else {
-        data = await cabinetService.getAll();
-      }
-      setCabinets(data);
-    } catch (error) {
-      message.error(t('messages.loadFailed'));
-      console.error(error);
+      setCabinets(await cabinetService.list(filter));
+    } catch {
+      // reported by rpc
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  const loadDevices = useCallback(async () => {
+    if (!routeCabinetId) {
+      setDevices([]);
+      return;
+    }
+    try {
+      setDevices(await deviceService.list({ cabinetId: routeCabinetId }));
+    } catch {
+      setDevices([]);
+    }
+  }, [routeCabinetId]);
 
   useEffect(() => {
-    loadAllData();
     loadCabinets();
+  }, [loadCabinets]);
+
+  useEffect(() => {
+    roomService.list().then(setRooms, () => undefined);
   }, []);
 
-  // 处理 URL 参数（扫码跳转和全局搜索跳转）
   useEffect(() => {
-    const cabinetId = searchParams.get('cabinetId');
-    const roomId = searchParams.get('roomId');
-    const tab = searchParams.get('tab');
-    const view = searchParams.get('view');
+    loadDevices();
+    if (routeCabinetId) setActiveTab('visual');
+  }, [loadDevices, routeCabinetId]);
 
-    if (roomId) {
-      // 如果有 roomId，筛选该机房
-      setSelectedRoom(roomId);
-      loadCabinets(undefined, roomId);
-    }
+  const roomLabel = useMemo(() => new Map(rooms.map((r) => [r.id, `${r.dataCenterName} - ${r.name}`])), [rooms]);
+  const cabinetOptions = cabinets.map((c) => ({ value: c.id, label: `${roomLabel.get(c.roomId) ?? c.roomName} - ${c.name}` }));
+  const rackDevices = useMemo(() => devices.filter((d) => d.uPosition !== null).sort((a, b) => (b.uPosition ?? 0) - (a.uPosition ?? 0)), [devices]);
+  // in the cabinet but without a U position: not drawn in the rack, listed separately so they can be edited and racked
+  const unplacedDevices = useMemo(() => devices.filter((d) => d.uPosition === null), [devices]);
 
-    if (cabinetId && cabinets.length > 0) {
-      // 如果有 cabinetId，选中该机柜
-      const cabinet = cabinets.find((c) => c.id === cabinetId);
-      if (cabinet) {
-        setSelectedCabinet(cabinet);
-        setHighlightedCabinetId(cabinetId);
-
-        // 如果指定了 tab=visual 或 view=visual，自动切换到可视化视图
-        if (tab === 'visual' || view === 'visual') {
-          setActiveTab('visual');
-        }
-
-        // 3秒后取消高亮
-        setTimeout(() => {
-          setHighlightedCabinetId(null);
-        }, 3000);
-      }
-    }
-  }, [searchParams, cabinets]);
-
-  // 处理从路由 state 传入的 selectedId（搜索跳转）
-  useEffect(() => {
-    const state = location.state as any;
-    if (state?.selectedId && cabinets.length > 0) {
-      const cabinet = cabinets.find((c) => c.id === state.selectedId);
-      if (cabinet) {
-        setSelectedCabinet(cabinet);
-
-        // 3秒后取消高亮
-        setTimeout(() => {
-          setHighlightedCabinetId(null);
-        }, 3000);
-      }
-    }
-  }, [location.state, cabinets]);
-
-
-  // 构建级联选择器选项
-  const getCascaderOptions = (): CascaderOption[] => {
-    return dataCenters.map((dc) => ({
-      value: dc.id,
-      label: dc.name,
-      children: rooms
-        .filter((r) => r.dataCenterId === dc.id)
-        .map((r) => ({
-          value: r.id,
-          label: r.name,
-        })),
-    }));
-  };
-
-  // 打开创建/编辑对话框
-  const handleOpenModal = (cabinet?: Cabinet) => {
-    if (cabinet) {
-      setEditingCabinet(cabinet);
-      // 编辑模式：将数字shortID转换为显示格式
-      form.setFieldsValue({
-        ...cabinet,
-        shortId: cabinet.shortId ? ShortIdFormatter.toDisplayFormat(cabinet.shortId) : undefined,
-      });
-    } else {
-      setEditingCabinet(null);
-      form.resetFields();
-    }
-    setModalVisible(true);
-  };
-
-  // 关闭对话框
-  const handleCloseModal = () => {
-    setModalVisible(false);
-    setEditingCabinet(null);
-    form.resetFields();
-  };
-
-  // 保存机柜
-  const handleSave = async () => {
-    try {
-      const values = await form.validateFields();
-
-      // 处理shortID：转换为数字格式
-      let numericShortId: number | undefined = undefined;
-      if (values.shortId && typeof values.shortId === 'string' && values.shortId.trim()) {
-        try {
-          numericShortId = ShortIdFormatter.toNumericFormat(values.shortId.trim());
-        } catch (error) {
-          message.error('shortID格式无效，请使用 E-XXXXX 格式或纯数字');
-          return;
-        }
-      } else if (typeof values.shortId === 'number') {
-        numericShortId = values.shortId;
-      }
-
-      const saveData = {
-        ...values,
-        shortId: numericShortId,
-      };
-
-      if (editingCabinet) {
-        const updated = await cabinetService.update(editingCabinet.id, saveData);
-        message.success(t('messages.updateSuccess'));
-        // 如果更新的是当前选中的机柜，同步更新 selectedCabinet
-        if (selectedCabinet && selectedCabinet.id === editingCabinet.id) {
-          setSelectedCabinet(updated);
-        }
-      } else {
-        await cabinetService.create(saveData);
-        message.success(t('messages.createSuccess'));
-      }
-      handleCloseModal();
-      // 重新加载机柜列表，确保数据刷新
-      await loadCabinets(undefined, selectedRoom);
-    } catch (error: any) {
-      if (error.errorFields) {
-        return;
-      }
-      message.error(editingCabinet ? t('messages.updateFailed') : t('messages.createFailed'));
-      console.error(error);
-    }
-  };
-
-  // 验证shortID是否可用
-  const validateShortId = async (_: any, value: string) => {
-    if (!value || !value.trim()) {
-      return Promise.reject('请输入shortID');
-    }
-
-    setShortIdChecking(true);
-    try {
-      // 转换为数字格式
-      const numericShortId = ShortIdFormatter.toNumericFormat(value.trim());
-
-      // 如果是编辑模式且shortID未改变，跳过验证
-      if (editingCabinet && editingCabinet.shortId === numericShortId) {
-        return Promise.resolve();
-      }
-
-      const result = await shortIdPoolService.checkShortIdExists(numericShortId);
-      if (result.exists) {
-        // 如果是在Pool中
-        if (result.usedBy === 'pool') {
-          // 检查是否已经分配给其他实体（entityId 不为空且不是当前机柜）
-          if (result.details?.entityId) {
-            // 如果是编辑模式，且这个shortID已经分配给当前机柜，允许使用
-            if (editingCabinet && result.details.entityId === editingCabinet.id && result.details.entityType === 'CABINET') {
-              return Promise.resolve();
-            }
-            // 否则说明已经分配给其他实体了
-            return Promise.reject(`shortID已分配给其他${result.details.entityType || '实体'}`);
-          }
-          // entityId 为空，说明只是在池中，状态是GENERATED或PRINTED，可以使用
-          return Promise.resolve();
-        }
-        // 如果已经绑定到其他实体（在实体表中找到）
-        return Promise.reject(`shortID已被占用: ${result.entityType || '实体'}`);
-      }
-      return Promise.resolve();
-    } catch (error: any) {
-      if (error.message && error.message.includes('无效的shortID格式')) {
-        return Promise.reject('shortID格式无效，请使用 E-XXXXX 格式或纯数字');
-      }
-      return Promise.reject('验证失败');
-    } finally {
-      setShortIdChecking(false);
-    }
-  };
-
-  // 删除机柜
-  const handleDelete = async (id: string) => {
-    try {
-      await cabinetService.delete(id);
-      message.success(t('messages.deleteSuccess'));
-      loadCabinets(undefined, selectedRoom);
-    } catch (error) {
-      message.error(t('messages.deleteFailed'));
-      console.error(error);
-    }
-  };
-
-  // 搜索
-  const handleSearch = (value: string) => {
-    loadCabinets(value);
-  };
-
-  // 按机房过滤
-  const handleRoomFilter = (value: string) => {
-    setSelectedRoom(value);
-    loadCabinets(undefined, value);
-  };
-
-  // 获取机柜设备
-  const getCabinetDevices = (cabinetId: string) => {
-    return devices
-      .filter((device) => device.cabinetId === cabinetId)
-      .sort((a, b) => (b.uPosition || 0) - (a.uPosition || 0));
-  };
-
-  // 选择机柜进行可视化
-  const handleSelectCabinet = (cabinet: Cabinet) => {
-    setSelectedCabinet(cabinet);
-  };
-
-  // 计算机柜统计
-  const getCabinetStats = (cabinet: Cabinet) => {
-    const cabinetDevices = getCabinetDevices(cabinet.id);
-    const usedUnits = cabinetDevices.reduce(
-      (sum, device) => sum + (device.uHeight || 1),
-      0
-    );
-    const availableUnits = cabinet.height - usedUnits;
-    const utilization = (usedUnits / cabinet.height) * 100;
-
-    return {
-      totalDevices: cabinetDevices.length,
-      usedUnits,
-      availableUnits,
-      utilization: Math.round(utilization),
-    };
-  };
-
-  // 视图模式切换
-  const handleViewModeChange = (mode: ViewMode) => {
+  const changeViewMode = (mode: ViewMode) => {
     setViewMode(mode);
-    localStorage.setItem('cabinet-view-mode', mode);
-  };
-
-  // 跳转到可视化 Tab 并选中机柜
-  const handleViewCabinet = (cabinet: Cabinet) => {
-    setSelectedCabinet(cabinet);
-    setActiveTab('visual');
-  };
-
-  // 按机房分组机柜
-  const cabinetsByRoom = rooms.map((room) => ({
-    room,
-    dataCenterId: room.dataCenterId,
-    cabinets: cabinets.filter((c) => c.roomId === room.id),
-  }));
-
-  // 打开设备编辑对话框
-  const handleOpenDeviceModal = (device?: Device) => {
-    if (device) {
-      setEditingDevice(device);
-      deviceForm.setFieldsValue(device);
-    } else {
-      setEditingDevice(null);
-      deviceForm.resetFields();
-      if (selectedCabinet) {
-        deviceForm.setFieldsValue({ cabinetId: selectedCabinet.id });
-      }
-    }
-    setDeviceModalVisible(true);
-  };
-
-  // 打开设备面板查看对话框（左键点击）
-  const handleViewDevicePanels = async (device: Device) => {
     try {
-      setViewingDevice(device);
-      const panels = await panelService.getByDevice(device.id);
-      setDevicePanels(panels);
-
-      // 加载每个面板的端口数据并生成布局
-      const portsMap = new Map<string, Port[]>();
-      await Promise.all(
-        panels.map(async (panel) => {
-          let ports = await portService.getByPanel(panel.id);
-
-          // 调试：输出原始端口数据
-          console.log('Original ports from API:', ports);
-          console.log('First port example:', ports[0]);
-
-          // 按端口编号排序
-          ports = sortPortsByNumber(ports);
-
-          // 检查端口是否已有布局位置，如果没有则自动生成
-          const hasLayout = ports.some(p => p.position);
-          console.log('Has layout:', hasLayout, 'Ports count:', ports.length);
-          if (!hasLayout && ports.length > 0) {
-            // 自动生成端口布局
-            console.log('Generating port layout...');
-            ports = generatePortLayout(ports, panel);
-            console.log('After layout generation:', ports[0]);
-          }
-
-          portsMap.set(panel.id, ports);
-        })
-      );
-      setPanelPorts(portsMap);
-
-      setPanelViewModalVisible(true);
-    } catch (error) {
-      console.error('Error loading device panels:', error);
-      message.error(t('messages.panelLoadFailed'));
+      localStorage.setItem(VIEW_MODE_KEY, mode);
+    } catch {
+      // per-viewer convenience only
     }
   };
 
-  // 解绑面板与模板
-  const handleUnbindPanel = async (panelId: string) => {
-    try {
-      await panelTemplateService.unbindPanel(panelId);
-      message.success(t('messages.panelUnbindSuccess'));
+  // ---------- cabinets ----------
 
-      // 重新加载面板信息
-      if (viewingDevice) {
-        const panels = await panelService.getByDevice(viewingDevice.id);
-        setDevicePanels(panels);
-      }
-    } catch (error: any) {
-      message.error(t('messages.panelUnbindFailed') + ': ' + error.message);
-      console.error('Error unbinding panel:', error);
-    }
-  };
-
-  // 保存设备
-  const handleSaveDevice = async () => {
-    try {
-      const values = await deviceForm.validateFields();
-      // console.log('Saving device with values:', values);
-      if (editingDevice) {
-        await deviceService.update(editingDevice.id, values);
-        message.success(t('messages.deviceUpdated'));
-      } else {
-        await deviceService.create(values);
-        message.success(t('messages.deviceCreated'));
-      }
-      setDeviceModalVisible(false);
-      deviceForm.resetFields();
-      await loadAllData();
-      await loadCabinets();
-    } catch (error: any) {
-      if (error.errorFields) return;
-      // console.error('Save device error:', error);
-      // console.error('Error details:', JSON.stringify(error.data?.details, null, 2));
-      message.error(editingDevice ? t('messages.updateFailed') : t('messages.createFailed'));
-      console.error(error);
-    }
-  };
-
-  // 删除设备
-  const handleDeleteDevice = async (device: Device) => {
-    Modal.confirm({
-      title: t('messages.deviceDeleteConfirm'),
-      content: `${t('labels.deviceName')} ${device.name} (${device.model || t('placeholders.height')})`,
-      okText: t('buttons.confirm'),
-      okType: 'danger',
-      cancelText: t('buttons.cancel'),
-      onOk: async () => {
-        try {
-          await deviceService.delete(device.id);
-          message.success(t('messages.deviceDeleted'));
-          await loadAllData();
-          await loadCabinets();
-        } catch (error) {
-          message.error(t('messages.deleteFailed'));
-          console.error(error);
-        }
-      },
+  const openCabinetModal = (c?: CabinetDto) => {
+    setEditingCabinet(c ?? null);
+    cabinetForm.resetFields();
+    cabinetForm.setFieldsValue({
+      shortId: c?.label ? formatShortId(c.label.shortId) : '',
+      name: c?.name ?? '',
+      positionCode: c?.positionCode ?? '',
+      heightU: c?.heightU ?? 42,
+      roomId: c?.roomId ?? filter.roomId,
     });
+    setCabinetModalOpen(true);
   };
 
-  // 打开设备面板编辑器
-  const handleOpenPanelEditor = (panel?: Panel, device?: Device) => {
-    setEditingPanel(panel || null);
-    // 如果传入了设备，设置当前查看的设备
-    if (device) {
-      setViewingDevice(device);
-    }
-    setPanelEditorVisible(true);
-  };
-
-  // 保存面板
-  const handleSavePanel = async (panelData: Partial<Panel>) => {
+  const saveCabinet = async () => {
+    const v = await cabinetForm.validateFields();
+    const shortId = parseLabelInput(v.shortId);
     try {
-      if (editingPanel) {
-        // 编辑模式：直接更新面板
-        await panelService.update(editingPanel.id, panelData);
+      if (editingCabinet) {
+        await cabinetService.update({ id: editingCabinet.id, name: v.name, positionCode: v.positionCode, heightU: v.heightU, roomId: v.roomId });
+        await rebindIfChanged({ kind: 'CABINET', id: editingCabinet.id }, editingCabinet.label?.shortId, shortId);
+        message.success(t('cabinet:messages.updateSuccess'));
       } else {
-        // 新建模式：检查是否使用模板
-        if (panelData.templateId && !panelData.isCustomized) {
-          // 使用模板创建：调用特殊的创建接口，会自动创建端口
-          console.log('Creating panel from template:', panelData.templateId);
-          await panelTemplateService.createPanelFromTemplate(
-            panelData.templateId,
-            panelData.deviceId!,
-            panelData.name,
-            panelData.shortId
-          );
-        } else {
-          // 自定义创建：普通创建面板（不含端口）
-          console.log('Creating custom panel');
-          await panelService.create(panelData);
-        }
+        await cabinetService.create({ name: v.name, positionCode: v.positionCode, heightU: v.heightU, roomId: v.roomId, labelShortId: shortId });
+        message.success(t('cabinet:messages.createSuccess'));
       }
-
-      // 重新加载设备面板信息
-      if (viewingDevice) {
-        const panels = await panelService.getByDevice(viewingDevice.id);
-        setDevicePanels(panels);
-
-        // 重新加载端口数据
-        const portsMap = new Map<string, Port[]>();
-        await Promise.all(
-          panels.map(async (panel) => {
-            let ports = await portService.getByPanel(panel.id);
-            ports = sortPortsByNumber(ports);
-            const hasLayout = ports.some(p => p.position);
-            if (!hasLayout && ports.length > 0) {
-              ports = generatePortLayout(ports, panel);
-            }
-            portsMap.set(panel.id, ports);
-          })
-        );
-        setPanelPorts(portsMap);
-      }
-
-      await loadAllData();
-    } catch (error) {
-      console.error('Failed to save panel:', error);
-      throw error;
+      setCabinetModalOpen(false);
+      loadCabinets();
+    } catch {
+      // reported by rpc
     }
   };
 
-  // 打开设备发送对话框
-  const handleOpenDeviceTransfer = (device: Device) => {
-    setSelectedDeviceForAction(device);
-    setDeviceTransferVisible(true);
-  };
-
-  // 打开设备复制对话框
-  const handleOpenDeviceCopy = (device: Device) => {
-    setSelectedDeviceForAction(device);
-    setDeviceCopyVisible(true);
-  };
-
-  // 设备发送功能
-  const handleDeviceTransfer = async (targetCabinetId: string, targetUPosition: number) => {
-    if (!selectedDeviceForAction) return;
-
+  const deleteCabinet = async (id: string) => {
     try {
-      // 检查目标位置是否可用
-      const targetCabinetDevices = devices.filter(
-        (device) => device.cabinetId === targetCabinetId
-      );
-      const isPositionAvailable = !targetCabinetDevices.some(
-        (device) =>
-          device.uPosition && device.uHeight &&
-          targetUPosition >= device.uPosition &&
-          targetUPosition < device.uPosition + device.uHeight
-      );
-
-      if (!isPositionAvailable) {
-        message.error(t('messages.positionOccupied', { uPosition: targetUPosition }));
-        return;
-      }
-
-      // 更新设备位置
-      await deviceService.update(selectedDeviceForAction.id, {
-        cabinetId: targetCabinetId,
-        uPosition: targetUPosition,
-      });
-
-      message.success(t('messages.deviceTransferSuccess'));
-      setDeviceTransferVisible(false);
-      setSelectedDeviceForAction(null);
-
-      await loadAllData();
-      await loadCabinets();
-    } catch (error) {
-      message.error(t('messages.deviceTransferFailed'));
-      console.error('Failed to transfer device:', error);
+      await cabinetService.delete({ id });
+      message.success(t('cabinet:messages.deleteSuccess'));
+      if (id === routeCabinetId) navigate(paths.cabinets());
+      loadCabinets();
+    } catch {
+      // reported by rpc
     }
   };
 
-  // 设备复制功能
-  const handleDeviceCopy = async (targetCabinetId: string, targetUPosition: number) => {
-    if (!selectedDeviceForAction) return;
+  // ---------- devices ----------
 
+  const refreshDevices = () => {
+    loadDevices();
+    loadCabinets();
+  };
+
+  const deleteDevice = async (d: DeviceDto) => {
+    const ok = await deleteWithForce((force, opts) => deviceService.delete({ id: d.id, force }, opts), {
+      code: 'NOT_EMPTY',
+      title: t('device:messages.forceDeleteTitle'),
+      content: t('device:messages.forceDeleteContent'),
+      okText: t('common:actions.delete'),
+      cancelText: t('common:actions.cancel'),
+    });
+    if (ok) {
+      message.success(t('cabinet:messages.deviceDeleted'));
+      refreshDevices();
+    }
+  };
+
+  const openPlace = (kind: 'move' | 'copy', device: DeviceDto) => {
+    placeForm.resetFields();
+    placeForm.setFieldsValue({ cabinetId: device.cabinetId ?? routeCabinetId });
+    setPlaceAction({ kind, device });
+  };
+
+  const submitPlace = async () => {
+    if (!placeAction) return;
+    const v = await placeForm.validateFields();
+    const d = placeAction.device;
     try {
-      // 检查目标位置是否可用
-      const targetCabinetDevices = devices.filter(
-        (device) => device.cabinetId === targetCabinetId
-      );
-      const isPositionAvailable = !targetCabinetDevices.some(
-        (device) =>
-          device.uPosition && device.uHeight &&
-          targetUPosition >= device.uPosition &&
-          targetUPosition < device.uPosition + device.uHeight
-      );
-
-      if (!isPositionAvailable) {
-        message.error(t('messages.positionOccupied', { uPosition: targetUPosition }));
-        return;
+      if (placeAction.kind === 'move') {
+        await deviceService.move({ id: d.id, cabinetId: v.cabinetId, roomId: null, uPosition: v.uPosition });
+        message.success(t('cabinet:messages.deviceTransferSuccess'));
+      } else {
+        await deviceService.create({
+          name: `${d.name}_${t('cabinet:buttons.deviceCopy')}`,
+          type: d.type,
+          deviceModelId: d.deviceModelId,
+          cabinetId: v.cabinetId,
+          uPosition: v.uPosition,
+          uHeight: d.uHeight,
+        });
+        message.success(t('cabinet:messages.deviceCopySuccess'));
       }
+      setPlaceAction(null);
+      refreshDevices();
+    } catch {
+      // reported by rpc
+    }
+  };
 
-      // 创建设备副本
-      const deviceCopy = {
-        name: `${selectedDeviceForAction.name}_${t('buttons.deviceCopy')}`,
-        type: selectedDeviceForAction.type,
-        model: selectedDeviceForAction.model,
-        cabinetId: targetCabinetId,
-        uPosition: targetUPosition,
-        uHeight: selectedDeviceForAction.uHeight || 1,
-      };
+  // ---------- panels of a device ----------
 
-      await deviceService.create(deviceCopy);
-      message.success(t('messages.deviceCopySuccess'));
-      setDeviceCopyVisible(false);
-      setSelectedDeviceForAction(null);
+  const loadDevicePanels = useCallback(async (device: DeviceDto) => {
+    try {
+      const [panels, dang] = await Promise.all([
+        panelService.list({ deviceId: device.id, includePorts: true }),
+        cableService.danglingByDevice({ deviceId: device.id }),
+      ]);
+      setDevicePanels(panels);
+      setDangling(dang);
+    } catch {
+      // reported by rpc
+    }
+  }, []);
 
-      await loadAllData();
-      await loadCabinets();
-    } catch (error) {
-      message.error(t('messages.deviceCopyFailed'));
-      console.error('Failed to copy device:', error);
+  const showDevicePanels = async (device: DeviceDto) => {
+    setViewingDevice(device);
+    await loadDevicePanels(device);
+  };
+
+  const closeDevicePanels = () => {
+    setViewingDevice(null);
+    setDevicePanels([]);
+    setDangling(null);
+  };
+
+  const deletePanel = async (panel: PanelDto) => {
+    const ok = await deleteWithForce((force, opts) => panelService.delete({ id: panel.id, force }, opts), {
+      code: 'PORT_HAS_DEPENDENTS',
+      title: t('panel:messages.forceDeleteTitle'),
+      content: t('panel:messages.forceDeleteContent'),
+      okText: t('common:actions.delete'),
+      cancelText: t('common:actions.cancel'),
+    });
+    if (ok && viewingDevice) {
+      message.success(t('panel:messages.deleteSuccess'));
+      loadDevicePanels(viewingDevice);
+    }
+  };
+
+  const unbindTemplate = async (panelId: string) => {
+    try {
+      await panelTemplateService.unbind({ panelId });
+      message.success(t('cabinet:messages.panelUnbindSuccess'));
+      if (viewingDevice) loadDevicePanels(viewingDevice);
+    } catch {
+      // reported by rpc
     }
   };
 
   const columns = [
     {
-      title: t('fields.shortId'),
-      dataIndex: 'shortId',
-      key: 'shortId',
-      width: 100,
-      render: (shortId: number) => shortId ? ShortIdFormatter.toDisplayFormat(shortId) : '-',
+      title: t('cabinet:fields.label'),
+      key: 'label',
+      width: 110,
+      render: (_: unknown, c: CabinetDto) => (c.label ? <Text code>{formatShortId(c.label.shortId)}</Text> : '-'),
     },
+    { title: t('cabinet:fields.name'), dataIndex: 'name', key: 'name' },
+    { title: t('cabinet:fields.position'), dataIndex: 'positionCode', key: 'positionCode', render: (v: string | null) => v || '-' },
+    { title: t('cabinet:fields.height'), dataIndex: 'heightU', key: 'heightU', render: (v: number) => `${v}U` },
+    { title: t('cabinet:fields.usedU'), key: 'usedU', render: (_: unknown, c: CabinetDto) => `${c.usedU}/${c.heightU}U` },
+    { title: t('cabinet:fields.deviceCount'), dataIndex: 'deviceCount', key: 'deviceCount', width: 90 },
     {
-      title: t('fields.name'),
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: t('fields.position'),
-      dataIndex: 'position',
-      key: 'position',
-      render: (text: string) => text || '-',
-    },
-    {
-      title: t('fields.height'),
-      dataIndex: 'height',
-      key: 'height',
-      render: (height: number) => `${height}U`,
-    },
-    {
-      title: t('fields.room'),
-      dataIndex: 'roomId',
-      key: 'roomId',
-      render: (roomId: string) => {
-        const room = rooms.find((r) => r.id === roomId);
-        if (!room) return '-';
-        const dc = dataCenters.find((d) => d.id === room.dataCenterId);
+      title: t('cabinet:fields.room'),
+      key: 'room',
+      render: (_: unknown, c: CabinetDto) => {
+        const room = rooms.find((r) => r.id === c.roomId);
         return (
           <Space>
-            <Tag color="blue">{dc?.name}</Tag>
-            <Tag color="green">{room.name}</Tag>
+            {room && <Tag color="blue">{room.dataCenterName}</Tag>}
+            <Tag color="green">{c.roomName}</Tag>
           </Space>
         );
       },
     },
     {
-      title: t('fields.createdAt'),
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (text: string) => new Date(text).toLocaleString('zh-CN'),
-    },
-    {
-      title: t('fields.actions'),
+      title: t('cabinet:fields.actions'),
       key: 'actions',
-      width: 200,
-      render: (_: any, record: Cabinet) => (
-        <Space>
-          <Button
-            type="link"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => handleViewCabinet(record)}
-          >
-            {t('buttons.visualize')}
+      width: 240,
+      render: (_: unknown, c: CabinetDto) => (
+        <Space onClick={(e) => e.stopPropagation()}>
+          <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => navigate(paths.cabinet(c.id))} data-testid="cabinet-view-btn">
+            {t('cabinet:buttons.visualize')}
           </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleOpenModal(record)}
-          >
-            {t('buttons.edit')}
+          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openCabinetModal(c)}>
+            {t('cabinet:buttons.edit')}
           </Button>
           <Popconfirm
-            title={t('messages.deleteConfirm')}
-            description={t('messages.deleteWarning')}
-            onConfirm={() => handleDelete(record.id)}
-            okText={t('buttons.confirm')}
-            cancelText={t('buttons.cancel')}
+            title={t('cabinet:messages.deleteConfirm')}
+            description={t('cabinet:messages.deleteWarning')}
+            onConfirm={() => deleteCabinet(c.id)}
+            okText={t('cabinet:buttons.confirm')}
+            cancelText={t('cabinet:buttons.cancel')}
           >
             <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              {t('buttons.delete')}
+              {t('cabinet:buttons.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -789,914 +373,437 @@ export default function CabinetList() {
     },
   ];
 
+  const deviceIconButton = (icon: React.ReactNode, onClick: () => void, extra: Record<string, unknown> = {}) => (
+    <Button type="text" size="small" icon={icon} onClick={onClick} style={{ padding: '0 4px', height: 20 }} {...extra} />
+  );
+
+  const deviceItem = (device: DeviceDto) => (
+    <li style={{ padding: '8px 12px', borderBottom: '1px solid #f0f0f0', listStyle: 'none' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+        <Text strong style={{ fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={device.name}>
+          {device.name}
+        </Text>
+        <Tag color={DEVICE_TYPE_COLORS[device.type]} style={{ fontSize: 10, margin: 0, padding: '0 4px', lineHeight: '16px' }}>
+          {t(`device:deviceTypes.${device.type}`)}
+        </Tag>
+      </div>
+      <Text type="secondary" style={{ fontSize: 10 }}>
+        {device.uPosition === null ? t('cabinet:panels.noUPosition') : `U${device.uPosition}`} ({uHeightText(device.uHeight, t('device:fields.uHeightUnknown'))})
+      </Text>
+      <Space size={4} wrap style={{ display: 'flex' }}>
+        {deviceIconButton(<EditOutlined />, () => setDeviceModal({ open: true, device }))}
+        {deviceIconButton(<SettingOutlined />, () => setPanelEditor({ open: true, device }), { 'data-testid': 'cabinet-device-panel-btn' })}
+        {device.uPosition === null ? (
+          <Tooltip title={t('cabinet:buttons.setUPosition')}>
+            {deviceIconButton(<VerticalAlignTopOutlined />, () => openPlace('move', device), { 'data-testid': 'cabinet-device-set-u' })}
+          </Tooltip>
+        ) : (
+          deviceIconButton(<SendOutlined />, () => openPlace('move', device))
+        )}
+        {deviceIconButton(<CopyOutlined />, () => openPlace('copy', device))}
+        {deviceIconButton(<DeleteOutlined />, () => deleteDevice(device), { danger: true })}
+      </Space>
+    </li>
+  );
+
+  const listTab = (
+    <Card>
+      <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
+        <Space>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openCabinetModal()}>
+            {t('cabinet:buttons.create')}
+          </Button>
+          <Select
+            placeholder={t('cabinet:buttons.selectRoom')}
+            allowClear
+            style={{ width: 240 }}
+            onChange={(roomId?: string) => setFilter((f) => ({ ...f, roomId }))}
+            options={rooms.map((r) => ({ value: r.id, label: `${r.dataCenterName} - ${r.name}` }))}
+          />
+        </Space>
+        <SearchInput placeholder={t('cabinet:placeholders.search')} onSearch={(search) => setFilter((f) => ({ ...f, search: search || undefined }))} style={{ width: 300 }} />
+      </Space>
+      <Table
+        columns={columns}
+        dataSource={cabinets}
+        loading={loading}
+        rowKey="id"
+        onRow={(c) => ({ onClick: () => navigate(paths.cabinet(c.id)), style: { cursor: 'pointer' } })}
+        rowClassName={(c) => (c.id === routeCabinetId ? 'highlighted-row' : '')}
+        pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => t('cabinet:table.total', { total }) }}
+      />
+    </Card>
+  );
+
+  const visualTab = (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flexShrink: 0, marginBottom: 12, display: 'flex', justifyContent: 'flex-end' }}>
+        <Space.Compact size="small">
+          <Tooltip title={t('cabinet:views.2dFrontPanel')}>
+            <Button type={viewMode === '2d' ? 'primary' : 'default'} icon={<AppstoreOutlined />} onClick={() => changeViewMode('2d')}>
+              2D
+            </Button>
+          </Tooltip>
+          <Tooltip title={t('cabinet:views.3dView')}>
+            <Button type={viewMode === '3d' ? 'primary' : 'default'} icon={<BlockOutlined />} onClick={() => changeViewMode('3d')}>
+              3D
+            </Button>
+          </Tooltip>
+        </Space.Compact>
+      </div>
+
+      <Layout style={{ background: '#fff', flex: 1, overflow: 'hidden' }}>
+        <Sider width={260} style={{ background: '#fafafa', borderRight: '1px solid #e8e8e8', overflowY: 'auto', height: '100%' }}>
+          <div style={{ padding: 16 }}>
+            <div style={{ marginBottom: 16 }}>
+              <Text type="secondary" style={{ fontSize: 12, marginBottom: 4, display: 'block' }}>
+                {t('cabinet:views.selectCabinet')}
+              </Text>
+              <Select
+                showSearch
+                style={{ width: '100%' }}
+                placeholder={t('cabinet:labels.selectCabinetPlaceholder')}
+                value={selected?.id}
+                optionFilterProp="label"
+                onChange={(id: string) => navigate(paths.cabinet(id))}
+                options={cabinetOptions}
+              />
+            </div>
+
+            {selected ? (
+              <>
+                <div style={{ padding: '8px 12px', background: '#fafafa', borderRadius: 4, marginBottom: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                    {selected.name} {selected.label && <Text code>{formatShortId(selected.label.shortId)}</Text>}
+                  </div>
+                  <Space size={8} wrap>
+                    <Tag color="blue" style={{ margin: 0 }}>
+                      {selected.heightU}U
+                    </Tag>
+                    <Text type="secondary" style={{ fontSize: 11 }}>
+                      {t('cabinet:labels.deviceCount', { count: selected.deviceCount })}
+                    </Text>
+                    <Text style={{ fontSize: 11 }}>
+                      {selected.usedU}/{selected.heightU}U
+                    </Text>
+                  </Space>
+                </div>
+                <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }} size={4}>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => setDeviceModal({ open: true, device: null })} block size="small">
+                    {t('cabinet:buttons.addDevice')}
+                  </Button>
+                  <Button icon={<EditOutlined />} onClick={() => openCabinetModal(selected)} block size="small">
+                    {t('cabinet:buttons.editCabinet')}
+                  </Button>
+                </Space>
+                <Card title={t('cabinet:panels.devicePanels')} size="small" styles={{ body: { padding: '8px 0' } }}>
+                  <List dataSource={rackDevices} size="small" split={false} renderItem={(device) => deviceItem(device)} />
+                </Card>
+                {unplacedDevices.length > 0 && (
+                  <Card
+                    title={t('cabinet:panels.unplacedDevices', { count: unplacedDevices.length })}
+                    size="small"
+                    style={{ marginTop: 12 }}
+                    styles={{ body: { padding: '8px 0' } }}
+                    data-testid="cabinet-unplaced-devices"
+                  >
+                    <Text type="secondary" style={{ fontSize: 11, display: 'block', padding: '0 12px 4px' }}>
+                      {t('cabinet:panels.unplacedHint')}
+                    </Text>
+                    <List dataSource={unplacedDevices} size="small" split={false} renderItem={(device) => deviceItem(device)} />
+                  </Card>
+                )}
+              </>
+            ) : (
+              <Empty description={t('cabinet:messages.selectCabinet')} />
+            )}
+          </div>
+        </Sider>
+
+        <Content style={{ padding: 24, height: '100%', overflow: 'hidden' }}>
+          {selected ? (
+            <CabinetVisualizer ref={mainViewRef} cabinet={selected} devices={rackDevices} viewMode={viewMode} onDeviceClick={(d) => {
+                const device = devices.find((x) => x.id === d.id);
+                if (device) showDevicePanels(device);
+              }} />
+          ) : (
+            <Empty description={t('cabinet:messages.selectCabinetVisual')} style={{ marginTop: 100 }} />
+          )}
+        </Content>
+
+        <Sider width={260} style={{ background: '#fafafa', borderLeft: '1px solid #e8e8e8', overflow: 'hidden', height: '100%' }}>
+          <div style={{ padding: 16 }}>
+            {selected ? (
+              <>
+                <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 8, paddingLeft: 4 }}>
+                  <InboxOutlined style={{ marginRight: 4 }} />
+                  {t('cabinet:labels.cabinetOverview')}
+                </div>
+                <CabinetThumbnail cabinet={selected} devices={rackDevices} containerHeight={600} mainViewRef={mainViewRef} />
+              </>
+            ) : (
+              <Empty description={t('cabinet:messages.selectCabinet')} />
+            )}
+          </div>
+        </Sider>
+      </Layout>
+    </div>
+  );
+
+  const danglingCount = dangling?.total ?? 0;
+
   return (
     <div style={{ height: 'calc(100vh - 192px)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <div style={{
-        flexShrink: 0,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <Title level={2} style={{ margin: 0 }}>
-            <InboxOutlined /> {t('title')}
-          </Title>
-          <Text type="secondary" style={{ fontSize: 14 }}>
-            {t('description')}
-          </Text>
-        </div>
+      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+        <Title level={2} style={{ margin: 0 }}>
+          <InboxOutlined /> {t('cabinet:title')}
+        </Title>
+        <Text type="secondary" style={{ fontSize: 14 }}>
+          {t('cabinet:description')}
+        </Text>
       </div>
 
       <Tabs
         activeKey={activeTab}
-        onChange={setActiveTab}
+        onChange={(key) => {
+          setActiveTab(key);
+          if (key === 'list' && routeCabinetId) navigate(paths.cabinets());
+        }}
         type="card"
         style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
         className="full-height-tabs"
-      >
-        <TabPane tab={<span><InboxOutlined /> {t('tabs.cabinetList')}</span>} key="list">
-          <Card>
-            <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
-              <Space>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
-                  {t('buttons.create')}
-                </Button>
-                <Select
-                  placeholder={t('buttons.selectRoom')}
-                  allowClear
-                  style={{ width: 200 }}
-                  onChange={handleRoomFilter}
-                  onClear={() => loadCabinets()}
-                >
-                  {rooms.map((room) => {
-                    const dc = dataCenters.find((d) => d.id === room.dataCenterId);
-                    return (
-                      <Option key={room.id} value={room.id}>
-                        {dc?.name} - {room.name}
-                      </Option>
-                    );
-                  })}
-                </Select>
-              </Space>
-              <Search
-                placeholder={t('placeholders.search')}
-                allowClear
-                onSearch={handleSearch}
-                style={{ width: 300 }}
-              />
-            </Space>
-
-            <Table
-              columns={columns}
-              dataSource={cabinets}
-              loading={loading}
-              rowKey="id"
-              onRow={(record) => ({
-                onClick: () => handleViewCabinet(record),
-                style: { cursor: 'pointer' },
-              })}
-              rowClassName={(record) =>
-                highlightedCabinetId === record.id ? 'highlighted-row' : ''
-              }
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showTotal: (total) => t('table.total', { total }),
-              }}
-            />
-          </Card>
-        </TabPane>
-
-        <TabPane tab={<span><EyeOutlined /> {t('tabs.visualization')}</span>} key="visual">
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ flexShrink: 0, marginBottom: 12, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-              <Button.Group size="small">
-                <Tooltip title={t('views.2dFrontPanel')}>
-                  <Button
-                    type={viewMode === '2d' ? 'primary' : 'default'}
-                    icon={<AppstoreOutlined />}
-                    onClick={() => handleViewModeChange('2d')}
-                  >
-                    2D
-                  </Button>
-                </Tooltip>
-                <Tooltip title={t('views.3dView')}>
-                  <Button
-                    type={viewMode === '3d' ? 'primary' : 'default'}
-                    icon={<BlockOutlined />}
-                    onClick={() => handleViewModeChange('3d')}
-                  >
-                    3D
-                  </Button>
-                </Tooltip>
-              </Button.Group>
-            </div>
-
-            <Layout style={{ background: '#fff', flex: 1, overflow: 'hidden' }}>
-            {/* 左侧：机柜导航器 */}
-            <Sider
-              width={260}
-              style={{
-                background: '#fafafa',
-                borderRight: '1px solid #e8e8e8',
-                overflowY: 'auto',
-                height: '100%',
-              }}
-            >
-              <div style={{ padding: 16 }}>
-                {/* 机柜选择器 */}
-                <div style={{ marginBottom: 16 }} title="机柜选择器容器">
-                  <Text type="secondary" style={{ fontSize: 12, marginBottom: 4, display: 'block' }}>
-                    {t('views.selectCabinet')}
-                  </Text>
-                  <Select
-                    showSearch
-                    style={{ width: '100%' }}
-                    placeholder={t('labels.selectCabinetPlaceholder')}
-                    value={selectedCabinet?.id}
-                    onChange={(cabinetId) => {
-                      const cabinet = cabinets.find(c => c.id === cabinetId);
-                      if (cabinet) handleSelectCabinet(cabinet);
-                    }}
-                    optionFilterProp="children"
-                    filterOption={(input, option) =>
-                      (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                    }
-                    options={cabinets.map(cabinet => {
-                      const room = rooms.find(r => r.id === cabinet.roomId);
-                      const dc = dataCenters.find(d => d.id === room?.dataCenterId);
-                      return {
-                        value: cabinet.id,
-                        label: `${dc?.name || ''} - ${room?.name || ''} - ${cabinet.name}`,
-                      };
-                    })}
-                  />
-                </div>
-
-                {selectedCabinet ? (
-                  <>
-                    {/* 机柜统计信息 */}
-                    <div style={{ marginBottom: 16 }}>
-                      {(() => {
-                        const stats = getCabinetStats(selectedCabinet);
-                        return (
-                          <>
-                            {/* 机柜名称和基本信息 */}
-                            <div style={{
-                              padding: '8px 12px',
-                              background: '#fafafa',
-                              borderRadius: 4,
-                              marginBottom: 8
-                            }}>
-                              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#262626' }}>
-                                {selectedCabinet.name}
-                              </div>
-                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                                <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>
-                                  {selectedCabinet.height}U
-                                </Tag>
-                                <Text type="secondary" style={{ fontSize: 11 }}>
-                                  {stats.totalDevices}台设备
-                                </Text>
-                                <Text style={{ fontSize: 11 }}>
-                                  {stats.usedUnits}/{selectedCabinet.height}U
-                                </Text>
-                                <Tag
-                                  color={
-                                    stats.utilization > 80
-                                      ? 'red'
-                                      : stats.utilization > 60
-                                      ? 'orange'
-                                      : 'green'
-                                  }
-                                  style={{ margin: 0, fontSize: 11 }}
-                                >
-                                  {stats.utilization}%
-                                </Tag>
-                              </div>
-                            </div>
-
-                            {/* 操作按钮 */}
-                            <Space direction="vertical" style={{ width: '100%' }} size={4}>
-                              <Button
-                                type="primary"
-                                icon={<PlusOutlined />}
-                                onClick={() => handleOpenDeviceModal()}
-                                block
-                                size="small"
-                              >
-                                {t('buttons.addDevice')}
-                              </Button>
-                              <Button
-                                icon={<EditOutlined />}
-                                onClick={() => handleOpenModal(selectedCabinet)}
-                                block
-                                size="small"
-                              >
-                                {t('buttons.editCabinet')}
-                              </Button>
-                            </Space>
-                          </>
-                        );
-                      })()}
-                    </div>
-
-                    {/* 设备列表 */}
-                    <Card
-                      title={t('panels.devicePanels')}
-                      size="small"
-                      bodyStyle={{ padding: '8px 0' }}
-                    >
-                      <List
-                        dataSource={getCabinetDevices(selectedCabinet.id)}
-                        size="small"
-                        split={false}
-                        renderItem={(device) => (
-                          <List.Item
-                            style={{
-                              padding: '8px 12px',
-                              borderBottom: '1px solid #f0f0f0',
-                              display: 'block',
-                            }}
-                          >
-                            <div style={{ marginBottom: 6 }}>
-                              <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                marginBottom: 4,
-                              }}>
-                                <Text
-                                  strong
-                                  style={{
-                                    fontSize: 12,
-                                    flex: 1,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                  }}
-                                  title={device.name}
-                                >
-                                  {device.name}
-                                </Text>
-                                <Tag
-                                  color={deviceTypeMap[device.type].color}
-                                  style={{
-                                    fontSize: 10,
-                                    margin: 0,
-                                    padding: '0 4px',
-                                    lineHeight: '16px',
-                                  }}
-                                >
-                                  {deviceTypeMap[device.type].label}
-                                </Tag>
-                              </div>
-                              <Text type="secondary" style={{ fontSize: 10 }}>
-                                U{device.uPosition} ({device.uHeight}U)
-                              </Text>
-                            </div>
-                            <Space size={4} wrap>
-                              <Button
-                                type="text"
-                                size="small"
-                                icon={<EditOutlined />}
-                                onClick={() => handleOpenDeviceModal(device)}
-                                style={{ padding: '0 4px', height: 20 }}
-                              />
-                              <Button
-                                type="text"
-                                size="small"
-                                icon={<SettingOutlined />}
-                                onClick={() => handleOpenPanelEditor(undefined, device)}
-                                style={{ padding: '0 4px', height: 20 }}
-                              />
-                              <Button
-                                type="text"
-                                size="small"
-                                icon={<SendOutlined />}
-                                onClick={() => handleOpenDeviceTransfer(device)}
-                                style={{ padding: '0 4px', height: 20 }}
-                              />
-                              <Button
-                                type="text"
-                                size="small"
-                                icon={<CopyOutlined />}
-                                onClick={() => handleOpenDeviceCopy(device)}
-                                style={{ padding: '0 4px', height: 20 }}
-                              />
-                              <Button
-                                type="text"
-                                size="small"
-                                danger
-                                icon={<DeleteOutlined />}
-                                onClick={() => handleDeleteDevice(device)}
-                                style={{ padding: '0 4px', height: 20 }}
-                              />
-                            </Space>
-                          </List.Item>
-                        )}
-                      />
-                    </Card>
-                  </>
-                ) : (
-                  <Empty description={t('messages.selectCabinet')} />
-                )}
-              </div>
-            </Sider>
-
-            {/* 中间：机柜可视化 */}
-            <Content
-              ref={contentContainerRef}
-              style={{
-                padding: 24,
-                height: '100%',
-                overflow: 'hidden', // 【修改点】从 overflowY: 'auto' 改为 overflow: 'hidden'，禁止主视图滚动
-              }}
-              title="机柜可视化主视图区域"
-            >
-              {selectedCabinet ? (
-                <CabinetVisualizer
-                  ref={mainViewRef}
-                  cabinet={selectedCabinet}
-                  devices={getCabinetDevices(selectedCabinet.id)}
-                  viewMode={viewMode}
-                  onDeviceClick={handleViewDevicePanels}
-                  onDeviceEdit={handleOpenDeviceModal}
-                  onDeviceDelete={handleDeleteDevice}
-                />
-              ) : (
-                <Empty description="请从左侧选择一个机柜进行可视化展示" style={{ marginTop: 100 }} />
-              )}
-            </Content>
-
-            {/* 右侧：机柜全览 */}
-            <Sider
-              width={260}
-              style={{
-                background: '#fafafa',
-                borderLeft: '1px solid #e8e8e8',
-                overflow: 'hidden',
-                height: '100%',
-              }}
-            >
-              <div style={{ padding: 16 }}>
-                {selectedCabinet ? (
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: '#8c8c8c',
-                        marginBottom: 8,
-                        paddingLeft: 4,
-                      }}
-                      title="机柜全览标题"
-                    >
-                      <InboxOutlined style={{ marginRight: 4 }} />
-                      {t('labels.cabinetOverview')}
-                    </div>
-                    <CabinetThumbnail
-                      cabinet={selectedCabinet}
-                      devices={getCabinetDevices(selectedCabinet.id)}
-                      viewMode={viewMode}
-                      containerHeight={600}
-                      mainViewRef={mainViewRef}
-                      contentContainerRef={contentContainerRef}
-                    />
-                  </div>
-                ) : (
-                  <Empty description={t('messages.selectCabinet')} />
-                )}
-              </div>
-            </Sider>
-          </Layout>
-          </div>
-        </TabPane>
-      </Tabs>
+        items={[
+          {
+            key: 'list',
+            label: (
+              <span>
+                <InboxOutlined /> {t('cabinet:tabs.cabinetList')}
+              </span>
+            ),
+            children: listTab,
+          },
+          {
+            key: 'visual',
+            label: (
+              <span>
+                <EyeOutlined /> {t('cabinet:tabs.visualization')}
+              </span>
+            ),
+            children: visualTab,
+          },
+        ]}
+      />
 
       <Modal
         title={
           <Space>
             <InboxOutlined />
-            {editingCabinet ? t('editTitle') : t('createTitle')}
+            {editingCabinet ? t('cabinet:editTitle') : t('cabinet:createTitle')}
           </Space>
         }
-        open={modalVisible}
-        onOk={handleSave}
-        onCancel={handleCloseModal}
-        okText={t('buttons.save')}
-        cancelText={t('buttons.cancel')}
+        open={cabinetModalOpen}
+        onOk={saveCabinet}
+        onCancel={() => setCabinetModalOpen(false)}
+        okText={t('cabinet:buttons.save')}
+        cancelText={t('cabinet:buttons.cancel')}
+        forceRender
+        wrapProps={{ 'data-testid': 'cabinet-modal' }}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="shortId"
-            label={
-              <Space>
-                <ScanOutlined />
-                ShortID
-              </Space>
-            }
-            rules={[
-              { required: true, message: '请输入shortID' },
-              { validator: validateShortId },
-            ]}
-            validateTrigger="onBlur"
-          >
-            <Input
-              placeholder="扫码或输入shortID（例如：E-00001 或 12345）"
+        <Form name="cabinet-list-cabinet-form" form={cabinetForm} layout="vertical" data-testid="cabinet-form">
+          <LabelField name="shortId" autoAllocate self={editingCabinet ? { kind: 'CABINET', id: editingCabinet.id } : undefined} testId="cabinet-shortid-input" />
+          <Form.Item name="name" label={t('cabinet:labels.cabinetName')} rules={[{ required: true, message: t('cabinet:validation.nameRequired') }]}>
+            <Input placeholder={t('cabinet:placeholders.name')} data-testid="cabinet-name-input" />
+          </Form.Item>
+          <Form.Item name="positionCode" label={t('cabinet:labels.position')}>
+            <Input placeholder={t('cabinet:placeholders.position')} data-testid="cabinet-position-input" />
+          </Form.Item>
+          <Form.Item name="heightU" label={t('cabinet:labels.uHeight')} rules={[{ required: true, message: t('cabinet:validation.heightRequired') }]}>
+            <InputNumber min={1} max={60} style={{ width: '100%' }} data-testid="cabinet-height-input" />
+          </Form.Item>
+          <Form.Item name="roomId" label={t('cabinet:labels.selectRoom')} rules={[{ required: true, message: t('cabinet:validation.roomRequired') }]}>
+            <Select
+              placeholder={t('cabinet:labels.selectRoom')}
+              showSearch
+              optionFilterProp="label"
+              data-testid="cabinet-room-select"
+              options={rooms.map((r) => ({ value: r.id, label: `${r.dataCenterName} - ${r.name}` }))}
             />
-          </Form.Item>
-          <Form.Item
-            name="name"
-            label={t('labels.cabinetName')}
-            rules={[{ required: true, message: t('validation.nameRequired') }]}
-          >
-            <Input placeholder={t('placeholders.name')} />
-          </Form.Item>
-          <Form.Item name="position" label={t('labels.position')}>
-            <Input placeholder={t('placeholders.position')} />
-          </Form.Item>
-          <Form.Item
-            name="height"
-            label={t('labels.uHeight')}
-            initialValue={42}
-            rules={[{ required: true, message: t('validation.heightRequired') }]}
-          >
-            <InputNumber min={1} max={52} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item
-            name="roomId"
-            label={t('labels.selectRoom')}
-            rules={[{ required: true, message: t('validation.roomRequired') }]}
-          >
-            <Select placeholder={t('labels.selectRoom')} showSearch optionFilterProp="children">
-              {rooms.map((room) => {
-                const dc = dataCenters.find((d) => d.id === room.dataCenterId);
-                return (
-                  <Option key={room.id} value={room.id}>
-                    {dc?.name} - {room.name}
-                  </Option>
-                );
-              })}
-            </Select>
           </Form.Item>
         </Form>
       </Modal>
 
-      {/* 设备编辑对话框 */}
+      <DeviceFormModal
+        open={deviceModal.open}
+        device={deviceModal.device}
+        defaultCabinetId={routeCabinetId}
+        onClose={(changed) => {
+          setDeviceModal({ open: false, device: null });
+          if (changed) refreshDevices();
+        }}
+      />
+
       <Modal
         title={
           <Space>
-            <BlockOutlined />
-            {editingDevice ? t('buttons.editDevice') : t('buttons.addDevice')}
+            {placeAction?.kind === 'copy' ? <CopyOutlined /> : <SendOutlined />}
+            {placeAction?.kind === 'copy' ? t('cabinet:copy.title') : t('cabinet:transfer.title')}
           </Space>
         }
-        open={deviceModalVisible}
-        onOk={handleSaveDevice}
-        onCancel={() => {
-          setDeviceModalVisible(false);
-          setEditingDevice(null);
-          deviceForm.resetFields();
-        }}
+        open={!!placeAction}
+        onOk={submitPlace}
+        onCancel={() => setPlaceAction(null)}
+        okText={placeAction?.kind === 'copy' ? t('cabinet:buttons.confirmCopy') : t('cabinet:buttons.confirmTransfer')}
+        cancelText={t('cabinet:buttons.cancel')}
         width={600}
+        forceRender
       >
-        <Form form={deviceForm} layout="vertical">
-          <Form.Item
-            name="name"
-            label={t('labels.deviceName')}
-            rules={[{ required: true, message: t('validation.deviceNameRequired') }]}
-          >
-            <Input placeholder="e.g.: WEB-Server-01" />
+        {placeAction && (
+          <Alert
+            message={placeAction.kind === 'copy' ? t('cabinet:copy.description', { deviceName: placeAction.device.name }) : t('cabinet:transfer.description', { deviceName: placeAction.device.name })}
+            type={placeAction.kind === 'copy' ? 'info' : 'warning'}
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
+        <Form name="cabinet-list-place-form" form={placeForm} layout="vertical">
+          <Form.Item name="cabinetId" label={t('cabinet:labels.targetCabinet')} rules={[{ required: true, message: t('cabinet:validation.cabinetRequired') }]}>
+            <Select placeholder={t('cabinet:labels.targetCabinet')} showSearch optionFilterProp="label" options={cabinetOptions} />
           </Form.Item>
-          <Form.Item
-            name="type"
-            label={t('labels.deviceType')}
-            rules={[{ required: true, message: t('validation.deviceTypeRequired') }]}
-          >
-            <Select placeholder={t('labels.deviceType')}>
-              <Option value="SERVER">{t('deviceTypes.SERVER')}</Option>
-              <Option value="SWITCH">{t('deviceTypes.SWITCH')}</Option>
-              <Option value="ROUTER">{t('deviceTypes.ROUTER')}</Option>
-              <Option value="FIREWALL">{t('deviceTypes.FIREWALL')}</Option>
-              <Option value="STORAGE">{t('deviceTypes.STORAGE')}</Option>
-              <Option value="PDU">{t('deviceTypes.PDU')}</Option>
-              <Option value="OTHER">{t('deviceTypes.OTHER')}</Option>
-            </Select>
+          <Form.Item name="uPosition" label={t('cabinet:labels.targetUPosition')} rules={[{ required: true, message: t('cabinet:validation.uPositionRequired') }]}>
+            <InputNumber style={{ width: '100%' }} min={1} max={60} />
           </Form.Item>
-          <Form.Item name="model" label={t('labels.deviceModel')}>
-            <Input placeholder="e.g.: Dell PowerEdge R740" />
-          </Form.Item>
-          <Form.Item name="serialNo" label={t('labels.serialNo')}>
-            <Input placeholder="e.g.: SN123456789" />
-          </Form.Item>
-          <Form.Item
-            name="cabinetId"
-            label={t('labels.selectCabinet')}
-            rules={[{ required: true, message: t('validation.deviceCabinetRequired') }]}
-          >
-            <Select placeholder={t('labels.selectCabinet')} showSearch optionFilterProp="children">
-              {cabinets.map((cabinet) => {
-                const room = rooms.find((r) => r.id === cabinet.roomId);
-                const dc = dataCenters.find((d) => d.id === room?.dataCenterId);
-                return (
-                  <Option key={cabinet.id} value={cabinet.id}>
-                    {dc?.name} - {room?.name} - {cabinet.name}
-                  </Option>
-                );
-              })}
-            </Select>
-          </Form.Item>
-          <Space style={{ width: '100%' }}>
-            <Form.Item name="uPosition" label={t('labels.uPosition')} style={{ marginBottom: 0 }}>
-              <InputNumber min={1} max={52} placeholder="1" style={{ width: 120 }} />
-            </Form.Item>
-            <Form.Item name="uHeight" label={t('labels.uHeight')} initialValue={1} style={{ marginBottom: 0 }}>
-              <InputNumber min={1} max={10} placeholder="1" style={{ width: 120 }} />
-            </Form.Item>
-          </Space>
         </Form>
       </Modal>
 
-      {/* 设备面板查看对话框 */}
       <Modal
         title={
           <Space>
             <CloudServerOutlined />
-            {viewingDevice?.name} - {t('panels.title')}
+            {viewingDevice?.name} - {t('cabinet:panels.title')}
           </Space>
         }
-        open={panelViewModalVisible}
-        onCancel={() => {
-          setPanelViewModalVisible(false);
-          setViewingDevice(null);
-          setDevicePanels([]);
-          setPanelPorts(new Map());
-        }}
+        open={!!viewingDevice}
+        onCancel={closeDevicePanels}
         footer={[
           <Button
             key="edit"
             icon={<EditOutlined />}
             onClick={() => {
-              setPanelViewModalVisible(false);
-              handleOpenDeviceModal(viewingDevice || undefined);
+              const d = viewingDevice;
+              closeDevicePanels();
+              setDeviceModal({ open: true, device: d });
             }}
           >
-            {t('buttons.editDeviceButton')}
+            {t('cabinet:buttons.editDeviceButton')}
           </Button>,
-          <Button
-            key="close"
-            type="primary"
-            onClick={() => {
-              setPanelViewModalVisible(false);
-              setViewingDevice(null);
-              setDevicePanels([]);
-              setPanelPorts(new Map());
-            }}
-          >
-            {t('buttons.cancel')}
+          <Button key="close" type="primary" onClick={closeDevicePanels}>
+            {t('cabinet:buttons.cancel')}
           </Button>,
         ]}
-        width={900}
+        width={1000}
         style={{ top: 20 }}
       >
         {viewingDevice && (
           <div>
             <Descriptions column={2} size="small" bordered style={{ marginBottom: 16 }}>
-              <Descriptions.Item label={t('descriptions.deviceType')}>
-                <Tag color={deviceTypeMap[viewingDevice.type]?.color}>
-                  {deviceTypeMap[viewingDevice.type]?.label || viewingDevice.type}
-                </Tag>
+              <Descriptions.Item label={t('cabinet:descriptions.deviceType')}>
+                <Tag color={DEVICE_TYPE_COLORS[viewingDevice.type]}>{t(`device:deviceTypes.${viewingDevice.type}`)}</Tag>
               </Descriptions.Item>
-              <Descriptions.Item label={t('descriptions.model')}>
-                {viewingDevice.model || '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('descriptions.serialNo')}>
-                {viewingDevice.serialNo || '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('descriptions.uPosition')}>
-                U{viewingDevice.uPosition} (Height: {viewingDevice.uHeight}U)
+              <Descriptions.Item label={t('cabinet:descriptions.model')}>{viewingDevice.deviceModel?.name ?? '-'}</Descriptions.Item>
+              <Descriptions.Item label={t('cabinet:descriptions.serialNo')}>{viewingDevice.serialNo ?? '-'}</Descriptions.Item>
+              <Descriptions.Item label={t('cabinet:descriptions.uPosition')}>
+                {viewingDevice.uPosition ? `U${viewingDevice.uPosition} (${uHeightText(viewingDevice.uHeight, t('device:fields.uHeightUnknown'))})` : '-'}
               </Descriptions.Item>
             </Descriptions>
 
-            <Divider orientation="left">{t('panels.title')}</Divider>
+            <Divider orientation="left">{t('cabinet:panels.title')}</Divider>
+
+            {danglingCount > 0 && (
+              <Alert type="warning" showIcon style={{ marginBottom: 16 }} message={t('cabinet:messages.dangling', { count: danglingCount })} />
+            )}
+
+            <div style={{ marginBottom: 16 }}>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setPanelEditor({ open: true, device: viewingDevice })} data-testid="cabinet-add-panel-btn">
+                {t('cabinet:buttons.addPanel')}
+              </Button>
+            </div>
 
             {devicePanels.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px' }}>
-                <Empty description={t('panels.noPanels')} />
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => handleOpenPanelEditor()}
-                  style={{ marginTop: 16 }}
-                >
-                  {t('buttons.addPanel')}
-                </Button>
-              </div>
+              <Empty description={t('cabinet:panels.noPanels')} />
             ) : (
-              <>
-                <div style={{ marginBottom: 16 }}>
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => handleOpenPanelEditor()}
-                  >
-                    {t('buttons.addPanel')}
-                  </Button>
-                </div>
-                <Tabs defaultActiveKey="0">
-                  {devicePanels.map((panel, index) => {
-                  const ports = panelPorts.get(panel.id) || [];
-                  const hasTemplate = panel.templateId && !panel.isCustomized;
-
-                  return (
-                    <TabPane
-                      tab={
-                        <Space>
-                          {panel.name}
-                          {panel.shortId && (
-                            <Text code>{ShortIdFormatter.toDisplayFormat(panel.shortId)}</Text>
-                          )}
-                          {hasTemplate && <Tag color="blue">模板</Tag>}
-                          {panel.isCustomized && <Tag color="orange">已自定义</Tag>}
-                        </Space>
-                      }
-                      key={index.toString()}
-                    >
-                      <div style={{ marginBottom: 16 }}>
-                        <Space>
+              <Tabs
+                items={devicePanels.map((panel) => {
+                  const parked = dangling?.panels.find((p) => p.panelId === panel.id)?.endpoints ?? [];
+                  return {
+                    key: panel.id,
+                    label: (
+                      <Space>
+                        {panel.name}
+                        {panel.label && <Text code>{formatShortId(panel.label.shortId)}</Text>}
+                        {panel.templateId && <Tag color="blue">{t('cabinet:panels.templateBound')}</Tag>}
+                        {panel.templateOutdated && <Tag color="orange">{t('cabinet:messages.outdated')}</Tag>}
+                        {parked.length > 0 && <Tag color="warning">{t('cabinet:messages.danglingTag', { count: parked.length })}</Tag>}
+                      </Space>
+                    ),
+                    children: (
+                      <div>
+                        <Space style={{ marginBottom: 16 }} wrap>
                           <Button
                             icon={<EditOutlined />}
-                            onClick={() => handleOpenPanelEditor(panel)}
+                            onClick={() => setPanelEditor({ open: true, panelId: panel.id, device: viewingDevice })}
+                            data-testid="cabinet-edit-panel-btn"
                           >
-                            {t('buttons.editPanel')}
+                            {t('cabinet:buttons.editPanel')}
                           </Button>
-                          <Popconfirm
-                            title="确认删除面板"
-                            description={`确定要删除面板"${panel.name}"吗？此操作不可恢复，该面板下的所有端口也将被删除。`}
-                            onConfirm={async () => {
-                              try {
-                                await panelService.delete(panel.id);
-                                message.success('面板删除成功');
-                                // 刷新面板列表
-                                if (viewingDevice?.id) {
-                                  const panels = await panelService.getByDevice(viewingDevice.id);
-                                  setDevicePanels(panels);
-                                }
-                              } catch (error: any) {
-                                console.error('Failed to delete panel:', error);
-                                message.error(error.response?.data?.error || '删除面板失败');
-                              }
-                            }}
-                            okText="确定删除"
-                            okButtonProps={{ danger: true }}
-                            cancelText="取消"
-                          >
-                            <Button danger icon={<DeleteOutlined />}>
-                              删除面板
-                            </Button>
-                          </Popconfirm>
-                          {hasTemplate && (
+                          <Button danger icon={<DeleteOutlined />} onClick={() => deletePanel(panel)}>
+                            {t('panel:editor.delete')}
+                          </Button>
+                          {panel.templateId && (
                             <Popconfirm
-                              title={t('panels.unbindConfirmTitle')}
-                              description={t('panels.unbindConfirmDesc')}
-                              onConfirm={() => handleUnbindPanel(panel.id)}
-                              okText={t('buttons.confirm')}
-                              cancelText={t('buttons.cancel')}
+                              title={t('cabinet:panels.unbindConfirmTitle')}
+                              description={t('cabinet:panels.unbindConfirmDesc')}
+                              onConfirm={() => unbindTemplate(panel.id)}
+                              okText={t('cabinet:buttons.confirm')}
+                              cancelText={t('cabinet:buttons.cancel')}
                             >
                               <Button type="link" size="small">
-                                {t('buttons.unbindTemplate')}
+                                {t('cabinet:buttons.unbindTemplate')}
                               </Button>
                             </Popconfirm>
                           )}
                         </Space>
+                        {parked.length > 0 && (
+                          <Space wrap style={{ marginBottom: 12 }}>
+                            {parked.map((ep) => (
+                              <Tag key={ep.id} color="warning" style={{ cursor: 'pointer' }} onClick={() => navigate(paths.cable(ep.cableId))}>
+                                {ep.label ? formatShortId(ep.label.shortId) : ep.cableId.slice(0, 8)}
+                              </Tag>
+                            ))}
+                          </Space>
+                        )}
+                        <PanelView panel={panel} ports={panel.ports ?? []} onPortClick={(port) => navigate(paths.port(port.id))} scale={1.6} />
                       </div>
-
-                      {hasTemplate && (
-                        <Alert
-                          message={t('panels.templateAlert')}
-                          description={t('panels.templateAlertDesc')}
-                          type="info"
-                          showIcon
-                          style={{ marginBottom: 16 }}
-                        />
-                      )}
-
-                      <PanelVisualizer
-                        panel={panel}
-                        ports={ports}
-                        labelMode="hover"
-                        onPortClick={(port) => {
-                          message.info(`${t('panels.portNumber')}: ${port.number} - ${t('panels.portStatus')}: ${port.status}`);
-                        }}
-                        onPortPositionChange={async (portId, x, y) => {
-                          try {
-                            // 后端使用 positionX 和 positionY 字段，而不是 position 对象
-                            await portService.update(portId, {
-                              position: { x, y },
-                            } as any);
-                            // 重新加载端口数据
-                            const updatedPorts = await portService.getByPanel(panel.id);
-                            setPanelPorts((prev) => {
-                              const newMap = new Map(prev);
-                              newMap.set(panel.id, updatedPorts);
-                              return newMap;
-                            });
-                            message.success(t('messages.portPositionUpdated'));
-                          } catch (error) {
-                            console.error('Failed to update port position:', error);
-                            message.error(t('messages.portPositionUpdateFailed'));
-                          }
-                        }}
-                        onPortsUpdated={async () => {
-                          try {
-                            // 重新加载端口数据
-                            const updatedPorts = await portService.getByPanel(panel.id);
-                            setPanelPorts((prev) => {
-                              const newMap = new Map(prev);
-                              newMap.set(panel.id, updatedPorts);
-                              return newMap;
-                            });
-                          } catch (error) {
-                            console.error('Failed to reload ports:', error);
-                          }
-                        }}
-                        allowEdit={true}
-                      />
-                    </TabPane>
-                  );
+                    ),
+                  };
                 })}
-              </Tabs>
-              </>
+              />
             )}
           </div>
         )}
       </Modal>
 
-      {/* 设备面板编辑器 */}
-      {viewingDevice && (
+      {panelEditor.device && (
         <DevicePanelEditor
-          visible={panelEditorVisible}
-          onCancel={() => {
-            setPanelEditorVisible(false);
-            setEditingPanel(null);
+          open={panelEditor.open}
+          device={panelEditor.device}
+          panelId={panelEditor.panelId}
+          onClose={(changed) => {
+            const device = panelEditor.device;
+            setPanelEditor({ open: false, device: null });
+            if (changed && device && viewingDevice?.id === device.id) loadDevicePanels(device);
           }}
-          onSave={handleSavePanel}
-          device={viewingDevice}
-          panel={editingPanel || undefined}
         />
       )}
-
-      {/* 设备发送对话框 */}
-      <Modal
-        title={
-          <Space>
-            <SendOutlined />
-            {t('transfer.title')}
-          </Space>
-        }
-        open={deviceTransferVisible}
-        onCancel={() => {
-          setDeviceTransferVisible(false);
-          setSelectedDeviceForAction(null);
-        }}
-        footer={null}
-        width={600}
-      >
-        {selectedDeviceForAction && (
-          <Form layout="vertical" onFinish={(values) => {
-            handleDeviceTransfer(values.cabinetId, values.uPosition);
-          }}>
-            <Alert
-              message={t('transfer.title')}
-              description={t('transfer.description', { deviceName: selectedDeviceForAction.name })}
-              type="warning"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-
-            <Form.Item
-              name="cabinetId"
-              label={t('labels.targetCabinet')}
-              rules={[{ required: true, message: t('validation.cabinetRequired') }]}
-            >
-              <Select placeholder={t('labels.targetCabinet')} showSearch optionFilterProp="children">
-                {cabinets.map((cabinet) => {
-                  const room = rooms.find((r) => r.id === cabinet.roomId);
-                  const dc = dataCenters.find((d) => d.id === room?.dataCenterId);
-                  return (
-                    <Option key={cabinet.id} value={cabinet.id}>
-                      {dc?.name} - {room?.name} - {cabinet.name}
-                    </Option>
-                  );
-                })}
-              </Select>
-            </Form.Item>
-
-            <Form.Item
-              name="uPosition"
-              label={t('labels.targetUPosition')}
-              rules={[{ required: true, message: t('validation.uPositionRequired') }]}
-            >
-              <InputNumber
-                style={{ width: '100%' }}
-                placeholder={t('labels.targetUPosition')}
-                min={1}
-                max={52}
-              />
-            </Form.Item>
-
-            <Form.Item>
-              <Space>
-                <Button type="primary" htmlType="submit">
-                  {t('buttons.confirmTransfer')}
-                </Button>
-                <Button onClick={() => {
-                  setDeviceTransferVisible(false);
-                  setSelectedDeviceForAction(null);
-                }}>
-                  {t('buttons.cancel')}
-                </Button>
-              </Space>
-            </Form.Item>
-          </Form>
-        )}
-      </Modal>
-
-      {/* 设备复制对话框 */}
-      <Modal
-        title={
-          <Space>
-            <CopyOutlined />
-            {t('copy.title')}
-          </Space>
-        }
-        open={deviceCopyVisible}
-        onCancel={() => {
-          setDeviceCopyVisible(false);
-          setSelectedDeviceForAction(null);
-        }}
-        footer={null}
-        width={600}
-      >
-        {selectedDeviceForAction && (
-          <Form layout="vertical" onFinish={(values) => {
-            handleDeviceCopy(values.cabinetId, values.uPosition);
-          }}>
-            <Alert
-              message={t('copy.title')}
-              description={t('copy.description', { deviceName: selectedDeviceForAction.name })}
-              type="info"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-
-            <Form.Item
-              name="cabinetId"
-              label={t('labels.targetCabinet')}
-              rules={[{ required: true, message: t('validation.cabinetRequired') }]}
-            >
-              <Select placeholder={t('labels.targetCabinet')} showSearch optionFilterProp="children">
-                {cabinets.map((cabinet) => {
-                  const room = rooms.find((r) => r.id === cabinet.roomId);
-                  const dc = dataCenters.find((d) => d.id === room?.dataCenterId);
-                  return (
-                    <Option key={cabinet.id} value={cabinet.id}>
-                      {dc?.name} - {room?.name} - {cabinet.name}
-                    </Option>
-                  );
-                })}
-              </Select>
-            </Form.Item>
-
-            <Form.Item
-              name="uPosition"
-              label={t('labels.targetUPosition')}
-              rules={[{ required: true, message: t('validation.uPositionRequired') }]}
-            >
-              <InputNumber
-                style={{ width: '100%' }}
-                placeholder={t('labels.targetUPosition')}
-                min={1}
-                max={52}
-              />
-            </Form.Item>
-
-            <Form.Item>
-              <Space>
-                <Button type="primary" htmlType="submit">
-                  {t('buttons.confirmCopy')}
-                </Button>
-                <Button onClick={() => {
-                  setDeviceCopyVisible(false);
-                  setSelectedDeviceForAction(null);
-                }}>
-                  {t('buttons.cancel')}
-                </Button>
-              </Space>
-            </Form.Item>
-          </Form>
-        )}
-      </Modal>
     </div>
   );
 }

@@ -1,0 +1,23 @@
+{
+  "VALIDATION_ERROR": "提交的数据不合法",
+  "NOT_FOUND": "记录不存在或已被删除",
+  "UNIQUE_VIOLATION": "已存在相同的记录",
+  "LABEL_NOT_AVAILABLE": "该标签不可用：已被占用或已作废",
+  "LABEL_REQUIRED": "机柜、面板和线缆端子必须绑定标签",
+  "PORT_OCCUPIED": "端口已被其他线缆占用",
+  "PORT_HAS_DEPENDENTS": "端口仍有线缆、光模块、IP 或工作站在用",
+  "NOT_EMPTY": "下面还有内容，请先清空后再删除",
+  "U_SPACE_CONFLICT": "U 位与已有设备重叠",
+  "U_OUT_OF_RANGE": "U 位超出机柜高度",
+  "IP_OUT_OF_SUBNET": "IP 地址不在该网段内",
+  "IP_CONFLICT": "IP 地址冲突",
+  "TEMPLATE_REVISION_MISMATCH": "模板已被修改，请刷新后重试",
+  "TEMPLATE_CONFLICT": "模板与面板上已占用的端口冲突，未做任何修改",
+  "INVALID_STATE": "当前状态下不能执行该操作",
+  "INTERNAL": "服务器内部错误",
+  "NETWORK": "无法连接到服务器",
+  "detail": {
+    "field": "字段：{{fields}}",
+    "items": "涉及：{{items}}"
+  }
+}
