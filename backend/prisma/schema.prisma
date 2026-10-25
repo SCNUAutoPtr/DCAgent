@@ -59,21 +59,69 @@ enum DeviceType {
   OTHER
 }
 
+// 设备型号（预定义交换机、路由器等型号的端口配置）
+model DeviceModel {
+  id          String   @id @default(uuid())
+  name        String   @unique // 型号名称，如 "S5735S-L24T4X-QA2"
+  vendor      String?  // 厂商，如 "Huawei", "H3C"
+  deviceType  DeviceType // 设备类型
+  description String?  // 型号描述
+  // 端口组配置（JSON数组）：定义该型号的所有端口
+  // 格式：[{type: "GE", prefix: "GigabitEthernet0/0/", start: 1, end: 24, layout: "double-row"}, ...]
+  portGroups  Json
+  // 是否为堆叠设备
+  isStackable Boolean  @default(false)
+  // 关联的面板模板（用于自动创建面板）
+  panelTemplateId String?
+  panelTemplate   PanelTemplate? @relation(fields: [panelTemplateId], references: [id], onDelete: SetNull)
+  // 使用该型号的设备
+  devices     Device[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([deviceType])
+  @@index([vendor])
+}
+
 // 设备（可以通过Cabinet唯一找到，不需要独立的shortID）
 model Device {
-  id          String      @id @default(uuid())
-  name        String
-  type        DeviceType
-  model       String?
-  serialNo    String?     @unique
-  uPosition   Int?        // 在机柜中的U位
-  uHeight     Int?        // 占用几U
-  cabinetId   String
-  cabinet     Cabinet     @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
-  panels      Panel[]
-  ipAddresses IpAddress[] // 设备的管理IP地址
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id            String         @id @default(uuid())
+  name          String
+  type          DeviceType
+  model         String?
+  serialNo      String?        @unique
+  uPosition     Int?           // 在机柜中的U位
+  uHeight       Int?           // 占用几U
+  cabinetId     String
+  cabinet       Cabinet        @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  panels        Panel[]
+  ipAddresses   IpAddress[]    // 设备的管理IP地址
+  // 设备型号关联
+  deviceModelId String?
+  deviceModel   DeviceModel?   @relation(fields: [deviceModelId], references: [id], onDelete: SetNull)
+  // 堆叠成员（如果是堆叠设备）
+  stackMembers  StackMember[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([deviceModelId])
+}
+
+// 堆叠设备成员（用于管理堆叠交换机的多个成员）
+model StackMember {
+  id        String   @id @default(uuid())
+  deviceId  String   // 堆叠设备ID
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  memberId  Int      // 成员编号（0, 1, 2...）
+  panelId   String?  @unique // 该成员对应的面板
+  panel     Panel?   @relation(fields: [panelId], references: [id], onDelete: SetNull)
+  status    String?  // 成员状态（active, standby, offline等）
+  notes     String?  // 备注
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([deviceId, memberId]) // 确保同一设备的成员编号唯一
+  @@index([deviceId])
 }
 
 // 面板类型枚举
@@ -88,28 +136,30 @@ enum PanelType {
 
 // 面板模板（可复用的面板配置）
 model PanelTemplate {
-  id              String    @id @default(uuid())
-  name            String    // 模板名称，如 "24口交换机面板"
-  type            PanelType // 面板类型
-  portCount       Int       // 端口数量
-  description     String?   // 模板描述
+  id              String        @id @default(uuid())
+  name            String        // 模板名称，如 "24口交换机面板"
+  type            PanelType     // 面板类型
+  portCount       Int           // 端口数量
+  description     String?       // 模板描述
   // 物理尺寸（单位：mm）
-  width           Float     @default(482.6) // 标准1U面板宽度
-  height          Float     @default(44.45) // 标准1U面板高度
+  width           Float         @default(482.6) // 标准1U面板宽度
+  height          Float         @default(44.45) // 标准1U面板高度
   // 布局配置（JSON存储）
-  layoutConfig    Json?     // 布局规则配置：{ portsPerRow, rowSpacing, portSize, spacing }
+  layoutConfig    Json?         // 布局规则配置：{ portsPerRow, rowSpacing, portSize, spacing }
   // 端口定义（JSON数组）
-  portDefinitions Json      // 端口定义数组：[{ number, position: {x,y}, size: {width,height} }]
+  portDefinitions Json          // 端口定义数组：[{ number, position: {x,y}, size: {width,height} }]
   // 视觉样式
-  backgroundColor String?   // 背景颜色
-  image           String?   // 图片URL
-  svgPath         String?   // SVG路径
+  backgroundColor String?       // 背景颜色
+  image           String?       // 图片URL
+  svgPath         String?       // SVG路径
   // 是否为系统预设模板
-  isSystem        Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  isSystem        Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   // 使用该模板的面板
   panels          Panel[]
+  // 使用该模板的设备型号
+  deviceModels    DeviceModel[]
 }
 
 // 面板（设备上的接口面板）
@@ -125,6 +175,8 @@ model Panel {
   templateId      String?
   template        PanelTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   isCustomized    Boolean        @default(false) // 是否已从模板自定义（解绑）
+  // 堆叠成员关联（可选）
+  stackMember     StackMember?
   // 物理布局信息（单位：mm）
   position        Json?          // 位置坐标 {x, y}
   size            Json?          // 尺寸 {width, height}

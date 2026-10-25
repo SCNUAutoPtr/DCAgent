@@ -18,6 +18,8 @@ import panelTemplateRouter from './routes/panelTemplateRoutes';
 import opticalModulesRouter from './routes/opticalModules';
 import subnetsRouter from './routes/subnets';
 import ipAddressesRouter from './routes/ipAddresses';
+import deviceModelsRouter from './routes/deviceModels';
+import portCompletionRouter from './routes/portCompletion';
 // import monitoringRouter from './routes/monitoring'; // SNMP 监控模块已隐藏
 import { requestLogger, errorLogger } from './middleware/logger';
 
@@ -67,6 +69,8 @@ app.get('/api/v1', (req: Request, res: Response) => {
       shortIdPool: '/api/v1/shortid-pool',
       search: '/api/v1/search',
       panelTemplates: '/api/v1/panel-templates',
+      deviceModels: '/api/v1/device-models',
+      portCompletion: '/api/v1/port-completion',
       // monitoring: '/api/v1/monitoring' // SNMP 监控模块已隐藏
     }
   });
@@ -87,6 +91,8 @@ app.use('/api/v1/cable-shortid-pool', cableShortIdPoolRouter);
 app.use('/api/v1/shortid-pool', shortIdPoolRouter);
 app.use('/api/v1/search', searchRouter);
 app.use('/api/v1/panel-templates', panelTemplateRouter);
+app.use('/api/v1/device-models', deviceModelsRouter);
+app.use('/api/v1/port-completion', portCompletionRouter);
 // app.use('/api/v1/monitoring', monitoringRouter); // SNMP 监控模块已隐藏
 
 // Swagger UI (需要先安装依赖: npm install swagger-ui-express yamljs @types/yamljs)
